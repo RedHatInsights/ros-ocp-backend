@@ -1,0 +1,70 @@
+version: "3.8"
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=32181
+      - ZOOKEEPER_SERVER_ID=1
+  kafka:
+    image: confluentinc/cp-kafka
+    ports:
+      - 29092:29092
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:29092
+      - KAFKA_BROKER_ID=1
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:32181
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+
+  kafka-create-topics:
+    image: confluentinc/cp-kafka
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub kafka-ready -b kafka:29092 1 20 && \
+                       kafka-topics --create --if-not-exists --topic platform.upload.rosocp --bootstrap-server kafka:29092'"
+    depends_on:
+      - kafka
+
+  minio:
+    image: minio/minio
+    command: server /data
+    volumes:
+      # Ensure the directories exist prior to running this file
+      - ./minio-conf/:/root/.minio:Z
+      - ./minio-data/:/data:Z
+    ports:
+      - 9000:9000
+    environment:
+      - MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY
+      - MINIO_SECRET_KEY=$MINIO_SECRET_KEY
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://minio:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY;
+      /usr/bin/mc mb myminio/insights-upload-perma;
+      /usr/bin/mc mb myminio/insights-upload-rejected;
+      /usr/bin/mc policy download myminio/insights-upload-perma;
+      /usr/bin/mc policy download myminio/insights-upload-rejected;
+      exit 0;
+      "
+
+  ingress:
+    image: quay.io/cloudservices/insights-ingress:latest
+    ports:
+      - 3000:3000
+    environment:
+      - INGRESS_VALIDTOPICS=hccm,rosocp
+      - INGRESS_STAGEBUCKET=insights-upload-perma
+      - OPENSHIFT_BUILD_COMMIT=somestring
+      - INGRESS_MAXSIZE=104857600
+      - INGRESS_MINIODEV=true
+      - INGRESS_MINIOACCESSKEY=$MINIO_ACCESS_KEY
+      - INGRESS_MINIOSECRETKEY=$MINIO_SECRET_KEY
+      - INGRESS_MINIOENDPOINT=minio:9000
+    depends_on:
+       - kafka

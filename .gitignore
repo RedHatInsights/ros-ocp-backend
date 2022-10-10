@@ -2,3 +2,4 @@ __pycache__
 *.egg-info
 scripts/minio-conf/
 scripts/minio-data/
+.vscode/
