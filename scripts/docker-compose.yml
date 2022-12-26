@@ -56,7 +56,7 @@ services:
   ingress:
     image: quay.io/cloudservices/insights-ingress:latest
     ports:
-      - 3000:3000
+      - $INGRESS_PORT:3000
     environment:
       - INGRESS_VALIDTOPICS=hccm,rosocp
       - INGRESS_STAGEBUCKET=insights-upload-perma
