@@ -3,7 +3,7 @@ import os
 import sys
 import socket
 from threading import local
-from ros.lib.config import LOG_LEVEL
+from ros_ocp.lib.config import LOG_LEVEL
 from logstash_formatter import LogstashFormatterV1
 
 

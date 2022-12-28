@@ -1,7 +1,7 @@
 import logging
 
-from ros.lib.config import UPLOAD_TOPIC
-from ros.lib.exceptions import KafkaMsgException
+from ros_ocp.lib.config import UPLOAD_TOPIC
+from ros_ocp.lib.exceptions import KafkaMsgException
 
 
 LOG = logging.getLogger(__name__)

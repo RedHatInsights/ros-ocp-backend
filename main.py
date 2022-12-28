@@ -1,11 +1,11 @@
 import logging
 import json
 
-from ros.lib.consume import init_consumer
-from ros.lib.logger import initialize_logging, threadctx
-from ros.lib.config import KAFKA_BROKER, UPLOAD_TOPIC, KAFKA_AUTO_COMMIT
-from ros.lib.utils import generate_request_object
-from ros.lib.exceptions import KafkaMsgException
+from ros_ocp.lib.consume import init_consumer
+from ros_ocp.lib.logger import initialize_logging, threadctx
+from ros_ocp.lib.config import KAFKA_BROKER, UPLOAD_TOPIC, KAFKA_AUTO_COMMIT, KAFKA_CA_FILE_PATH
+from ros_ocp.lib.utils import generate_request_object
+from ros_ocp.lib.exceptions import KafkaMsgException
 
 
 initialize_logging()
@@ -13,7 +13,7 @@ LOG = logging.getLogger(__name__)
 
 # Create cacert for kafka managed kafka config.
 if KAFKA_BROKER and KAFKA_BROKER.cacert:
-    with open('/tmp/cacert', 'w') as f:
+    with open(KAFKA_CA_FILE_PATH, 'w') as f:
         f.write(KAFKA_BROKER.cacert)
 
 
@@ -40,7 +40,8 @@ while True:
         set_extra_log_data(request_obj)
         consumer.commit()
         # Process data below
-
+        print(request_obj)
+        print(msg)
     except KafkaMsgException as err:
         LOG.error(f"Incorrect event received on kafka topic: {err}")
     except Exception as error:

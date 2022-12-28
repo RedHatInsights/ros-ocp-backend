@@ -1,5 +1,5 @@
 from confluent_kafka import Consumer
-from ros.lib.config import (
+from ros_ocp.lib.config import (
         KAFKA_AUTO_COMMIT,
         INSIGHTS_KAFKA_ADDRESS,
         UPLOAD_TOPIC,
