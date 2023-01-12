@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+confluent-kafka = "*"
+app-common-python = "*"
+logstash-formatter = "*"
+watchtower = "*"
+requests = "*"
+
+[dev-packages]
+flake8 = "*"
+pytest = "*"
+pytest-cov = "*"
+
+[requires]
+python_version = "3.9"
