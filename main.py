@@ -6,6 +6,7 @@ from ros_ocp.lib.logger import initialize_logging, threadctx
 from ros_ocp.lib.config import KAFKA_BROKER, UPLOAD_TOPIC, KAFKA_AUTO_COMMIT, KAFKA_CA_FILE_PATH
 from ros_ocp.lib.utils import generate_request_object
 from ros_ocp.lib.exceptions import KafkaMsgException
+from ros_ocp.processor.report_processor import process_report
 
 
 initialize_logging()
@@ -39,9 +40,7 @@ while True:
         request_obj = generate_request_object(msg)
         set_extra_log_data(request_obj)
         consumer.commit()
-        # Process data below
-        print(request_obj)
-        print(msg)
+        process_report(msg, request_obj)
     except KafkaMsgException as err:
         LOG.error(f"Incorrect event received on kafka topic: {err}")
     except Exception as error:

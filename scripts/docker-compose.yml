@@ -68,3 +68,15 @@ services:
       - INGRESS_MINIOENDPOINT=minio:9000
     depends_on:
        - kafka
+  kruize-autotune:
+    image: docker.io/kruize/autotune_operator:0.0.8_mvp
+    ports:
+      - 8080:8080
+    environment:
+      - CLUSTER_TYPE=kubernetes
+      - K8S_TYPE=openshift
+      - MONITORING_AGENT=prometheus
+      - MONITORING_SERVICE=prometheus-k8s
+      - MONITORING_AGENT_ENDPOINT=prometheus-k8s
+      - LOGGING_LEVEL=info
+      - ROOT_LOGGING_LEVEL=info

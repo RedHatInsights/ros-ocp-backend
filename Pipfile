@@ -9,6 +9,7 @@ app-common-python = "*"
 logstash-formatter = "*"
 watchtower = "*"
 requests = "*"
+pandas = "*"
 
 [dev-packages]
 flake8 = "*"

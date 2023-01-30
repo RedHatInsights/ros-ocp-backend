@@ -26,6 +26,7 @@ def generate_request_object(consumed_message):
         raise KafkaMsgException(f"Message missing required field(s): {', '.join(missing_fields)}.")
     request_obj = {
         'request_id': request_id,
+        'cluster_id': cluster_id,
         'account': metadata.get('account'),
         'org_id': org_id,
         'b64_identity': consumed_message.get('b64_identity')

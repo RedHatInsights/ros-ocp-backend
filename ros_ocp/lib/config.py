@@ -35,6 +35,9 @@ else:
     UPLOAD_TOPIC = os.getenv('UPLOAD_TOPIC', 'platform.upload.rosocp')
     METRICS_PORT = os.getenv("METRICS_PORT", 5005)
 
+KRUIZE_HOST = os.getenv("KRUIZE_HOST", "localhost")
+KRUIZE_PORT = os.getenv("KRUIZE_PORT", 8080)
+KRUIZE_URL = f'http://{KRUIZE_HOST}:{KRUIZE_PORT}'
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 KAFKA_AUTO_COMMIT = os.getenv("KAFKA_AUTO_COMMIT", False)
 KAFKA_CONSUMER_GROUP_ID = os.getenv("KAFKA_CONSUMER_GROUP_ID", "ros-ocp")

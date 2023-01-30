@@ -6,3 +6,9 @@ class KafkaMsgException(Exception):
     """
 
     pass
+
+
+class FailDownloadException(Exception):
+    """Use to report download errors that should not be retried."""
+
+    pass
