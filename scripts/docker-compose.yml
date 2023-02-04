@@ -31,8 +31,8 @@ services:
     command: server /data
     volumes:
       # Ensure the directories exist prior to running this file
-      - ./minio-conf/:/root/.minio:Z
-      - ./minio-data/:/data:Z
+      - ./_minio-conf/:/root/.minio:Z
+      - ./_minio-data/:/data:Z
     ports:
       - 9000:9000
     environment:
