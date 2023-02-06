@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/confluentinc/confluent-kafka-go/v2 v2.0.2
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/redhatinsights/app-common-go v1.6.5
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/viper v1.15.0
 )

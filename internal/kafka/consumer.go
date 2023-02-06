@@ -18,11 +18,32 @@ func StartConsumer() {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
-	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":  cfg.InsightsKafkaAddress,
-		"group.id":           cfg.KafkaConsumerGroupId,
-		"enable.auto.commit": cfg.KafkaAutoCommit,
-	})
+	var configMap kafka.ConfigMap
+	if cfg.KafkaSASLMechanism != "" {
+		configMap = kafka.ConfigMap{
+			"bootstrap.servers":        cfg.KafkaBootstrapServers,
+			"group.id":                 cfg.KafkaConsumerGroupId,
+			"security.protocol":        cfg.KafkaSecurityProtocol,
+			"sasl.mechanism":           cfg.KafkaSASLMechanism,
+			"ssl.ca.location":          cfg.KafkaCA,
+			"sasl.username":            cfg.KafkaUsername,
+			"sasl.password":            cfg.KafkaPassword,
+			"enable.auto.commit":       cfg.KafkaAutoCommit,
+			"go.logs.channel.enable":   true,
+			"allow.auto.create.topics": true,
+		}
+
+	} else {
+		configMap = kafka.ConfigMap{
+			"bootstrap.servers":        cfg.KafkaBootstrapServers,
+			"group.id":                 cfg.KafkaConsumerGroupId,
+			"enable.auto.commit":       cfg.KafkaAutoCommit,
+			"go.logs.channel.enable":   true,
+			"allow.auto.create.topics": true,
+		}
+	}
+
+	consumer, err := kafka.NewConsumer(&configMap)
 	if err != nil {
 		log.Errorf("Failed to create consumer: %s", err)
 		os.Exit(1)
