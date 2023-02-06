@@ -7,9 +7,26 @@ ros_ocp_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"ac
 file=./scripts/samples/cost-mgmt.tar.gz
 INGRESS_PORT ?= 3000
 
-lint: 
-	go fmt ./...
-	go vet ./...
+
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	@echo "🤖 Ensuring $(LOCALBIN) is available"
+	mkdir -p $(LOCALBIN)
+	@echo "✅ Done"
+
+
+.PHONY: golangci-lint
+GOLANGCILINT := $(LOCALBIN)/golangci-lint
+GOLANGCI_URL := https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh
+golangci-lint: $(LOCALBIN)
+	@ echo "📥 Downloading golangci-lint"
+	curl -sSfL $(GOLANGCI_URL) | sh -s -- -b $(LOCALBIN) $(GOLANGCI_VERSION)
+	@ echo "✅ Done"
+
+
+.PHONY: lint
+lint: golangci-lint
+	$(GOLANGCILINT) run ./...
 
 local-upload-data:
 	curl -vvvv -F "upload=@$(file);type=application/application/vnd.redhat.hccm.tar+tgz" \

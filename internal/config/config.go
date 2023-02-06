@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
@@ -39,8 +40,10 @@ func InitConfig() {
 		}
 	}
 
-	viper.Unmarshal(&cfg)
-
+	if err := viper.Unmarshal(&cfg); err != nil {
+		fmt.Println("Can not unmarshal config. Exiting..")
+		os.Exit(1)
+	}
 }
 
 func Get() *config {
