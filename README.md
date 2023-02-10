@@ -1,16 +1,9 @@
-# ros-ocp-backend
+# Resource Optimization For Openshift
 
 Backend for Resource Optimization for Openshift service
 
 
-## Getting Started
-### Run dependent services
-```bash
-cd scripts/
-docker-compose up
-```
-### Run the application
-
-```bash
-go run cmd/rosocp-consumer/main.go
-```
+## Documentation
+- [Resource Optimization For Openshift: Architecture Overview](https://github.com/RedHatInsights/ros-ocp-backend/wiki/Resource-Optimization-For-Openshift:-Architecture-Overview)
+- [Dev environment setup](https://github.com/RedHatInsights/ros-ocp-backend/wiki/Dev-environment-setup-(local))
+- [Kruize API Schema](https://github.com/kruize/autotune/blob/mvp_demo/design/MonitoringModeAPI.md)
