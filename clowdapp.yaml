@@ -1,0 +1,70 @@
+---
+apiVersion: v1
+kind: Template
+metadata:
+  name: ros-ocp-backend
+objects:
+- apiVersion: cloud.redhat.com/v1alpha1
+  kind: ClowdApp
+  metadata:
+    name: ros-ocp-backend
+  spec:
+    envName: ${ENV_NAME}
+    dependencies:
+    - ingress
+    deployments:
+    - name: processor
+      replicas: ${{PROCESSOR_REPLICA_COUNT}}
+      podSpec:
+        image: ${IMAGE}:${IMAGE_TAG}
+        resources:
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+        env:
+          - name: CLOWDER_ENABLED
+            value: ${CLOWDER_ENABLED}
+    kafkaTopics:
+      - topicName: platform.upload.rosocp
+        partitions: 1
+
+parameters:
+- description : ClowdEnvironment name
+  name: ENV_NAME
+  required: true
+- description: Replica count for processor pod
+  name: PROCESSOR_REPLICA_COUNT
+  value: "1"
+- description: Image NAME
+  name: IMAGE
+  required: true
+  value: quay.io/cloudservices/ros-ocp-backend
+- description: Image tag
+  name: IMAGE_TAG
+  required: true
+- description: Initial cpu request.
+  displayName: CPU Request
+  name: CPU_REQUEST
+  required: true
+  value: 500m
+- description: Initial amount of memory the container will request.
+  displayName: Memory Request
+  name: MEMORY_REQUEST
+  required: true
+  value: 1Gi
+- description: Maximum amount of memory the Django container can use.
+  displayName: Memory Limit
+  name: MEMORY_LIMIT
+  required: true
+  value: 1Gi
+- description: Maximum amount of CPU the build container can use.
+  displayName: CPU Limit
+  name: CPU_LIMIT
+  required: true
+  value: '1'
+- description: Is clowder enabled
+  name: CLOWDER_ENABLED
+  value: "True"
