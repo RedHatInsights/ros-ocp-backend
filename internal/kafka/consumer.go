@@ -10,11 +10,12 @@ import (
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/ros-ocp-backend/internal/processor"
 )
 
 func StartConsumer() {
 	log := logging.GetLogger()
-	cfg := config.Get()
+	cfg := config.GetConfig()
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
@@ -65,7 +66,8 @@ func StartConsumer() {
 			msg, err := consumer.ReadMessage(time.Second)
 			if err == nil {
 				// Invoke report processor function in this block.
-				log.Infof("Message on %s: %s", msg.TopicPartition, string(msg.Value))
+				log.Infof("Message received from kafka %s: %s", msg.TopicPartition, string(msg.Value))
+				processor.ProcessReport(msg)
 			} else if !err.(kafka.Error).IsTimeout() {
 				// The client will automatically try to recover from all errors.
 				// Timeout is not considered an error because it is raised by

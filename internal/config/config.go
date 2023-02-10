@@ -11,7 +11,7 @@ import (
 	clowder "github.com/redhatinsights/app-common-go/pkg/api/v1"
 )
 
-type config struct {
+type Config struct {
 	//Application config
 	LogLevel string `mapstructure:"LogLevel"`
 
@@ -25,9 +25,12 @@ type config struct {
 	KafkaSASLMechanism    string
 	KafkaSecurityProtocol string
 	KafkaCA               string
+
+	// Kruize config
+	KruizeUrl string `mapstructure:"KRUIZE_URL"`
 }
 
-var cfg config
+var cfg Config
 
 func InitConfig() {
 	viper.AutomaticEnv()
@@ -61,6 +64,9 @@ func InitConfig() {
 	viper.SetDefault("KAFKA_CONSUMER_GROUP_ID", "ros-ocp")
 	viper.SetDefault("KAFKA_AUTO_COMMIT", false)
 	viper.SetDefault("LogLevel", "INFO")
+	viper.SetDefault("KRUIZE_HOST", "localhost")
+	viper.SetDefault("KRUIZE_PORT", "8080")
+	viper.SetDefault("KRUIZE_URL", fmt.Sprintf("http://%s:%s", viper.GetString("KRUIZE_HOST"), viper.GetString("KRUIZE_PORT")))
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}
@@ -79,6 +85,6 @@ func InitConfig() {
 	}
 }
 
-func Get() *config {
+func GetConfig() *Config {
 	return &cfg
 }

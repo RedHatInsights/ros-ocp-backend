@@ -7,10 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log *logrus.Logger
+var log *logrus.Logger = logrus.New()
 
 func InitLogger() {
-	cfg := config.Get()
+	cfg := config.GetConfig()
 	var logLevel logrus.Level
 
 	switch cfg.LogLevel {
@@ -22,7 +22,6 @@ func InitLogger() {
 		logLevel = logrus.InfoLevel
 	}
 
-	log = logrus.New()
 	log.Level = logLevel
 	log.Out = os.Stdout
 	log.ReportCaller = true
