@@ -1,0 +1,61 @@
+{
+ "uuid": "0f53e6fa-ea85-4f18-aab1-872b067ae2ac",
+ "cluster_id": "1b77b73f-1d3e-43c6-9f55-bcd9fb6d1a0c",
+ "version": "1f0b2060c372163296be34fe571963f2b2277bcf",
+ "date": "2022-10-02T13:34:23.408496332Z",
+ "files": [
+  "0f53e6fa-ea85-4f18-aab1-872b067ae2ac_openshift_usage_report.3.csv",
+  "0f53e6fa-ea85-4f18-aab1-872b067ae2ac_openshift_usage_report.0.csv",
+  "0f53e6fa-ea85-4f18-aab1-872b067ae2ac_openshift_usage_report.1.csv",
+  "0f53e6fa-ea85-4f18-aab1-872b067ae2ac_openshift_usage_report.2.csv"
+ ],
+ "start": "2022-10-02T12:00:00Z",
+ "end": "2022-10-02T12:59:59Z",
+ "cr_status": {
+  "clusterID": "1b77b73f-1d3e-43c6-9f55-bcd9fb6d1a0c",
+  "clusterVersion": "stable-4.10",
+  "api_url": "https://cloud.redhat.com",
+  "authentication": {
+   "type": "basic",
+   "secret_name": "dev-auth-secret",
+   "credentials_found": true
+  },
+  "packaging": {
+   "last_successful_packaging_time": null,
+   "max_reports_to_store": 30,
+   "max_size_MB": 100,
+   "number_reports_stored": 0
+  },
+  "upload": {
+   "ingress_path": "/api/ingress/v1/upload",
+   "upload": true,
+   "upload_wait": 30,
+   "upload_cycle": 360,
+   "last_successful_upload_time": null,
+   "validate_cert": false
+  },
+  "operator_commit": "1f0b2060c372163296be34fe571963f2b2277bcf",
+  "prometheus": {
+   "prometheus_configured": true,
+   "prometheus_connected": true,
+   "context_timeout": 120,
+   "last_query_start_time": "2022-10-02T13:34:21Z",
+   "last_query_success_time": "2022-10-02T13:34:21Z",
+   "service_address": "https://prometheus-k8s-openshift-monitoring.apps.supatil.example.com",
+   "skip_tls_verification": true
+  },
+  "reports": {
+   "report_month": "10",
+   "last_hour_queried": "2022-10-02 12:00:00 - 2022-10-02 12:59:59",
+   "data_collected": true
+  },
+  "source": {
+   "sources_path": "/api/sources/v1.0/",
+   "create_source": false,
+   "last_check_time": null,
+   "check_cycle": 1440
+  },
+  "storage": {}
+ },
+ "certified": false
+}
