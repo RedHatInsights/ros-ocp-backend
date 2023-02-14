@@ -6,6 +6,7 @@ require (
 	github.com/confluentinc/confluent-kafka-go/v2 v2.0.2
 	github.com/go-gota/gota v0.12.0
 	github.com/go-playground/validator/v10 v10.11.2
+	github.com/google/go-cmp v0.5.9
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/redhatinsights/app-common-go v1.6.5
 	github.com/sirupsen/logrus v1.9.0

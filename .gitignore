@@ -3,3 +3,4 @@ scripts/_minio-data/
 .vscode/
 bin
 tmp
+coverage.txt
