@@ -1,0 +1,24 @@
+name: github action pr check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
+      - name: Run golangci-lint
+        run: make lint
+      - name: Run unit tests
+        run: make test
+      - name: Check Build
+        run: make build
