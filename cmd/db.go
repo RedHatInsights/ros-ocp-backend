@@ -19,7 +19,7 @@ var migrateCmd = &cobra.Command{
 		err := db.DB.AutoMigrate(
 			&model.RHAccount{},
 			&model.Cluster{},
-			&model.Recommendation{},
+			&model.RecommendationSet{},
 		)
 		if err != nil {
 			fmt.Println("DB Migration Failed..")
