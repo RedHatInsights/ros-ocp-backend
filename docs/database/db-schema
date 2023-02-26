@@ -23,17 +23,27 @@ Table clusters {
   }
 }
 
-Table recommendation_sets {
+Table workloads {
+  id bigint [increment]
   cluster_id bigint [ref: > clusters.id]
   experiment_name text
   namespace text
   workload_type text
   workload_name text
   containers text[]
-  recommendations jsonb
-  created_at datetime 
+  metrics_upload_at datetime
   Indexes {
+    id [pk]
     cluster_id [name: "clusters.id_fkey", type: btree]
-    containers [type: btree] // gin index is not supported in dbdiagram.io so this will throw error
+    containers [type: gin] // gin index is not supported in dbdiagram.io so this will throw error
+  }
+}
+
+Table recommendation_sets {
+  workload_id bigint [ref: > workloads.id]
+  recommendations jsonb
+  created_at datetime
+  Indexes {
+    workload_id [name: "workloads.id_fkey", type: btree]
   }
 }

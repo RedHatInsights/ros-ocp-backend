@@ -19,6 +19,7 @@ var migrateCmd = &cobra.Command{
 		err := db.DB.AutoMigrate(
 			&model.RHAccount{},
 			&model.Cluster{},
+			&model.Workload{},
 			&model.RecommendationSet{},
 		)
 		if err != nil {
