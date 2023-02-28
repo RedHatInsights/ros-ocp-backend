@@ -38,6 +38,7 @@ func ProcessReport(msg *kafka.Message) {
 			return
 		}
 		df := dataframe.LoadRecords(data)
+		df = aggregate_data(df)
 		create_kruize_experiments(df, kafkaMsg)
 		list_of_experiments := update_results(df, kafkaMsg)
 		for _, experiment := range list_of_experiments {

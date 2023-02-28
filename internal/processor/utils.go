@@ -106,3 +106,12 @@ func convertDateToISO8601(date string) string {
 	t, _ := time.Parse(date_format, date)
 	return t.Format(time.RFC3339)
 }
+
+func findInStringSlice(str string, s []string) int {
+	for i, e := range s {
+		if e == str {
+			return i
+		}
+	}
+	return -1
+}
