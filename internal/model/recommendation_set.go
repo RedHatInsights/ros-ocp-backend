@@ -7,8 +7,10 @@ import (
 )
 
 type RecommendationSet struct {
-	WorkloadID      uint
-	Workload        Workload
-	Recommendations datatypes.JSON
-	CreatedAt       time.Time
+	WorkloadID          uint
+	Workload            Workload
+	MonitoringStartTime time.Time
+	MonitoringEndTime   time.Time
+	Recommendations     datatypes.JSON
+	CreatedAt           time.Time
 }
