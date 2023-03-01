@@ -5,7 +5,7 @@ import (
 	"github.com/go-gota/gota/series"
 )
 
-func aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
+func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
 	df = df.Filter(
 		dataframe.F{Colname: "owner_kind", Comparator: series.Neq, Comparando: ""},
 		dataframe.F{Colname: "owner_name", Comparator: series.Neq, Comparando: ""},
