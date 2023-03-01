@@ -179,7 +179,10 @@ func TestMakeContainerData(t *testing.T) {
 	  }`
 
 	expected_result := make(map[string]interface{})
-	json.Unmarshal([]byte(data), &expected_result)
+	err := json.Unmarshal([]byte(data), &expected_result)
+	if err != nil {
+		t.Errorf("Error while unmarshaling data: %v", err)
+	}
 	if diff := cmp.Diff(result, expected_result); diff != "" {
 		t.Error(diff)
 	}

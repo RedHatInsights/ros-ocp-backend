@@ -23,6 +23,9 @@ golangci-lint: $(LOCALBIN)
 	curl -sSfL $(GOLANGCI_URL) | sh -s -- -b $(LOCALBIN) $(GOLANGCI_VERSION)
 	@ echo "✅ Done"
 
+.PHONY: build
+build:
+	go build -o bin/rosocp cmd/rosocp-consumer/main.go
 
 .PHONY: lint
 lint: golangci-lint
