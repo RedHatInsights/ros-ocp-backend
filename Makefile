@@ -28,6 +28,10 @@ golangci-lint: $(LOCALBIN)
 lint: golangci-lint
 	$(GOLANGCILINT) run ./...
 
+.PHONY: test
+test:
+	go test -v ./...
+
 local-upload-data:
 	curl -vvvv -F "upload=@$(file);type=application/application/vnd.redhat.hccm.tar+tgz" \
 		-H "x-rh-identity: ${b64_identity}" \
