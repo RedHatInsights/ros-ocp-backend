@@ -1,0 +1,51 @@
+// Paste below code in https://dbdiagram.io/d editor to get graphical(ERD) view of the database
+
+Table rh_accounts {
+  id bigint [increment]
+  account text
+  org_id text [not null]
+  Indexes {
+    id [pk]
+    account [unique, type: btree]
+    org_id [unique, type: btree]
+  }
+}
+
+Table clusters {
+  id bigint [increment]
+  tenant_id bigint [ref: > rh_accounts.id]
+  cluster_id text [not null]
+  last_reported_at datetime
+  Indexes {
+    id [pk]
+    cluster_id [unique, type: btree]
+    tenant_id [name: "rh_accounts.id_fkey", type: btree]
+  }
+}
+
+Table workloads {
+  id bigint [increment]
+  cluster_id bigint [ref: > clusters.id]
+  experiment_name text
+  namespace text
+  workload_type text
+  workload_name text
+  containers text[]
+  metrics_upload_at datetime
+  Indexes {
+    id [pk]
+    cluster_id [name: "clusters.id_fkey", type: btree]
+    containers [type: gin] // gin index is not supported in dbdiagram.io so this will throw error
+  }
+}
+
+Table recommendation_sets {
+  workload_id bigint [ref: > workloads.id]
+  monitoring_start_time datetime
+  monitoring_end_time datetime
+  recommendations jsonb
+  created_at datetime
+  Indexes {
+    workload_id [name: "workloads.id_fkey", type: btree]
+  }
+}

@@ -25,7 +25,7 @@ golangci-lint: $(LOCALBIN)
 
 .PHONY: build
 build:
-	go build -o bin/rosocp cmd/rosocp-consumer/main.go
+	go build -o bin/rosocp rosocp.go
 
 .PHONY: lint
 lint: golangci-lint

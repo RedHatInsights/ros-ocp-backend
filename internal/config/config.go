@@ -28,6 +28,13 @@ type Config struct {
 
 	// Kruize config
 	KruizeUrl string `mapstructure:"KRUIZE_URL"`
+
+	// Database config
+	DBName     string
+	DBUser     string
+	DBPassword string
+	DBHost     string
+	DBPort     string
 }
 
 var cfg Config
@@ -56,9 +63,23 @@ func InitConfig() {
 			viper.Set("KafkaCA", caPath)
 		}
 
+		// clowder DB Config
+		viper.SetDefault("DBName", c.Database.Name)
+		viper.SetDefault("DBUser", c.Database.Username)
+		viper.SetDefault("DBPassword", c.Database.Password)
+		viper.SetDefault("DBHost", c.Database.Hostname)
+		viper.SetDefault("DBPort", c.Database.Port)
+
 	} else {
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
 		viper.SetDefault("UPLOAD_TOPIC", "platform.upload.rosocp")
+
+		// default DB Config
+		viper.SetDefault("DBName", "postgres")
+		viper.SetDefault("DBUser", "postgres")
+		viper.SetDefault("DBPassword", "postgres")
+		viper.SetDefault("DBHost", "localhost")
+		viper.SetDefault("DBPort", "15432")
 	}
 
 	viper.SetDefault("KAFKA_CONSUMER_GROUP_ID", "ros-ocp")
