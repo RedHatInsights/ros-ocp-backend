@@ -19,9 +19,19 @@ $(LOCALBIN):
 GOLANGCILINT := $(LOCALBIN)/golangci-lint
 GOLANGCI_URL := https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh
 golangci-lint: $(LOCALBIN)
+ifeq (,$(wildcard $(GOLANGCILINT)))
 	@ echo "📥 Downloading golangci-lint"
 	curl -sSfL $(GOLANGCI_URL) | sh -s -- -b $(LOCALBIN) $(GOLANGCI_VERSION)
 	@ echo "✅ Done"
+endif
+
+.PHONY: db-migrate
+db-migrate:
+	go run rosocp.go db migrate
+
+.PHONY: run-processor
+run-processor:
+	go run rosocp.go start processor
 
 .PHONY: build
 build:
