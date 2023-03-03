@@ -33,12 +33,12 @@ func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
 		}
 	})
 
-	df = df.Mutate(s.Col("X0")).Rename("k8_object_type", "X0")
-	df = df.Mutate(s.Col("X1")).Rename("k8_object_name", "X1")
+	df = df.Mutate(s.Col("X0")).Rename("k8s_object_type", "X0")
+	df = df.Mutate(s.Col("X1")).Rename("k8s_object_name", "X1")
 	dfGroups := df.GroupBy(
 		"namespace",
-		"k8_object_type",
-		"k8_object_name",
+		"k8s_object_type",
+		"k8s_object_name",
 		"workload",
 		"container_name",
 		"image_name",
