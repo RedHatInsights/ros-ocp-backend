@@ -6,7 +6,8 @@ import (
 )
 
 func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
-	df = df.Filter(
+	df = df.FilterAggregation(
+		dataframe.And,
 		dataframe.F{Colname: "owner_kind", Comparator: series.Neq, Comparando: ""},
 		dataframe.F{Colname: "owner_name", Comparator: series.Neq, Comparando: ""},
 		dataframe.F{Colname: "workload", Comparator: series.Neq, Comparando: ""},

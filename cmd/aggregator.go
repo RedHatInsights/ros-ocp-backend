@@ -32,6 +32,7 @@ var (
 			} else {
 				outputDir, _ = os.Getwd()
 			}
+			outputFile := outputDir + "/output.csv"
 			f, err := os.Open(input_file)
 			if err != nil {
 				panic(err.Error())
@@ -46,7 +47,7 @@ var (
 
 			df := dataframe.LoadRecords(records)
 			df = processor.Aggregate_data(df)
-			fileio, err := os.Create(outputDir + "/output.csv")
+			fileio, err := os.Create(outputFile)
 			if err != nil {
 				panic(err.Error())
 			}
@@ -54,7 +55,7 @@ var (
 			if error != nil {
 				panic(err.Error())
 			} else {
-				fmt.Printf("Aggregated CSV created at: %s \n", outputDir+"/output.csv")
+				fmt.Printf("Aggregated CSV created at: %s \n", outputFile)
 			}
 		},
 	}
