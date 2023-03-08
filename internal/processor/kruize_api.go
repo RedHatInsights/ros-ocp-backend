@@ -100,6 +100,7 @@ func list_recommendations(experiment string) error {
 	}
 	q := req.URL.Query()
 	q.Add("experiment_name", experiment)
+	req.URL.RawQuery = q.Encode()
 	res, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error Occured while calling /listRecommendations API %v", err)
