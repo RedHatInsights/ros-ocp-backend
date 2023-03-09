@@ -10,10 +10,11 @@ INGRESS_PORT ?= 3000
 
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
+ifeq (,$(wildcard $(LOCALBIN)))
 	@echo "🤖 Ensuring $(LOCALBIN) is available"
 	mkdir -p $(LOCALBIN)
 	@echo "✅ Done"
-
+endif
 
 .PHONY: golangci-lint
 GOLANGCILINT := $(LOCALBIN)/golangci-lint
@@ -25,9 +26,15 @@ ifeq (,$(wildcard $(GOLANGCILINT)))
 	@ echo "✅ Done"
 endif
 
+
+.PHONY: install-golang-migrate-cli-tool
+install-golang-migrate-cli-tool: $(LOCALBIN)
+	curl -L https://github.com/golang-migrate/migrate/releases/download/v4.15.2/migrate.linux-amd64.tar.gz | tar xvz -C $(LOCALBIN) migrate
+
+
 .PHONY: db-migrate
 db-migrate:
-	go run rosocp.go db migrate
+	go run rosocp.go db migrate up
 
 .PHONY: run-processor
 run-processor:

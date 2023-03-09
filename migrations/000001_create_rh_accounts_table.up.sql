@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS rh_accounts(
+   id BIGSERIAL PRIMARY KEY,
+   account TEXT UNIQUE,
+   org_id TEXT UNIQUE NOT NULL
+);
