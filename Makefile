@@ -59,4 +59,4 @@ local-upload-data:
 		http://localhost:${INGRESS_PORT}/api/ingress/v1/upload
 
 upload-msg-to-rosocp:
-	echo ${ros_ocp_msg} | docker-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic platform.upload.rosocp  --broker-list localhost:29092
+	echo ${ros_ocp_msg} | docker-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092

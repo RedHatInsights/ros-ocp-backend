@@ -7,9 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log *logrus.Logger = logrus.New()
+var log *logrus.Logger = nil
 
-func InitLogger() {
+func initLogger() {
+	log = logrus.New()
 	cfg := config.GetConfig()
 	var logLevel logrus.Level
 
@@ -28,5 +29,10 @@ func InitLogger() {
 }
 
 func GetLogger() *logrus.Logger {
+	if log == nil {
+		initLogger()
+		log.Info("Logging initialized")
+		return log
+	}
 	return log
 }

@@ -22,7 +22,8 @@ services:
     image: confluentinc/cp-kafka
     command: "bash -c 'echo Waiting for Kafka to be ready... && \
                        cub kafka-ready -b kafka:29092 1 20 && \
-                       kafka-topics --create --if-not-exists --topic platform.upload.rosocp --bootstrap-server kafka:29092'"
+                       kafka-topics --create --if-not-exists --topic hccm.ros.events --bootstrap-server kafka:29092 && \
+                       kafka-topics --create --if-not-exists --topic rosocp.kruize.experiments --bootstrap-server kafka:29092'"
     depends_on:
       - kafka
 

@@ -2,6 +2,7 @@ package processor
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/go-gota/gota/dataframe"
@@ -9,7 +10,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	p "github.com/redhatinsights/ros-ocp-backend/internal/kafka"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 )
 
 var log *logrus.Logger = logging.GetLogger()
@@ -45,8 +48,8 @@ func ProcessReport(msg *kafka.Message) {
 
 		// looping over each group.
 		for _, k8s_object_group := range k8s_object_groups {
-			list_of_experiments := []string{}
 			k8s_object := k8s_object_group.Maps()
+
 			experiment_name := generateExperimentName(
 				kafkaMsg.Metadata.Org_id,
 				kafkaMsg.Metadata.Cluster_id,
@@ -54,6 +57,7 @@ func ProcessReport(msg *kafka.Message) {
 				k8s_object[0]["k8s_object_type"].(string),
 				k8s_object[0]["k8s_object_name"].(string),
 			)
+
 			if err := create_kruize_experiments(experiment_name, k8s_object); err != nil {
 				log.Error(err)
 				continue
@@ -62,13 +66,27 @@ func ProcessReport(msg *kafka.Message) {
 				log.Error(err)
 				continue
 			}
-			list_of_experiments = append(list_of_experiments, experiment_name)
 
-			for _, experiment := range list_of_experiments {
-				if err := list_recommendations(experiment); err != nil {
-					log.Errorf("Unable to list recommendation for: %v Error: %v", list_of_experiments, err)
-				}
+			// Sending list_of_experiments to rosocp.kruize.experiments topic.
+			experimentEventMsg := types.ExperimentEvent{
+				Experiment_name: experiment_name,
+				K8s_object_name: k8s_object[0]["k8s_object_name"].(string),
+				K8s_object_type: k8s_object[0]["k8s_object_type"].(string),
+				Namespace:       k8s_object[0]["namespace"].(string),
+				Fetch_time:      time.Now().Add(time.Minute * time.Duration(2)),
 			}
+
+			msgBytes, err := json.Marshal(experimentEventMsg)
+			if err != nil {
+				log.Errorf("Unable convert list_of_experiments to json: %s", err)
+			}
+			p.SendMessage(msgBytes, &cfg.ExperimentsTopic)
+
+			// for _, experiment := range list_of_experiments {
+			// 	if err := list_recommendations(experiment); err != nil {
+			// 		log.Errorf("Unable to list recommendation for: %v Error: %v", list_of_experiments, err)
+			// 	}
+			// }
 		}
 
 	}

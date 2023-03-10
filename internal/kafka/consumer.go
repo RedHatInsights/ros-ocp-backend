@@ -10,10 +10,9 @@ import (
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
-	"github.com/redhatinsights/ros-ocp-backend/internal/processor"
 )
 
-func StartConsumer() {
+func StartConsumer(kafka_topic string, handler func(msg *kafka.Message)) {
 	log := logging.GetLogger()
 	cfg := config.GetConfig()
 	sigchan := make(chan os.Signal, 1)
@@ -50,7 +49,7 @@ func StartConsumer() {
 		os.Exit(1)
 	}
 
-	err = consumer.Subscribe(cfg.UploadTopic, nil)
+	err = consumer.Subscribe(kafka_topic, nil)
 	if err != nil {
 		log.Errorf("Failed to create subscribe: %s", err)
 	}
@@ -67,7 +66,7 @@ func StartConsumer() {
 			if err == nil {
 				// Invoke report processor function in this block.
 				log.Infof("Message received from kafka %s: %s", msg.TopicPartition, string(msg.Value))
-				processor.ProcessReport(msg)
+				handler(msg)
 			} else if !err.(kafka.Error).IsTimeout() {
 				// The client will automatically try to recover from all errors.
 				// Timeout is not considered an error because it is raised by

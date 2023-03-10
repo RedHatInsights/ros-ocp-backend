@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
 )
 
@@ -91,7 +92,7 @@ func update_results(experiment_name string, k8s_object []map[string]interface{})
 	return nil
 }
 
-func list_recommendations(experiment string) error {
+func List_recommendations(experiment types.ExperimentEvent) error {
 	url := cfg.KruizeUrl + "/listRecommendations"
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
@@ -99,7 +100,7 @@ func list_recommendations(experiment string) error {
 		return fmt.Errorf("an Error Occured %v", err)
 	}
 	q := req.URL.Query()
-	q.Add("experiment_name", experiment)
+	q.Add("experiment_name", experiment.Experiment_name)
 	req.URL.RawQuery = q.Encode()
 	res, err := client.Do(req)
 	if err != nil {
