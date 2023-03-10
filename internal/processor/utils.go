@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -42,7 +43,7 @@ func Setup_kruize_performance_profile() {
 				log.Errorf("can not unmarshal response data: %v", err)
 				os.Exit(1)
 			}
-			if data["message"] == "Performance Profile name : resource-optimization-openshift is duplicate" {
+			if data["message"] == "Validation failed due to Performance Profile already exists!" {
 				log.Infof("Performance Profile already exist")
 				return
 			}
@@ -105,4 +106,17 @@ func convertDateToISO8601(date string) string {
 	const date_format = "2006-01-02 15:04:05 -0700 MST"
 	t, _ := time.Parse(date_format, date)
 	return t.Format(time.RFC3339)
+}
+
+func findInStringSlice(str string, s []string) int {
+	for i, e := range s {
+		if e == str {
+			return i
+		}
+	}
+	return -1
+}
+
+func generateExperimentName(org_id, cluster_id, namespace, k8s_object_type, k8s_object_name string) string {
+	return fmt.Sprintf("%s|%s|%s|%s|%s", org_id, cluster_id, namespace, k8s_object_type, k8s_object_name)
 }

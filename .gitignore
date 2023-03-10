@@ -4,3 +4,4 @@ scripts/_minio-data/
 bin
 tmp
 coverage.txt
+output.csv

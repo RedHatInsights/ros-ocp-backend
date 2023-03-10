@@ -20,3 +20,19 @@ func (p *WorkloadType) Scan(value interface{}) error {
 func (p WorkloadType) Value() (driver.Value, error) {
 	return string(p), nil
 }
+
+func (p WorkloadType) String() string {
+	switch p {
+	case Deployment:
+		return "deployment"
+	case Deploymentconfig:
+		return "deploymentconfig"
+	case Replicaset:
+		return "replicaset"
+	case Replicationcontroller:
+		return "replicationcontroller"
+	case Statefulsets:
+		return "statefulsets"
+	}
+	return "unknown"
+}

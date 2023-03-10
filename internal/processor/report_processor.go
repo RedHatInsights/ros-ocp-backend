@@ -38,13 +38,39 @@ func ProcessReport(msg *kafka.Message) {
 			return
 		}
 		df := dataframe.LoadRecords(data)
-		create_kruize_experiments(df, kafkaMsg)
-		list_of_experiments := update_results(df, kafkaMsg)
-		for _, experiment := range list_of_experiments {
-			if err := list_recommendations(experiment); err != nil {
-				log.Errorf("Unable to list recommendation for: %v", list_of_experiments)
+		df = Aggregate_data(df)
+
+		// grouping container(row in csv) by there deployement.
+		k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name").GetGroups()
+
+		// looping over each group.
+		for _, k8s_object_group := range k8s_object_groups {
+			list_of_experiments := []string{}
+			k8s_object := k8s_object_group.Maps()
+			experiment_name := generateExperimentName(
+				kafkaMsg.Metadata.Org_id,
+				kafkaMsg.Metadata.Cluster_id,
+				k8s_object[0]["namespace"].(string),
+				k8s_object[0]["k8s_object_type"].(string),
+				k8s_object[0]["k8s_object_name"].(string),
+			)
+			if err := create_kruize_experiments(experiment_name, k8s_object); err != nil {
+				log.Error(err)
+				continue
+			}
+			if err := update_results(experiment_name, k8s_object); err != nil {
+				log.Error(err)
+				continue
+			}
+			list_of_experiments = append(list_of_experiments, experiment_name)
+
+			for _, experiment := range list_of_experiments {
+				if err := list_recommendations(experiment); err != nil {
+					log.Errorf("Unable to list recommendation for: %v Error: %v", list_of_experiments, err)
+				}
 			}
 		}
+
 	}
 
 }

@@ -2,169 +2,108 @@ package processor
 
 import (
 	"bytes"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
-	"encoding/json"
-
-	"github.com/go-gota/gota/dataframe"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
 )
 
-func create_kruize_experiments(df dataframe.DataFrame, kafkaMsg KafkaMsg) {
-	payload_data := map[string]interface{}{
-		"performanceProfile":      "resource-optimization-openshift",
-		"mode":                    "monitor",
-		"targetCluster":           "remote",
-		"trial_settings":          map[string]string{"measurement_duration": "15min"},
-		"recommendation_settings": map[string]string{"threshold": "0.1"},
+func create_kruize_experiments(experiment_name string, k8s_object []map[string]interface{}) error {
+	// k8s_object (can) contain multiple containers of same k8s object type.
+	data := map[string]string{
+		"namespace":       k8s_object[0]["namespace"].(string),
+		"k8s_object_type": k8s_object[0]["k8s_object_type"].(string),
+		"k8s_object_name": k8s_object[0]["k8s_object_name"].(string),
 	}
-	namspaces := get_all_namespaces(df)
-	for _, namespace := range namspaces {
-		deployments := get_all_deployments_from_namespace(df, namespace)
-		for _, deployment := range deployments {
-			containers := get_all_containers_and_images_from_deployment(df, namespace, deployment)
-			data := []map[string]string{}
-			for _, container := range containers {
-				c := map[string]string{
-					"container_name": container["container_name"].(string),
-					"image":          container["image_name"].(string),
-				}
-				data = append(data, c)
-			}
-			payload_data["containers"] = data
-			payload_data["experiment_name"] = fmt.Sprintf("%s|%s|%s|%s", kafkaMsg.Metadata.Org_id, kafkaMsg.Metadata.Cluster_id, namespace, deployment)
-			payload_data["deployment_name"] = deployment
-			payload_data["namespace"] = namespace
-			wrapper := []map[string]interface{}{
-				payload_data,
-			}
-
-			// Create experiment in kruize
-			url := cfg.KruizeUrl + "/createExperiment"
-			postBody, err := json.Marshal(wrapper)
-			if err != nil {
-				log.Errorf("unable to marshal payload to json: %v", err)
-				continue
-			}
-			res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
-			if err != nil {
-				log.Errorf("An Error Occured while creating experiment: %v", err)
-				continue
-			}
-			defer res.Body.Close()
-			body, _ := io.ReadAll(res.Body)
-			resdata := map[string]interface{}{}
-			if err := json.Unmarshal(body, &resdata); err != nil {
-				log.Errorf("can not unmarshal response data: %v", err)
-				continue
-			}
-			if strings.Contains(resdata["message"].(string), "is duplicate") {
-				log.Info("Experiment already exist")
-			}
-			if res.StatusCode == 201 {
-				log.Info("Experiment Created successfully")
-			}
-
-		}
+	containers := []map[string]string{}
+	for _, row := range k8s_object {
+		containers = append(containers, map[string]string{
+			"container_name":       row["container_name"].(string),
+			"container_image_name": row["image_name"].(string),
+		})
 	}
+	payload, err := kruizePayload.GetCreateExperimentPayload(experiment_name, containers, data)
+	if err != nil {
+		return fmt.Errorf("unable to create payload: %v", err)
+	}
+	// Create experiment in kruize
+	url := cfg.KruizeUrl + "/createExperiment"
+	if err != nil {
+		return fmt.Errorf("unable to marshal payload to json: %v", err)
+
+	}
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("error Occured while creating experiment: %v", err)
+	}
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	resdata := map[string]interface{}{}
+	if err := json.Unmarshal(body, &resdata); err != nil {
+		return fmt.Errorf("can not unmarshal response data: %v", err)
+	}
+	if strings.Contains(resdata["message"].(string), "is duplicate") {
+		log.Info("Experiment already exist")
+	}
+	if res.StatusCode == 201 {
+		log.Info("Experiment Created successfully")
+	}
+	return nil
 }
 
-func update_results(df dataframe.DataFrame, kafkaMsg KafkaMsg) []map[string]string {
-	list_of_experiments := []map[string]string{}
-	payload_data := map[string]interface{}{}
-	namspaces := get_all_namespaces(df)
-	for _, namespace := range namspaces {
-		deployments := get_all_deployments_from_namespace(df, namespace)
-		for _, deployment := range deployments {
-			containers_with_metrics := get_all_containers_and_metrics(df, namespace, deployment)
-			all_containers := []map[string]interface{}{}
-			for _, container := range containers_with_metrics {
-				container_data := make_container_data(container)
-				all_containers = append(all_containers, container_data)
-			}
+func update_results(experiment_name string, k8s_object []map[string]interface{}) error {
+	data := map[string]string{
+		"namespace":       k8s_object[0]["namespace"].(string),
+		"k8s_object_type": k8s_object[0]["k8s_object_type"].(string),
+		"k8s_object_name": k8s_object[0]["k8s_object_name"].(string),
+		"interval_start":  convertDateToISO8601(k8s_object[0]["interval_start"].(string)),
+		"interval_end":    convertDateToISO8601(k8s_object[0]["interval_end"].(string)),
+	}
+	payload_data, err := kruizePayload.GetUpdateResultPayload(experiment_name, k8s_object, data)
+	if err != nil {
+		return fmt.Errorf("unable to create payload: %v", err)
+	}
 
-			experiment_name := fmt.Sprintf("%s|%s|%s|%s", kafkaMsg.Metadata.Org_id, kafkaMsg.Metadata.Cluster_id, namespace, deployment)
+	// Update metrics to kruize experiment
+	url := cfg.KruizeUrl + "/updateResults"
 
-			payload_data["experiment_name"] = experiment_name
-			// below timestamp variable needs to be revisited once timestamp location in payload is confirmed
-			payload_data["start_timestamp"] = convertDateToISO8601("containers_with_metrics[0][\"interval_start\"]")
-			payload_data["end_timestamp"] = convertDateToISO8601("containers_with_metrics[0][\"interval_end\"]")
-			payload_data["deployments"] = []map[string]interface{}{
-				{
-					"containers":      all_containers,
-					"deployment_name": deployment,
-					"namespace":       namespace,
-					"pod_metrics":     []string{},
-				},
-			}
-
-			list_of_experiments = append(list_of_experiments, map[string]string{
-				"experiment_name": experiment_name,
-				"deployment_name": deployment,
-				"namespace":       namespace,
-			})
-			wrapper := []map[string]interface{}{
-				payload_data,
-			}
-
-			// Update metrics to kruize experiment
-			url := cfg.KruizeUrl + "/updateResults"
-			postBody, err := json.Marshal(wrapper)
-			if err != nil {
-				log.Errorf("unable to marshal payload to json: %v", err)
-				continue
-			}
-			res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
-			if err != nil {
-				log.Errorf("An Error Occured while sending metrics: %v", err)
-				continue
-			}
-			if res.StatusCode == 201 {
-				log.Info("Metrics uploaded successfully")
-			} else {
-				defer res.Body.Close()
-				body, _ := io.ReadAll(res.Body)
-				resdata := map[string]interface{}{}
-				if err := json.Unmarshal(body, &resdata); err != nil {
-					log.Errorf("can not unmarshal response data: %v", err)
-					continue
-				}
-				if strings.Contains(resdata["message"].(string), "already contains result for timestamp") {
-					log.Info(resdata["message"])
-				}
-			}
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload_data))
+	if err != nil {
+		return fmt.Errorf("an Error Occured while sending metrics: %v", err)
+	}
+	if res.StatusCode == 201 {
+		log.Info("Metrics uploaded successfully")
+	} else {
+		defer res.Body.Close()
+		body, _ := io.ReadAll(res.Body)
+		resdata := map[string]interface{}{}
+		if err := json.Unmarshal(body, &resdata); err != nil {
+			return fmt.Errorf("can not unmarshal response data: %v", err)
+		}
+		if strings.Contains(resdata["message"].(string), "already contains result for timestamp") {
+			log.Info(resdata["message"])
 		}
 	}
-	return list_of_experiments
+
+	return nil
 }
 
-func list_recommendations(experiment map[string]string) error {
-	error_string := "Failed while listing recommendations from kruize"
-	params := map[string]string{
-		"experiment_name": experiment["experiment_name"],
-		"deployment_name": experiment["deployment_name"],
-		"namespace":       experiment["namespace"],
-	}
-
-	// list recommendation from kruize
+func list_recommendations(experiment string) error {
 	url := cfg.KruizeUrl + "/listRecommendations"
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Errorf("An Error Occured %v", err)
-		return errors.New(error_string)
+		return fmt.Errorf("an Error Occured %v", err)
 	}
 	q := req.URL.Query()
-	q.Add("experiment_name", params["experiment_name"])
-	q.Add("deployment_name", params["deployment_name"])
-	q.Add("namespace", params["namespace"])
+	q.Add("experiment_name", experiment)
+	req.URL.RawQuery = q.Encode()
 	res, err := client.Do(req)
 	if err != nil {
-		log.Errorf("Error Occured while calling /listRecommendations API %v", err)
-		return errors.New(error_string)
+		return fmt.Errorf("error Occured while calling /listRecommendations API %v", err)
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)

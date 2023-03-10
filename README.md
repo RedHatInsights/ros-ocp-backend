@@ -8,3 +8,4 @@ Backend for Resource Optimization for Openshift service
 - [Dev environment setup](https://github.com/RedHatInsights/ros-ocp-backend/wiki/Dev-environment-setup-(local))
 - [Deploying service in ephemeral environment](https://github.com/RedHatInsights/ros-ocp-backend/wiki/Deploying-in-ephemeral-environment)
 - [Kruize API Schema](https://github.com/kruize/autotune/blob/mvp_demo/design/MonitoringModeAPI.md)
+- [Data Aggregation | Report Exemplum](https://github.com/RedHatInsights/ros-ocp-backend/wiki/Data-Aggregation-%7C-Report-Exemplum)
