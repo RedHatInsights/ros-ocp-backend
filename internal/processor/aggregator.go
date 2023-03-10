@@ -1,8 +1,12 @@
 package processor
 
 import (
+	"strings"
+
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-gota/gota/series"
+
+	w "github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
 )
 
 func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
@@ -25,10 +29,10 @@ func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
 		owner_kind := s.Elem(index_of_owner_kind).String()
 		workload := s.Elem(index_of_workload).String()
 		workload_type := s.Elem(index_of_workload_type).String()
-		if owner_kind == "ReplicaSet" && workload == "<none>" {
-			return series.Strings([]string{"replicaset", owner_name})
-		} else if owner_kind == "ReplicationController" && workload == "<none>" {
-			return series.Strings([]string{"replicationcontroller", owner_name})
+		if strings.ToLower(owner_kind) == string(w.Replicaset) && workload == "<none>" {
+			return series.Strings([]string{string(w.Replicaset), owner_name})
+		} else if strings.ToLower(owner_kind) == string(w.Replicationcontroller) && workload == "<none>" {
+			return series.Strings([]string{string(w.Replicationcontroller), owner_name})
 		} else {
 			return series.Strings([]string{workload_type, workload})
 		}
