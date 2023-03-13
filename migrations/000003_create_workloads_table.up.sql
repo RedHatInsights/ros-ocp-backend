@@ -16,3 +16,6 @@ ADD CONSTRAINT fk_workloads_cluster FOREIGN KEY (cluster_id) REFERENCES clusters
 ON DELETE CASCADE;
 
 CREATE INDEX idx_workloads_containers ON workloads USING gin(containers);
+
+ALTER TABLE workloads
+ADD UNIQUE (cluster_id, experiment_name);

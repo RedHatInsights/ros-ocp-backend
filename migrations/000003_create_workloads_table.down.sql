@@ -1,1 +1,2 @@
 DROP TABLE IF EXISTS workloads;
+DROP TYPE IF EXISTS workloadtype;
