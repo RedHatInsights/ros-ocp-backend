@@ -12,7 +12,9 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	p "github.com/redhatinsights/ros-ocp-backend/internal/kafka"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
 )
 
 var log *logrus.Logger = logging.GetLogger()
@@ -34,6 +36,27 @@ func ProcessReport(msg *kafka.Message) {
 		return
 	}
 
+	// Create user account(if not present) for incoming archive.
+	rh_account := model.RHAccount{
+		Account: kafkaMsg.Metadata.Account,
+		OrgId:   kafkaMsg.Metadata.Org_id,
+	}
+	if err := rh_account.CreateRHAccount(); err != nil {
+		log.Errorf("unable to get or add record to rh_accounts table: %v. Error: %v", rh_account, err)
+		return
+	}
+
+	// Create cluster record(if not present) for incoming archive.
+	cluster := model.Cluster{
+		TenantID:       rh_account.ID,
+		ClusterID:      kafkaMsg.Metadata.Source_id,
+		LastReportedAt: time.Now(),
+	}
+	if err := cluster.CreateCluster(); err != nil {
+		log.Errorf("unable to get or add record to clusters table: %v. Error: %v", cluster, err)
+		return
+	}
+
 	for _, file := range kafkaMsg.Files {
 		data, err := readCSVFromUrl(file)
 		if err != nil {
@@ -48,20 +71,41 @@ func ProcessReport(msg *kafka.Message) {
 
 		// looping over each group.
 		for _, k8s_object_group := range k8s_object_groups {
+
 			k8s_object := k8s_object_group.Maps()
+			namespace := k8s_object[0]["namespace"].(string)
+			k8s_object_type := k8s_object[0]["k8s_object_type"].(string)
+			k8s_object_name := k8s_object[0]["k8s_object_name"].(string)
 
 			experiment_name := generateExperimentName(
 				kafkaMsg.Metadata.Org_id,
 				kafkaMsg.Metadata.Cluster_id,
-				k8s_object[0]["namespace"].(string),
-				k8s_object[0]["k8s_object_type"].(string),
-				k8s_object[0]["k8s_object_name"].(string),
+				namespace,
+				k8s_object_type,
+				k8s_object_name,
 			)
 
-			if err := create_kruize_experiments(experiment_name, k8s_object); err != nil {
+			container_names, err := create_kruize_experiments(experiment_name, k8s_object)
+			if err != nil {
 				log.Error(err)
 				continue
 			}
+
+			// Create workload entry into the table.
+			workload := model.Workload{
+				ClusterID:       cluster.ID,
+				ExperimentName:  experiment_name,
+				Namespace:       namespace,
+				WorkloadType:    workload.WorkloadType(k8s_object_type),
+				WorkloadName:    k8s_object_name,
+				Containers:      container_names,
+				MetricsUploadAt: time.Now(),
+			}
+			if err := workload.CreateWorkload(); err != nil {
+				log.Errorf("unable to get or add record to workloads table: %v. Error: %v", workload, err)
+				return
+			}
+
 			if err := update_results(experiment_name, k8s_object); err != nil {
 				log.Error(err)
 				continue
@@ -69,11 +113,13 @@ func ProcessReport(msg *kafka.Message) {
 
 			// Sending list_of_experiments to rosocp.kruize.experiments topic.
 			experimentEventMsg := types.ExperimentEvent{
+				WorkloadID:      workload.ID,
 				Experiment_name: experiment_name,
 				K8s_object_name: k8s_object[0]["k8s_object_name"].(string),
 				K8s_object_type: k8s_object[0]["k8s_object_type"].(string),
 				Namespace:       k8s_object[0]["namespace"].(string),
 				Fetch_time:      time.Now().Add(time.Minute * time.Duration(2)),
+				Fetch_attempt:   1,
 			}
 
 			msgBytes, err := json.Marshal(experimentEventMsg)
@@ -82,11 +128,6 @@ func ProcessReport(msg *kafka.Message) {
 			}
 			p.SendMessage(msgBytes, &cfg.ExperimentsTopic)
 
-			// for _, experiment := range list_of_experiments {
-			// 	if err := list_recommendations(experiment); err != nil {
-			// 		log.Errorf("Unable to list recommendation for: %v Error: %v", list_of_experiments, err)
-			// 	}
-			// }
 		}
 
 	}

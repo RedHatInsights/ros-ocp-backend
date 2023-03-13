@@ -25,10 +25,10 @@ var processorCmd = &cobra.Command{
 }
 
 var recommenderCmd = &cobra.Command{
-	Use:   "recommneder",
-	Short: "starts ros-ocp recommneder service",
+	Use:   "recommender",
+	Short: "starts ros-ocp recommender service",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("starting ros-ocp recommneder service")
+		fmt.Println("starting ros-ocp recommender service")
 		cfg := config.GetConfig()
 		processor.Setup_kruize_performance_profile()
 		kafka.StartConsumer(cfg.ExperimentsTopic, services.ProcessEvent)

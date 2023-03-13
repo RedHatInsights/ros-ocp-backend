@@ -12,7 +12,7 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
 )
 
-func create_kruize_experiments(experiment_name string, k8s_object []map[string]interface{}) error {
+func create_kruize_experiments(experiment_name string, k8s_object []map[string]interface{}) ([]string, error) {
 	// k8s_object (can) contain multiple containers of same k8s object type.
 	data := map[string]string{
 		"namespace":       k8s_object[0]["namespace"].(string),
@@ -28,23 +28,23 @@ func create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 	}
 	payload, err := kruizePayload.GetCreateExperimentPayload(experiment_name, containers, data)
 	if err != nil {
-		return fmt.Errorf("unable to create payload: %v", err)
+		return nil, fmt.Errorf("unable to create payload: %v", err)
 	}
 	// Create experiment in kruize
 	url := cfg.KruizeUrl + "/createExperiment"
 	if err != nil {
-		return fmt.Errorf("unable to marshal payload to json: %v", err)
+		return nil, fmt.Errorf("unable to marshal payload to json: %v", err)
 
 	}
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
-		return fmt.Errorf("error Occured while creating experiment: %v", err)
+		return nil, fmt.Errorf("error Occured while creating experiment: %v", err)
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
 	resdata := map[string]interface{}{}
 	if err := json.Unmarshal(body, &resdata); err != nil {
-		return fmt.Errorf("can not unmarshal response data: %v", err)
+		return nil, fmt.Errorf("can not unmarshal response data: %v", err)
 	}
 	if strings.Contains(resdata["message"].(string), "is duplicate") {
 		log.Info("Experiment already exist")
@@ -52,7 +52,13 @@ func create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 	if res.StatusCode == 201 {
 		log.Info("Experiment Created successfully")
 	}
-	return nil
+
+	container_names := make([]string, 0, len(containers))
+	for _, value := range containers {
+		container_names = append(container_names, value["container_name"])
+	}
+
+	return container_names, nil
 }
 
 func update_results(experiment_name string, k8s_object []map[string]interface{}) error {
@@ -92,22 +98,27 @@ func update_results(experiment_name string, k8s_object []map[string]interface{})
 	return nil
 }
 
-func List_recommendations(experiment types.ExperimentEvent) error {
+func List_recommendations(experiment types.ExperimentEvent) ([]kruizePayload.ListRecommendations, error) {
 	url := cfg.KruizeUrl + "/listRecommendations"
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return fmt.Errorf("an Error Occured %v", err)
+		return nil, fmt.Errorf("an Error Occured %v", err)
 	}
 	q := req.URL.Query()
 	q.Add("experiment_name", experiment.Experiment_name)
 	req.URL.RawQuery = q.Encode()
 	res, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error Occured while calling /listRecommendations API %v", err)
+		return nil, fmt.Errorf("error Occured while calling /listRecommendations API %v", err)
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
+	response := []kruizePayload.ListRecommendations{}
 	fmt.Println(string(body))
-	return nil
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal response of /listRecommendations API %v", err)
+	}
+
+	return response, nil
 }
