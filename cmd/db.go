@@ -56,8 +56,17 @@ var migratedown = &cobra.Command{
 	Long:  "Reverse database migration",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Reverse database migration")
-		// Placeholder for db downgrade.
-		// This will be helpful for force unlock dirty migration
+		all, _ := cmd.Flags().GetBool("all")
+		m := getMigrateInstance()
+		var err error
+		if all {
+			err = m.Down()
+		} else {
+			err = m.Steps(-1)
+		}
+		if err != nil {
+			fmt.Println(err)
+		}
 	},
 }
 
@@ -96,4 +105,5 @@ func init() {
 	dbCmd.AddCommand(revision)
 	migrateCmd.AddCommand(migrateUp)
 	migrateCmd.AddCommand(migratedown)
+	migratedown.Flags().Bool("all", false, "Used to undo all migrations")
 }
