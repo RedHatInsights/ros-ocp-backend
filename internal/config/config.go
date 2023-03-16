@@ -37,9 +37,9 @@ type Config struct {
 	DBPort     string
 }
 
-var cfg Config
+var cfg *Config = nil
 
-func InitConfig() {
+func initConfig() {
 	viper.AutomaticEnv()
 	if clowder.IsClowderEnabled() {
 		c := clowder.LoadedConfig
@@ -107,5 +107,8 @@ func InitConfig() {
 }
 
 func GetConfig() *Config {
-	return &cfg
+	if cfg == nil {
+		initConfig()
+	}
+	return cfg
 }

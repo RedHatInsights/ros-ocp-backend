@@ -10,9 +10,9 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
+var DB *gorm.DB = nil
 
-func InitDB() {
+func initDB() {
 	cfg := config.GetConfig()
 	log := logging.GetLogger()
 	var (
@@ -32,4 +32,11 @@ func InitDB() {
 	DB = db
 
 	log.Info("DB initialization complete")
+}
+
+func GetDB() *gorm.DB {
+	if DB == nil {
+		initDB()
+	}
+	return DB
 }
