@@ -80,8 +80,8 @@ func ProcessEvent(msg *kafka.Message) {
 
 func is_valid_recommendation(data []kruizePayload.ListRecommendations) bool {
 	for _, v := range data[0].Kubernetes_objects[0].Containers[0].Recommendations {
-		asd := v.Duration_based.Short_term.Config
-		if asd != (kruizePayload.ConfigObject{}) {
+		data := v.Duration_based.Short_term.Config
+		if data != (kruizePayload.ConfigObject{}) {
 			return true
 		}
 	}
