@@ -67,7 +67,7 @@ func ProcessReport(msg *kafka.Message) {
 		df = Aggregate_data(df)
 
 		// grouping container(row in csv) by there deployement.
-		k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name").GetGroups()
+		k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name", "interval_start").GetGroups()
 
 		// looping over each group.
 		for _, k8s_object_group := range k8s_object_groups {
@@ -76,6 +76,7 @@ func ProcessReport(msg *kafka.Message) {
 			namespace := k8s_object[0]["namespace"].(string)
 			k8s_object_type := k8s_object[0]["k8s_object_type"].(string)
 			k8s_object_name := k8s_object[0]["k8s_object_name"].(string)
+			monitoring_start_time := k8s_object[0]["k8s_object_name"].(string)
 
 			experiment_name := generateExperimentName(
 				kafkaMsg.Metadata.Org_id,
@@ -106,20 +107,21 @@ func ProcessReport(msg *kafka.Message) {
 				return
 			}
 
-			if err := update_results(experiment_name, k8s_object); err != nil {
+			if err := Update_results(experiment_name, k8s_object); err != nil {
 				log.Error(err)
 				continue
 			}
 
 			// Sending list_of_experiments to rosocp.kruize.experiments topic.
 			experimentEventMsg := types.ExperimentEvent{
-				WorkloadID:      workload.ID,
-				Experiment_name: experiment_name,
-				K8s_object_name: k8s_object[0]["k8s_object_name"].(string),
-				K8s_object_type: k8s_object[0]["k8s_object_type"].(string),
-				Namespace:       k8s_object[0]["namespace"].(string),
-				Fetch_time:      time.Now().Add(time.Minute * time.Duration(2)),
-				Fetch_attempt:   1,
+				WorkloadID:            workload.ID,
+				Experiment_name:       experiment_name,
+				K8s_object_name:       k8s_object[0]["k8s_object_name"].(string),
+				K8s_object_type:       k8s_object[0]["k8s_object_type"].(string),
+				Namespace:             k8s_object[0]["namespace"].(string),
+				Fetch_time:            time.Now().Add(time.Minute * time.Duration(2)),
+				Monitoring_start_time: monitoring_start_time,
+				K8s_object:            k8s_object,
 			}
 
 			msgBytes, err := json.Marshal(experimentEventMsg)

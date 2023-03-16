@@ -63,9 +63,11 @@ func ProcessEvent(msg *kafka.Message) {
 			}
 		}
 
-	} else if kafkaMsg.Fetch_attempt < 3 {
+	} else {
+		if err := processor.Update_results(kafkaMsg.Experiment_name, kafkaMsg.K8s_object); err != nil {
+			log.Error(err)
+		}
 		kafkaMsg.Fetch_time = time.Now().Add(time.Minute * time.Duration(2))
-		kafkaMsg.Fetch_attempt = kafkaMsg.Fetch_attempt + 1
 
 		msgBytes, err := json.Marshal(kafkaMsg)
 		if err != nil {

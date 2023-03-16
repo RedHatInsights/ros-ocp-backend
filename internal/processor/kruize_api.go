@@ -61,7 +61,7 @@ func create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 	return container_names, nil
 }
 
-func update_results(experiment_name string, k8s_object []map[string]interface{}) error {
+func Update_results(experiment_name string, k8s_object []map[string]interface{}) error {
 	data := map[string]string{
 		"namespace":       k8s_object[0]["namespace"].(string),
 		"k8s_object_type": k8s_object[0]["k8s_object_type"].(string),
@@ -107,6 +107,7 @@ func List_recommendations(experiment types.ExperimentEvent) ([]kruizePayload.Lis
 	}
 	q := req.URL.Query()
 	q.Add("experiment_name", experiment.Experiment_name)
+	q.Add("experiment_name", experiment.Monitoring_start_time)
 	req.URL.RawQuery = q.Encode()
 	res, err := client.Do(req)
 	if err != nil {
