@@ -4,29 +4,20 @@ import (
 	"fmt"
 	"os"
 
-	"database/sql"
-
 	"github.com/golang-migrate/migrate/v4"
+
 	"github.com/spf13/cobra"
 
-	"github.com/golang-migrate/migrate/v4/database/pgx"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 )
 
 func getMigrateInstance() *migrate.Migrate {
 	cfg := config.GetConfig()
-	db, err := sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s:%s/%s", cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName))
-	if err != nil {
-		fmt.Printf("Unable to get *sql.DB: %v\n", err)
-		os.Exit(1)
-	}
-	driver, err := pgx.WithInstance(db, &pgx.Config{})
-	if err != nil {
-		fmt.Printf("Unable to get db driver: %v\n", err)
-		os.Exit(1)
-	}
-	m, err := migrate.NewWithDatabaseInstance("file://./migrations", cfg.DBName, driver)
+	m, err := migrate.New(
+		"file://./migrations",
+		fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBssl))
 	if err != nil {
 		fmt.Printf("Unable to get migration instance: %v\n", err)
 		os.Exit(1)

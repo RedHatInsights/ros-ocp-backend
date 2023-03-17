@@ -72,7 +72,9 @@ objects:
       name: rosocp
       version: 13
     kafkaTopics:
-      - topicName: platform.upload.rosocp
+      - topicName: hccm.ros.events
+        partitions: 1
+      - topicName: rosocp.kruize.experiments
         partitions: 1
 
 parameters:

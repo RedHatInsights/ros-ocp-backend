@@ -20,6 +20,7 @@ type Config struct {
 	KafkaConsumerGroupId  string `mapstructure:"KAFKA_CONSUMER_GROUP_ID"`
 	KafkaAutoCommit       bool   `mapstructure:"KAFKA_AUTO_COMMIT"`
 	UploadTopic           string `mapstructure:"UPLOAD_TOPIC"`
+	ExperimentsTopic      string `mapstructure:"EXPERIMENTS_TOPIC"`
 	KafkaUsername         string
 	KafkaPassword         string
 	KafkaSASLMechanism    string
@@ -35,6 +36,7 @@ type Config struct {
 	DBPassword string
 	DBHost     string
 	DBPort     string
+	DBssl      string
 }
 
 var cfg *Config = nil
@@ -45,7 +47,8 @@ func initConfig() {
 		c := clowder.LoadedConfig
 		broker := c.Kafka.Brokers[0]
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", strings.Join(clowder.KafkaServers, ","))
-		viper.SetDefault("UPLOAD_TOPIC", clowder.KafkaTopics["platform.upload.rosocp"].Name)
+		viper.SetDefault("UPLOAD_TOPIC", clowder.KafkaTopics["hccm.ros.events"].Name)
+		viper.SetDefault("EXPERIMENTS_TOPIC", clowder.KafkaTopics["rosocp.kruize.experiments"].Name)
 
 		// Kafka SSL Config
 		if broker.Authtype != nil {
@@ -69,10 +72,12 @@ func initConfig() {
 		viper.SetDefault("DBPassword", c.Database.Password)
 		viper.SetDefault("DBHost", c.Database.Hostname)
 		viper.SetDefault("DBPort", c.Database.Port)
+		viper.SetDefault("DBssl", "enable")
 
 	} else {
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
-		viper.SetDefault("UPLOAD_TOPIC", "platform.upload.rosocp")
+		viper.SetDefault("UPLOAD_TOPIC", "hccm.ros.events")
+		viper.SetDefault("EXPERIMENTS_TOPIC", "rosocp.kruize.experiments")
 
 		// default DB Config
 		viper.SetDefault("DBName", "postgres")
@@ -80,6 +85,7 @@ func initConfig() {
 		viper.SetDefault("DBPassword", "postgres")
 		viper.SetDefault("DBHost", "localhost")
 		viper.SetDefault("DBPort", "15432")
+		viper.SetDefault("DBssl", "disable")
 	}
 
 	viper.SetDefault("KAFKA_CONSUMER_GROUP_ID", "ros-ocp")
@@ -109,6 +115,7 @@ func initConfig() {
 func GetConfig() *Config {
 	if cfg == nil {
 		initConfig()
+		fmt.Println("Config initialized")
 	}
 	return cfg
 }
