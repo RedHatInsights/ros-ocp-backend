@@ -36,6 +36,7 @@ type Config struct {
 	DBPassword string
 	DBHost     string
 	DBPort     string
+	DBssl      string
 }
 
 var cfg *Config = nil
@@ -71,6 +72,7 @@ func initConfig() {
 		viper.SetDefault("DBPassword", c.Database.Password)
 		viper.SetDefault("DBHost", c.Database.Hostname)
 		viper.SetDefault("DBPort", c.Database.Port)
+		viper.SetDefault("DBssl", "enable")
 
 	} else {
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
@@ -83,6 +85,7 @@ func initConfig() {
 		viper.SetDefault("DBPassword", "postgres")
 		viper.SetDefault("DBHost", "localhost")
 		viper.SetDefault("DBPort", "15432")
+		viper.SetDefault("DBssl", "disable")
 	}
 
 	viper.SetDefault("KAFKA_CONSUMER_GROUP_ID", "ros-ocp")
