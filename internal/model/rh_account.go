@@ -7,12 +7,12 @@ import (
 type RHAccount struct {
 	ID      uint   `gorm:"primaryKey;not null;autoIncrement"`
 	Account string `gorm:"type:text;unique"`
-	OrgId   string `gorm:"type:text;unique"`
+	OrgId   string `gorm:"type:text;not null;unique"`
 }
 
 func (r *RHAccount) CreateRHAccount() error {
 	db := database.GetDB()
-	result := db.Where("account = ? OR org_id = ?", r.Account, r.OrgId).FirstOrCreate(r)
+	result := db.Where("org_id = ?", r.OrgId).FirstOrCreate(r)
 	if result.Error != nil {
 		return result.Error
 	}
