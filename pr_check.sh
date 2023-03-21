@@ -16,8 +16,6 @@ curl -s $CICD_URL/bootstrap.sh > .cicd_bootstrap.sh && source .cicd_bootstrap.sh
 
 source $CICD_ROOT/build.sh
 
-export EXTRA_DEPLOY_ARGS="--set-parameter ros-ocp-backend/KRUIZE_IMAGE_TAG=latest"
-
 # Deploy to an ephemeral namespace for testing
 source $CICD_ROOT/deploy_ephemeral_env.sh
 
