@@ -9,5 +9,6 @@ FROM registry.redhat.io/ubi8/ubi-minimal:latest
 WORKDIR /
 COPY --from=builder /go/src/app/rosocp ./rosocp
 COPY migrations ./migrations
+COPY internal/api/docs/v1/openapi.json ./openapi.json
 COPY resource_optimization_openshift.json ./resource_optimization_openshift.json
 USER 1001

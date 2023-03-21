@@ -6,9 +6,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
-
+	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 )
 
 func StartAPIServer() {
@@ -22,7 +21,7 @@ func StartAPIServer() {
 
 	app.GET("/api/cost-management/v1/recommendations/openshift", GetRecommendationSetList)
 	app.GET("/api/cost-management/v1/recommendations/openshift/:recommendation-id", GetRecommendationSet)
-	app.GET("/api/cost-management/v1/recommendations/openshift/openapi.json", GetOpenAPISpec)
+	app.File("/api/cost-management/v1/recommendations/openshift/openapi.json", "openapi.json")
 
 	s := http.Server{
 		Addr:    ":" + cfg.API_PORT, //local dev server

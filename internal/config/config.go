@@ -89,7 +89,7 @@ func initConfig() {
 		viper.SetDefault("DBPort", "15432")
 		viper.SetDefault("DBssl", "disable")
 	}
-	viper.SetDefault("API_PORT", "8088")
+	viper.SetDefault("API_PORT", "8000")
 	viper.SetDefault("KAFKA_CONSUMER_GROUP_ID", "ros-ocp")
 	viper.SetDefault("KAFKA_AUTO_COMMIT", false)
 	viper.SetDefault("LogLevel", "INFO")

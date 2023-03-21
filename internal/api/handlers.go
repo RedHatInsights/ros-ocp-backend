@@ -1,26 +1,24 @@
 package api
 
 import (
-	"os"
 	"net/http"
 	"strconv"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/log"
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 
-	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/identity"
 )
 
 func GetRecommendationSetList(c echo.Context) error {
 	var identity identity.IdentityData
 	OrgID, err := identity.GetOrgIDFromRequest(c)
-	if err != nil{
+	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "org_id not found"})
 	}
-	
+
 	log := logging.GetLogger()
 
 	limitStr := c.QueryParam("limit")
@@ -63,7 +61,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		recommendationData["last_report"] = recommendation.Workload.Cluster.LastReportedAtStr
 		recommendationData["values"] = recommendation.Recommendations
 		allRecommendations = append(allRecommendations, recommendationData)
-	}	
+	}
 
 	interfaceSlice := make([]interface{}, len(allRecommendations))
 	for i, v := range allRecommendations {
@@ -78,16 +76,16 @@ func GetRecommendationSet(c echo.Context) error {
 	log := logging.GetLogger()
 	var identity identity.IdentityData
 	OrgID, err := identity.GetOrgIDFromRequest(c)
-	if err != nil{
+	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "org_id not found"})
 	}
-	
+
 	RecommendationIDStr := c.Param("recommendation-id")
 	RecommendationUUID, err := uuid.Parse(RecommendationIDStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "bad recommendation_id"})
 	}
-	
+
 	recommendationSetVar := model.RecommendationSet{}
 	recommendationSet, error := recommendationSetVar.GetRecommendationSetByID(OrgID, RecommendationUUID.String())
 
@@ -110,13 +108,4 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, recommendationSlice)
-}
-
-func GetOpenAPISpec(c echo.Context) error{
-
-	path, err := os.Getwd()
-        if err != nil {
-            log.Error("unable to fetch working directory")
-        }
-	return c.File(path + "/internal/api/docs/v1/openapi.json")
 }
