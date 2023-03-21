@@ -13,7 +13,8 @@ import (
 type RecommendationSet struct {
 	ID                     string `gorm:"primaryKey;not null;autoIncrement"`
 	WorkloadID             uint
-	Workload               Workload  `gorm:"foreignKey:WorkloadID"`
+	Workload               Workload `gorm:"foreignKey:WorkloadID"`
+	ContainerName          string
 	MonitoringStartTime    time.Time `gorm:"type:timestamp"`
 	MonitoringEndTime      time.Time `gorm:"type:timestamp"`
 	Recommendations        datatypes.JSON
@@ -90,6 +91,16 @@ func (r *RecommendationSet) CreateRecommendationSet() error {
 	db := database.GetDB()
 	result := db.Create(r)
 
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func DeleteStaleRecommendationSet(workload_id uint, containers []string) error {
+	db := database.GetDB()
+	result := db.Where("workload_id = ? AND container_name NOT IN ?", workload_id, containers).Delete(&RecommendationSet{})
 	if result.Error != nil {
 		return result.Error
 	}

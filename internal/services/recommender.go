@@ -47,24 +47,36 @@ func ProcessEvent(msg *kafka.Message) {
 	}
 
 	if is_valid_recommendation(data) {
-		for _, v := range data[0].Kubernetes_objects[0].Containers[0].Recommendations {
-			marshalData, err := json.Marshal(v)
-			if err != nil {
-				log.Errorf("Unable to list recommendation for: %v", err)
-			}
-			// Create RecommendationSet entry into the table.
-			recommendationSet := model.RecommendationSet{
-				WorkloadID:          kafkaMsg.WorkloadID,
-				MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
-				MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
-				Recommendations:     marshalData,
-			}
-			if err := recommendationSet.CreateRecommendationSet(); err != nil {
-				log.Errorf("unable to get or add record to recommendation set table: %v. Error: %v", recommendationSet, err)
-				return
+		containers := data[0].Kubernetes_objects[0].Containers
+		container_names := make([]string, 0, len(containers))
+		for _, container := range containers {
+			container_names = append(container_names, container.Container_name)
+			for _, v := range container.Recommendations {
+				marshalData, err := json.Marshal(v)
+				if err != nil {
+					log.Errorf("Unable to list recommendation for: %v", err)
+				}
+
+				// Create RecommendationSet entry into the table.
+				recommendationSet := model.RecommendationSet{
+					WorkloadID:          kafkaMsg.WorkloadID,
+					ContainerName:       container.Container_name,
+					MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
+					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
+					Recommendations:     marshalData,
+				}
+				if err := recommendationSet.CreateRecommendationSet(); err != nil {
+					log.Errorf("unable to get or add record to recommendation set table: %v. Error: %v", recommendationSet, err)
+					return
+				}
 			}
 		}
 
+		// Delete stale container of current workload.
+		if err := model.DeleteStaleRecommendationSet(kafkaMsg.WorkloadID, container_names); err != nil {
+			log.Errorf("unable remove stale containers, Error: %v", err)
+			return
+		}
 	} else {
 		if err := processor.Update_results(kafkaMsg.Experiment_name, kafkaMsg.K8s_object); err != nil {
 			log.Error(err)
