@@ -18,7 +18,7 @@ objects:
       podSpec:
         image: ${IMAGE}:${IMAGE_TAG}
         command: ["sh"]
-        args: ["-c", "./rosocp db migrate && ./rosocp start processor"]
+        args: ["-c", "./rosocp db migrate up && ./rosocp start processor"]
         resources:
           requests:
             cpu: ${CPU_REQUEST}
@@ -33,6 +33,36 @@ objects:
             value: ${KRUIZE_HOST}
           - name: KRUIZE_PORT
             value: ${KRUIZE_PORT}
+    - name: api
+      replicas: ${{API_REPLICA_COUNT}}
+      webServices:
+        public:
+          enabled: true
+          apiPath: cost-management
+      podSpec:
+        image: ${IMAGE}:${IMAGE_TAG}
+        command: ["sh"]
+        args: ["-c", "./rosocp db migrate up && ./rosocp start api"]
+        resources:
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+        env:
+          - name: PATH_PREFIX
+            value: /api
+          - name: CLOWDER_ENABLED
+            value: ${CLOWDER_ENABLED}
+          - name: ENABLE_RBAC
+            value: "${ENABLE_RBAC}"
+          - name: DB_POOL_SIZE
+            value: ${DB_POOL_SIZE}
+          - name: DB_MAX_OVERFLOW
+            value: ${DB_MAX_OVERFLOW}
+          - name: SSL_CERT_DIR
+            value: ${SSL_CERT_DIR}
     - name: kruize
       replicas: 1
       webServices:
@@ -116,7 +146,7 @@ parameters:
   name: MEMORY_REQUEST
   required: true
   value: 1Gi
-- description: Maximum amount of memory the Django container can use.
+- description: Maximum amount of memory the container can use.
   displayName: Memory Limit
   name: MEMORY_LIMIT
   required: true
@@ -129,3 +159,8 @@ parameters:
 - description: Is clowder enabled
   name: CLOWDER_ENABLED
   value: "True"
+- name: SSL_CERT_DIR
+  value: '/etc/ssl/certs:/etc/pki/tls/certs:/system/etc/security/cacerts:/cdapp/certs'
+- description: Replica count for api pod
+  name: API_REPLICA_COUNT
+  value: "1"

@@ -1,0 +1,321 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "ROS OCP Backend API",
+    "description": "GO Echo API for Resource Optimization OCP Backend Service",
+    "version": "v1",
+    "license": {
+      "name": "GPLv3",
+      "url": "https://www.gnu.org/licenses/gpl-3.0.en.html"
+    }
+  },
+  "paths": {
+    "/api/cost-management/v1/recommendations/openshift": {
+      "get": {
+        "summary": "Get all recommendations",
+        "operationId": "getRecommendationList",
+        "parameters": [
+          {
+            "name": "cluster",
+            "in": "query",
+            "description": "Cluster alias or ID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workload_type",
+            "in": "query",
+            "description": "Workload type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workload",
+            "in": "query",
+            "description": "Workload name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "container",
+            "in": "query",
+            "description": "Container name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "description": "Project name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "description": "Start date",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "description": "End date",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Pagination offset",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Pagination limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cost-management/v1/recommendations/openshift/{recommendation-id}": {
+      "get": {
+        "operationId": "getRecommendationById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation-id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minimum": 1
+            },
+            "description": "The recommendation UUID"
+          }
+        ],
+        "summary": "Get recommendation for workload",
+        "responses": {
+          "200": {
+            "description": "Auto generated using Swagger Inspector",
+            "content": {
+              "application/json; charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recommendation"
+                },
+                "examples": {
+                  "example1": {
+                    "summary": "Recommendation Example",
+                    "value": "{ \n  \"cluster_uuid\": \"1ac7d92e-e721-45bf-b9bc-91cd6d4c30e8\",\n  \"cluster_alias\": \"6678\",\n  \"containers\": [\n    \"node\",\n    \"postgres\",\n    \"apache\"\n  ],\n  \"id\": \"aad02009-36d0-46cb-a7a9-c7d8c5924474\",\n  \"last_report\": \"2023-03-15T10:08:21+05:30\",\n  \"project\": \"proj_rxu\",\n  \"values\": {\n    \"cpu\": {\n      \"current\": {\n        \"limit\": 2,\n        \"request\": 5\n      },\n      \"recommended\": {\n        \"delta\": 2,\n        \"limit\": 3,\n        \"request\": 7\n      }\n    },\n    \"memory\": {\n      \"current\": {\n        \"limit\": 3,\n        \"request\": 5\n      },\n      \"recommended\": {\n        \"delta\": 1,\n        \"limit\": 2,\n        \"request\": 5\n      }\n    },\n    \"interval\": 15,\n    \"reported\": \"24/12/1992\"\n  },\n  \"workload\": \"deployment_proj_rxu\",\n  \"workload_type\": \"replicaset\"\n}\n"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RecommendationList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "first": {
+                "type": "string"
+              },
+              "last": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Recommendation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "cluster_uuid": {
+            "type": "string",
+            "example": "f0501829-e2bc-4ef0-9b4d-2875344c5ac8"
+          },
+          "cluster_alias": {
+            "type": "string",
+            "example": "6678"
+          },
+          "project": {
+            "type": "string",
+            "example": "proj_rxu"
+          },
+          "workload": {
+            "type": "string",
+            "example": "deployment_proj_rxu"
+          },
+          "workload_type": {
+            "type": "string",
+            "example": "replicaset"
+          },
+          "containers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": [
+                "node",
+                "postgres",
+                "apache"
+              ]
+            }
+          },
+          "values": {
+            "type": "object",
+            "properties": {
+              "cpu": {
+                "type": "object",
+                "properties": {
+                  "current": {
+                    "type": "object",
+                    "properties": {
+                      "limit": {
+                        "type": "integer",
+                        "example": 2
+                      },
+                      "request": {
+                        "type": "integer",
+                        "example": 5
+                      }
+                    }
+                  },
+                  "recommended": {
+                    "type": "object",
+                    "properties": {
+                      "delta": {
+                        "type": "integer",
+                        "example": 2
+                      },
+                      "limit": {
+                        "type": "integer",
+                        "example": 3
+                      },
+                      "request": {
+                        "type": "integer",
+                        "example": 7
+                      }
+                    }
+                  }
+                }
+              },
+              "memory": {
+                "type": "object",
+                "properties": {
+                  "current": {
+                    "type": "object",
+                    "properties": {
+                      "limit": {
+                        "type": "integer",
+                        "example": 3
+                      },
+                      "request": {
+                        "type": "integer",
+                        "example": 5
+                      }
+                    }
+                  },
+                  "recommended": {
+                    "type": "object",
+                    "properties": {
+                      "delta": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "limit": {
+                        "type": "integer",
+                        "example": 2
+                      },
+                      "request": {
+                        "type": "integer",
+                        "example": 5
+                      }
+                    }
+                  }
+                }
+              },
+              "interval": {
+                "type": "integer",
+                "example": 15
+              },
+              "reported": {
+                "type": "string",
+                "example": "24/12/1992"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
