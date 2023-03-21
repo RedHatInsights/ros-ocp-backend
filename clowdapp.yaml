@@ -70,6 +70,8 @@ objects:
           enabled: true
       podSpec:
         image: ${KRUIZE_IMAGE}:${KRUIZE_IMAGE_TAG}
+        command: ["sh"]
+        args: ["-c", "export CONFIG_FILE=${ACG_CONFIG} && bash target/bin/Autotune"]
         resources:
           requests:
             cpu: ${CPU_REQUEST}
@@ -78,7 +80,7 @@ objects:
             cpu: ${CPU_LIMIT}
             memory: ${MEMORY_LIMIT}
         env:
-          - name: AUTOTUNE_PORT
+          - name: AUTOTUNE_SERVER_PORT
             value: ${KRUIZE_PORT}
           - name: CLUSTER_TYPE
             value: "kubernetes"
@@ -98,6 +100,8 @@ objects:
             value: "info"
           - name: ROOT_LOGGING_LEVEL
             value: "info"
+          - name: DB_DRIVER
+            value: "jdbc:postgresql://"
     database:
       name: rosocp
       version: 13
