@@ -13,7 +13,7 @@ const (
 )
 
 func (p *WorkloadType) Scan(value interface{}) error {
-	*p = WorkloadType(value.([]byte))
+	*p = WorkloadType(value.(string))
 	return nil
 }
 

@@ -1,0 +1,139 @@
+{
+	"info": {
+		"_postman_id": "ad841740-79b4-4bd6-961a-620b5c6609a6",
+		"name": "ros_ocp_backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "18117398"
+	},
+	"item": [
+		{
+			"name": "Recommendation List",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Rh-Identity",
+						"value": "eyJpZGVudGl0eSI6IHsib3JnX2lkIjogIjMzNDA4NTEiLCAidHlwZSI6ICJTeXN0ZW0iLCAiYXV0aF90eXBlIjogImNlcnQtYXV0aCIsICJzeXN0ZW0iOiB7ImNuIjogIjFiMzZiMjBmLTdmYTAtNDQ1NC1hNmQyLTAwODI5NGUwNjM3OCIsICJjZXJ0X3R5cGUiOiAic3lzdGVtIn0sICJpbnRlcm5hbCI6IHsib3JnX2lkIjogIjMzNDA4NTEiLCAiYXV0aF90aW1lIjogNjMwMH19fQ==",
+						"type": "text"
+					},
+					{
+						"key": "X-Rh-Request_id",
+						"value": "0testtesttest",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "localhost:8088/api/cost-management/v1/recommendations/openshift?start_date=2023-03-12&end_date=2023-03-21&project=proj_rxu&cluster=6678&workload_type=replicaset&workload=deployment_proj_&container=postgres&limit=1",
+					"host": [
+						"localhost"
+					],
+					"port": "8088",
+					"path": [
+						"api",
+						"cost-management",
+						"v1",
+						"recommendations",
+						"openshift"
+					],
+					"query": [
+						{
+							"key": "start_date",
+							"value": "2023-03-12"
+						},
+						{
+							"key": "end_date",
+							"value": "2023-03-21"
+						},
+						{
+							"key": "project",
+							"value": "proj_rxu"
+						},
+						{
+							"key": "cluster",
+							"value": "6678"
+						},
+						{
+							"key": "workload_type",
+							"value": "replicaset"
+						},
+						{
+							"key": "workload",
+							"value": "deployment_proj_"
+						},
+						{
+							"key": "container",
+							"value": "postgres"
+						},
+						{
+							"key": "limit",
+							"value": "1"
+						},
+						{
+							"key": "offset",
+							"value": "1",
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Recommendation",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Rh-Identity",
+						"value": "eyJpZGVudGl0eSI6IHsib3JnX2lkIjogIjMzNDA4NTEiLCAidHlwZSI6ICJTeXN0ZW0iLCAiYXV0aF90eXBlIjogImNlcnQtYXV0aCIsICJzeXN0ZW0iOiB7ImNuIjogIjFiMzZiMjBmLTdmYTAtNDQ1NC1hNmQyLTAwODI5NGUwNjM3OCIsICJjZXJ0X3R5cGUiOiAic3lzdGVtIn0sICJpbnRlcm5hbCI6IHsib3JnX2lkIjogIjMzNDA4NTEiLCAiYXV0aF90aW1lIjogNjMwMH19fQ==",
+						"type": "text"
+					},
+					{
+						"key": "X-Rh-Request_id",
+						"value": "0testtesttest",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "localhost:8088/api/cost-management/v1/recommendations/openshift/{recommendation-id}",
+					"host": [
+						"localhost"
+					],
+					"port": "8088",
+					"path": [
+						"api",
+						"cost-management",
+						"v1",
+						"recommendations",
+						"openshift",
+						"{recommendation-id}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Openapi File",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8088/api/cost-management/v1/recommendations/openshift/openapi.json",
+					"host": [
+						"localhost"
+					],
+					"port": "8088",
+					"path": [
+						"api",
+						"cost-management",
+						"v1",
+						"recommendations",
+						"openshift",
+						"openapi.json"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

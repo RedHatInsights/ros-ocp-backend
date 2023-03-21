@@ -5,3 +5,4 @@ bin
 tmp
 coverage.txt
 output.csv
+.idea/

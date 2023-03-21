@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/api"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/kafka"
 	"github.com/redhatinsights/ros-ocp-backend/internal/processor"
@@ -39,8 +40,8 @@ var apiCmd = &cobra.Command{
 	Use:   "api",
 	Short: "starts ros-ocp api server",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("starting ros-ocp api server")
-		// Placeholder for starting api server code.
+		fmt.Println("Starting ros-ocp API server")
+		api.StartAPIServer()
 	},
 }
 
