@@ -33,6 +33,30 @@ objects:
             value: ${KRUIZE_HOST}
           - name: KRUIZE_PORT
             value: ${KRUIZE_PORT}
+          - name: KRUIZE_WAIT_TIME
+            value: ${KRUIZE_WAIT_TIME}
+    - name: recommender
+      replicas: ${{RECOMMENDER_REPLICA_COUNT}}
+      podSpec:
+        image: ${IMAGE}:${IMAGE_TAG}
+        command: ["sh"]
+        args: ["-c", "./rosocp db migrate up && ./rosocp start recommender"]
+        resources:
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+        env:
+          - name: CLOWDER_ENABLED
+            value: ${CLOWDER_ENABLED}
+          - name: KRUIZE_HOST
+            value: ${KRUIZE_HOST}
+          - name: KRUIZE_PORT
+            value: ${KRUIZE_PORT}
+          - name: KRUIZE_WAIT_TIME
+            value: ${KRUIZE_WAIT_TIME}
     - name: api
       replicas: ${{API_REPLICA_COUNT}}
       webServices:
@@ -188,3 +212,9 @@ parameters:
 - description: Replica count for api pod
   name: API_REPLICA_COUNT
   value: "1"
+- description: Replica count for recommender pod
+  name: RECOMMENDER_REPLICA_COUNT
+  value: "1"
+- description: Time to wait before hitting listRecommendation API
+  name: KRUIZE_WAIT_TIME
+  value: "120"

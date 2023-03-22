@@ -28,7 +28,8 @@ type Config struct {
 	KafkaCA               string
 
 	// Kruize config
-	KruizeUrl string `mapstructure:"KRUIZE_URL"`
+	KruizeUrl      string `mapstructure:"KRUIZE_URL"`
+	KruizeWaitTime string `mapstructure:"KRUIZE_WAIT_TIME"`
 
 	// Database config
 	DBName     string
@@ -90,6 +91,7 @@ func initConfig() {
 		viper.SetDefault("DBssl", "disable")
 	}
 	viper.SetDefault("API_PORT", "8000")
+	viper.SetDefault("KRUIZE_WAIT_TIME", "30")
 	viper.SetDefault("KAFKA_CONSUMER_GROUP_ID", "ros-ocp")
 	viper.SetDefault("KAFKA_AUTO_COMMIT", false)
 	viper.SetDefault("LogLevel", "INFO")

@@ -54,8 +54,10 @@ func ProcessEvent(msg *kafka.Message) {
 			}
 			// Create RecommendationSet entry into the table.
 			recommendationSet := model.RecommendationSet{
-				WorkloadID:      kafkaMsg.WorkloadID,
-				Recommendations: marshalData,
+				WorkloadID:          kafkaMsg.WorkloadID,
+				MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
+				MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
+				Recommendations:     marshalData,
 			}
 			if err := recommendationSet.CreateRecommendationSet(); err != nil {
 				log.Errorf("unable to get or add record to recommendation set table: %v. Error: %v", recommendationSet, err)

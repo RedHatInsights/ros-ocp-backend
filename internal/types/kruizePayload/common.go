@@ -2,6 +2,7 @@ package kruizePayload
 
 import (
 	"fmt"
+	"time"
 )
 
 type kubernetesObject struct {
@@ -46,8 +47,8 @@ type termbased struct {
 }
 
 type recommendationObject struct {
-	Monitoring_start_time string          `json:"monitoring_start_time,omitempty"`
-	Monitoring_end_time   string          `json:"monitoring_end_time,omitempty"`
+	Monitoring_start_time time.Time       `json:"monitoring_start_time,omitempty"`
+	Monitoring_end_time   time.Time       `json:"monitoring_end_time,omitempty"`
 	Duration_in_hours     float64         `json:"duration_in_hours,omitempty"`
 	Pods_count            int             `json:"pods_count,omitempty"`
 	Confidence_level      float64         `json:"confidence_level,omitempty"`
