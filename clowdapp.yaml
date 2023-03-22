@@ -33,6 +33,26 @@ objects:
             value: ${KRUIZE_HOST}
           - name: KRUIZE_PORT
             value: ${KRUIZE_PORT}
+    - name: recommender
+      replicas: ${{RECOMMENDER_REPLICA_COUNT}}
+      podSpec:
+        image: ${IMAGE}:${IMAGE_TAG}
+        command: ["sh"]
+        args: ["-c", "./rosocp db migrate up && ./rosocp start recommender"]
+        resources:
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+        env:
+          - name: CLOWDER_ENABLED
+            value: ${CLOWDER_ENABLED}
+          - name: KRUIZE_HOST
+            value: ${KRUIZE_HOST}
+          - name: KRUIZE_PORT
+            value: ${KRUIZE_PORT}
     - name: api
       replicas: ${{API_REPLICA_COUNT}}
       webServices:
@@ -187,4 +207,7 @@ parameters:
   value: '/etc/ssl/certs:/etc/pki/tls/certs:/system/etc/security/cacerts:/cdapp/certs'
 - description: Replica count for api pod
   name: API_REPLICA_COUNT
+  value: "1"
+- description: Replica count for recommender pod
+  name: RECOMMENDER_REPLICA_COUNT
   value: "1"
