@@ -2,6 +2,7 @@ package processor
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -49,8 +50,8 @@ func ProcessReport(msg *kafka.Message) {
 	// Create cluster record(if not present) for incoming archive.
 	cluster := model.Cluster{
 		TenantID:       rh_account.ID,
-		ClusterUUID:      kafkaMsg.Metadata.Source_id,
-		ClusterAlias:  kafkaMsg.Metadata.Cluster_alias,
+		ClusterUUID:    kafkaMsg.Metadata.Source_id,
+		ClusterAlias:   kafkaMsg.Metadata.Cluster_alias,
 		LastReportedAt: time.Now(),
 	}
 	if err := cluster.CreateCluster(); err != nil {
@@ -112,7 +113,10 @@ func ProcessReport(msg *kafka.Message) {
 				log.Error(err)
 				continue
 			}
-
+			waittime, err := strconv.Atoi(cfg.KruizeWaitTime)
+			if err != nil {
+				log.Error(err)
+			}
 			// Sending list_of_experiments to rosocp.kruize.experiments topic.
 			experimentEventMsg := types.ExperimentEvent{
 				WorkloadID:            workload.ID,
@@ -120,7 +124,7 @@ func ProcessReport(msg *kafka.Message) {
 				K8s_object_name:       k8s_object[0]["k8s_object_name"].(string),
 				K8s_object_type:       k8s_object[0]["k8s_object_type"].(string),
 				Namespace:             k8s_object[0]["namespace"].(string),
-				Fetch_time:            time.Now().Add(time.Minute * time.Duration(2)),
+				Fetch_time:            time.Now().Add(time.Second * time.Duration(waittime)),
 				Monitoring_start_time: monitoring_start_time,
 				K8s_object:            k8s_object,
 			}

@@ -2,7 +2,7 @@ include scripts/.env
 
 identity={"identity": {"org_id": "3340851", "type": "System", "auth_type": "cert-auth", "system": {"cn": "1b36b20f-7fa0-4454-a6d2-008294e06378", "cert_type": "system"}, "internal": {"org_id": "3340851", "auth_time": 6300}}}
 b64_identity=$(shell echo '${identity}' | base64 -w 0 -)
-ros_ocp_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"account": "123", "org_id": "345", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://dhcp131-80.gsslab.pnq2.redhat.com/rosocp/ros-usage.csv"]}'
+ros_ocp_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"account": "2234", "org_id": "3340851", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://dhcp131-80.gsslab.pnq2.redhat.com/rosocp/ros-usage.csv"]}'
 
 file=./scripts/samples/cost-mgmt.tar.gz
 CSVfile=./scripts/samples/my-ros-usage.csv
@@ -77,7 +77,7 @@ endif
 	bin/mc cp ${CSVfile} myminio/insights-upload-perma/
 	$(eval SHAREURL=$(shell bin/mc share download --json myminio/insights-upload-perma/my-ros-usage.csv | jq -r '.share'))
 	$(eval KAFKAPOD=$(shell oc get pods -o custom-columns=POD:.metadata.name --no-headers -n ${env} | grep kafka))
-	$(eval ros_ocp_msg_ephemeral = '{\"request_id\": \"uuid1234\", \"b64_identity\": \"test\", \"metadata\": {\"account\": \"123\", \"org_id\": \"345\", \"source_id\": \"111\", \"cluster_uuid\": \"222\", \"cluster_alias\": \"name222\"}, \"files\": [\"$(SHAREURL)\"]}')
+	$(eval ros_ocp_msg_ephemeral = '{\"request_id\": \"uuid1234\", \"b64_identity\": \"test\", \"metadata\": {\"account\": \"2234\", \"org_id\": \"3340851\", \"source_id\": \"111\", \"cluster_uuid\": \"222\", \"cluster_alias\": \"name222\"}, \"files\": [\"$(SHAREURL)\"]}')
 	oc exec ${KAFKAPOD} -n ${env} -- /bin/bash -c "echo ${ros_ocp_msg_ephemeral} | /opt/kafka/bin/kafka-console-producer.sh --topic hccm.ros.events   --broker-list localhost:9092"
 else
 	@ echo "Env not defined"
@@ -94,6 +94,11 @@ upload-msg-to-rosocp:
 
 
 get-recommendations:
+ifdef env
+	$(eval APIPOD=$(shell oc get pods -o custom-columns=POD:.metadata.name --no-headers -n ${env} | grep ros-ocp-backend-api))
+	oc exec ${APIPOD} -c ros-ocp-backend-api -n ${env} -- /bin/bash -c 'curl -H "X-Rh-Identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/recommendations/openshift'
+else
 	curl -H "x-rh-identity: ${b64_identity}" \
 		 -H "x-rh-request_id: testtesttest" \
-		 http://localhost:8088/api/cost-management/v1/recommendations/openshift
+		 http://localhost:8000/api/cost-management/v1/recommendations/openshift
+endif
