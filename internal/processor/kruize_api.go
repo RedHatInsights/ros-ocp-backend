@@ -107,7 +107,7 @@ func List_recommendations(experiment types.ExperimentEvent) ([]kruizePayload.Lis
 	}
 	q := req.URL.Query()
 	q.Add("experiment_name", experiment.Experiment_name)
-	q.Add("experiment_name", experiment.Monitoring_start_time)
+	q.Add("monitoring_end_time", experiment.Monitoring_end_time)
 	req.URL.RawQuery = q.Encode()
 	res, err := client.Do(req)
 	if err != nil {
