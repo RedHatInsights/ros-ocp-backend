@@ -9,9 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
-	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/platform-go-middlewares/identity"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
-	"github.com/redhatinsights/ros-ocp-backend/internal/types/identity"
 )
 
 var variationDummyObject = map[string]interface{}{
@@ -38,13 +37,8 @@ var variationDummyObject = map[string]interface{}{
 }
 
 func GetRecommendationSetList(c echo.Context) error {
-	var identity identity.IdentityData
-	OrgID, err := identity.GetOrgIDFromRequest(c)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "org_id not found"})
-	}
-
-	log := logging.GetLogger()
+	XRHID := c.Get("Identity").(identity.XRHID)
+	OrgID := XRHID.Identity.OrgID
 
 	orderBy := c.QueryParam("order_by")
 	if orderBy != "" {
@@ -154,12 +148,8 @@ func GetRecommendationSetList(c echo.Context) error {
 }
 
 func GetRecommendationSet(c echo.Context) error {
-	log := logging.GetLogger()
-	var identity identity.IdentityData
-	OrgID, err := identity.GetOrgIDFromRequest(c)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "org_id not found"})
-	}
+	XRHID := c.Get("Identity").(identity.XRHID)
+	OrgID := XRHID.Identity.OrgID
 
 	RecommendationIDStr := c.Param("recommendation-id")
 	RecommendationUUID, err := uuid.Parse(RecommendationIDStr)
@@ -203,4 +193,11 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, recommendationSlice)
+}
+
+func GetAppStatus(c echo.Context) error {
+	status := map[string]string{
+		"api-server": "working",
+	}
+	return c.JSON(http.StatusOK, status)
 }

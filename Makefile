@@ -52,6 +52,14 @@ db-migrate:
 run-processor:
 	go run rosocp.go start processor
 
+.PHONY: run-recommender
+run-recommender:
+	go run rosocp.go start recommender
+
+.PHONY: run-api-server
+run-api-server:
+	go run rosocp.go start api
+
 .PHONY: build
 build:
 	go build -o bin/rosocp rosocp.go
