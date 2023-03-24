@@ -57,7 +57,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		recommendationData["project"] = recommendation.Workload.Namespace
 		recommendationData["workload_type"] = recommendation.Workload.WorkloadType
 		recommendationData["workload"] = recommendation.Workload.WorkloadName
-		recommendationData["containers"] = recommendation.Workload.Containers
+		recommendationData["container"] = recommendation.ContainerName
 		recommendationData["last_report"] = recommendation.Workload.Cluster.LastReportedAtStr
 		recommendationData["values"] = recommendation.Recommendations
 		allRecommendations = append(allRecommendations, recommendationData)
@@ -102,7 +102,7 @@ func GetRecommendationSet(c echo.Context) error {
 		recommendationSlice["project"] = recommendationSet.Workload.Namespace
 		recommendationSlice["workload_type"] = recommendationSet.Workload.WorkloadType
 		recommendationSlice["workload"] = recommendationSet.Workload.WorkloadName
-		recommendationSlice["containers"] = recommendationSet.Workload.Containers
+		recommendationSlice["container"] = recommendationSet.ContainerName
 		recommendationSlice["last_report"] = recommendationSet.Workload.Cluster.LastReportedAtStr
 		recommendationSlice["values"] = recommendationSet.Recommendations
 	}

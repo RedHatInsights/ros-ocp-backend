@@ -78,7 +78,7 @@ func ProcessReport(msg *kafka.Message) {
 			namespace := k8s_object[0]["namespace"].(string)
 			k8s_object_type := k8s_object[0]["k8s_object_type"].(string)
 			k8s_object_name := k8s_object[0]["k8s_object_name"].(string)
-			monitoring_start_time := k8s_object[0]["k8s_object_name"].(string)
+			monitoring_end_time := k8s_object[0]["interval_end"].(string)
 
 			experiment_name := generateExperimentName(
 				kafkaMsg.Metadata.Org_id,
@@ -119,14 +119,14 @@ func ProcessReport(msg *kafka.Message) {
 			}
 			// Sending list_of_experiments to rosocp.kruize.experiments topic.
 			experimentEventMsg := types.ExperimentEvent{
-				WorkloadID:            workload.ID,
-				Experiment_name:       experiment_name,
-				K8s_object_name:       k8s_object[0]["k8s_object_name"].(string),
-				K8s_object_type:       k8s_object[0]["k8s_object_type"].(string),
-				Namespace:             k8s_object[0]["namespace"].(string),
-				Fetch_time:            time.Now().Add(time.Second * time.Duration(waittime)),
-				Monitoring_start_time: monitoring_start_time,
-				K8s_object:            k8s_object,
+				WorkloadID:          workload.ID,
+				Experiment_name:     experiment_name,
+				K8s_object_name:     k8s_object[0]["k8s_object_name"].(string),
+				K8s_object_type:     k8s_object[0]["k8s_object_type"].(string),
+				Namespace:           k8s_object[0]["namespace"].(string),
+				Fetch_time:          time.Now().Add(time.Second * time.Duration(waittime)),
+				Monitoring_end_time: monitoring_end_time,
+				K8s_object:          k8s_object,
 			}
 
 			msgBytes, err := json.Marshal(experimentEventMsg)

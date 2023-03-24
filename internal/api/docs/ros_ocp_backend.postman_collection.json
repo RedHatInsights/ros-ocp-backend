@@ -23,11 +23,11 @@
 					}
 				],
 				"url": {
-					"raw": "localhost:8088/api/cost-management/v1/recommendations/openshift?start_date=2023-03-12&end_date=2023-03-21&project=proj_rxu&cluster=6678&workload_type=replicaset&workload=deployment_proj_&container=postgres&limit=1",
+					"raw": "localhost:8000/api/cost-management/v1/recommendations/openshift?start_date=2023-03-12&end_date=2023-03-21&project=proj_rxu&cluster=6678&workload_type=replicaset&workload=deployment_proj_&container=postgres&limit=1",
 					"host": [
 						"localhost"
 					],
-					"port": "8088",
+					"port": "8000",
 					"path": [
 						"api",
 						"cost-management",
@@ -95,11 +95,11 @@
 					}
 				],
 				"url": {
-					"raw": "localhost:8088/api/cost-management/v1/recommendations/openshift/{recommendation-id}",
+					"raw": "localhost:8000/api/cost-management/v1/recommendations/openshift/{recommendation-id}",
 					"host": [
 						"localhost"
 					],
-					"port": "8088",
+					"port": "8000",
 					"path": [
 						"api",
 						"cost-management",
@@ -118,11 +118,11 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "localhost:8088/api/cost-management/v1/recommendations/openshift/openapi.json",
+					"raw": "localhost:8000/api/cost-management/v1/recommendations/openshift/openapi.json",
 					"host": [
 						"localhost"
 					],
-					"port": "8088",
+					"port": "8000",
 					"path": [
 						"api",
 						"cost-management",

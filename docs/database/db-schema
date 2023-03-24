@@ -40,12 +40,15 @@ Table workloads {
 }
 
 Table recommendation_sets {
+  id uuid [increment]
   workload_id bigint [ref: > workloads.id]
+  container_name text
   monitoring_start_time datetime
   monitoring_end_time datetime
   recommendations jsonb
   created_at datetime
   Indexes {
+    id [pk]
     workload_id [name: "workloads.id_fkey", type: btree]
   }
 }

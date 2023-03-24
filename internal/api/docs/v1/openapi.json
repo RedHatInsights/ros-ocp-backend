@@ -220,16 +220,9 @@
             "type": "string",
             "example": "replicaset"
           },
-          "containers": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "example": [
-                "node",
-                "postgres",
-                "apache"
-              ]
-            }
+          "container": {
+            "type": "string",
+            "example": "container-1"
           },
           "values": {
             "type": "object",
