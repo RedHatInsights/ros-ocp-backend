@@ -10,6 +10,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 )
 
 type Collection struct {
@@ -117,31 +118,31 @@ func MapQueryParameters(c echo.Context) map[string][]string {
 	queryParams["DATE(recommendation_sets.monitoring_end_time) <= ?"] = endDateSlice
 
 	clusters := c.QueryParams()["cluster"]
-	if len(clusters) > 0{
+	if len(clusters) > 0 {
 		paramString, values := parseQueryParams("cluster", clusters)
 		queryParams[paramString] = values
 	}
 
 	projects := c.QueryParams()["project"]
-	if len(projects) > 0{
+	if len(projects) > 0 {
 		paramString, values := parseQueryParams("project", projects)
 		queryParams[paramString] = values
 	}
 
 	workloadNames := c.QueryParams()["workload"]
-	if len(workloadNames) > 0{
+	if len(workloadNames) > 0 {
 		paramString, values := parseQueryParams("workload", workloadNames)
 		queryParams[paramString] = values
 	}
-	
+
 	workloadTypes := c.QueryParams()["workload_type"]
-	if len(workloadTypes) > 0{
+	if len(workloadTypes) > 0 {
 		paramString, values := parseQueryParams("workload_type", workloadTypes)
 		queryParams[paramString] = values
 	}
 
 	containers := c.QueryParams()["container"]
-	if len(containers) > 0{
+	if len(containers) > 0 {
 		paramString, values := parseQueryParams("container", containers)
 		queryParams[paramString] = values
 	}
@@ -150,9 +151,8 @@ func MapQueryParameters(c echo.Context) map[string][]string {
 
 }
 
-
 func parseQueryParams(param string, values []string) (string, []string) {
- 
+
 	parsedKeyMultipleVal := ""
 	valuesSlice := []string{}
 
@@ -164,34 +164,73 @@ func parseQueryParams(param string, values []string) (string, []string) {
 		"container":     "recommendation_sets.container_name ILIKE ?",
 	}
 
-	if len(values) > 1{
+	if len(values) > 1 {
 		for _, value := range values {
-			if param == "cluster"{
+			if param == "cluster" {
 				parsedKeyMultipleVal = parsedKeyMultipleVal + paramMap[param] + " OR " + "clusters.cluster_uuid ILIKE ?" + " OR "
-				valuesSlice = append(valuesSlice, "%" + value + "%")
-				valuesSlice = append(valuesSlice, "%" + value + "%")
+				valuesSlice = append(valuesSlice, "%"+value+"%")
+				valuesSlice = append(valuesSlice, "%"+value+"%")
 			} else {
 				parsedKeyMultipleVal = parsedKeyMultipleVal + paramMap[param] + " OR "
-				if param == "workload_type"{
+				if param == "workload_type" {
 					valuesSlice = append(valuesSlice, value)
 				} else {
-					valuesSlice = append(valuesSlice, "%" + value + "%")
+					valuesSlice = append(valuesSlice, "%"+value+"%")
 				}
 			}
 		}
 		parsedKeyMultipleVal = strings.TrimSuffix(parsedKeyMultipleVal, " OR ")
 		return parsedKeyMultipleVal, valuesSlice
 	} else {
-		if param == "cluster"{
+		if param == "cluster" {
 			paramMap[param] = paramMap[param] + " OR " + "clusters.cluster_uuid ILIKE ?"
-			valuesSlice = append(valuesSlice, "%" + values[0] + "%")
-			valuesSlice = append(valuesSlice, "%" + values[0] + "%")
+			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
+			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
 		} else if param == "workload_type" {
 			valuesSlice = append(valuesSlice, values[0])
 		} else {
-			valuesSlice = append(valuesSlice, "%" + values[0] + "%")
+			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
 		}
 		return paramMap[param], valuesSlice
 	}
 
+}
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+func get_user_permissions(c echo.Context) map[string][]string {
+	var user_permissions map[string][]string
+	switch t := c.Get("user.permissions").(type) {
+	case map[string][]string:
+		user_permissions = t
+	default:
+		user_permissions = map[string][]string{}
+	}
+	return user_permissions
+}
+
+func is_user_authorized_for_resource(resourceObject types.ResourceObject, user_permissions map[string][]string) bool {
+	if cfg.RBACEnabled {
+		if _, ok := user_permissions["*"]; ok {
+			return true
+		}
+		if resourceObject.Cluster == "" && resourceObject.Project == "" {
+			return true
+		}
+		if stringInSlice(resourceObject.Cluster, user_permissions["openshift.cluster"]) ||
+			stringInSlice(resourceObject.Project, user_permissions["openshift.project"]) ||
+			stringInSlice("*", user_permissions["openshift.cluster"]) ||
+			stringInSlice("*", user_permissions["openshift.project"]) {
+			return true
+		}
+	} else {
+		return true
+	}
+	return false
 }

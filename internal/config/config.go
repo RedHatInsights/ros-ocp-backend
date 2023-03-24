@@ -44,6 +44,7 @@ type Config struct {
 	RBACHost     string
 	RBACPort     string
 	RBACProtocol string
+	RBACEnabled  bool
 
 	API_PORT string
 }
@@ -90,6 +91,7 @@ func initConfig() {
 				viper.SetDefault("RBACHost", endpoint.Hostname)
 				viper.SetDefault("RBACPort", endpoint.Port)
 				viper.SetDefault("RBACProtocol", "https")
+				viper.SetDefault("RBACEnabled", true)
 			}
 		}
 
@@ -111,6 +113,7 @@ func initConfig() {
 		viper.SetDefault("RBACHost", "localhost")
 		viper.SetDefault("RBACPort", "9080")
 		viper.SetDefault("RBACProtocol", "http")
+		viper.SetDefault("RBACEnabled", false)
 
 	}
 	viper.SetDefault("API_PORT", "8000")

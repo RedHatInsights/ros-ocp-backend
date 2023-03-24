@@ -13,10 +13,10 @@ import (
 )
 
 var log *logrus.Logger = logging.GetLogger()
+var cfg *config.Config = config.GetConfig()
 
 func StartAPIServer() {
 	app := echo.New()
-	cfg := config.GetConfig()
 	app.Use(middleware.Logger())
 	app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowMethods: []string{http.MethodGet},
@@ -26,7 +26,9 @@ func StartAPIServer() {
 
 	v1 := app.Group("/api/cost-management/v1")
 	v1.Use(ros_middleware.Identity)
-	v1.Use(ros_middleware.Rbac)
+	if cfg.RBACEnabled {
+		v1.Use(ros_middleware.Rbac)
+	}
 	v1.GET("/recommendations/openshift", GetRecommendationSetList)
 	v1.GET("/recommendations/openshift/:recommendation-id", GetRecommendationSet)
 	v1.File("/recommendations/openshift/openapi.json", "openapi.json")
