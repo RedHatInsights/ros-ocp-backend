@@ -1,1 +1,2 @@
-DROP TABLE IF EXISTS rh_accounts;
+DROP TABLE IF EXISTS rosocp.rh_accounts;
+DROP SCHEMA IF EXISTS rosocp

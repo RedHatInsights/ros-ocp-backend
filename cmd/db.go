@@ -23,7 +23,7 @@ func getMigrateInstance() *migrate.Migrate {
 	cfg := config.GetConfig()
 	m, err := migrate.New(
 		"file://./migrations",
-		fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBssl))
+		fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&search_path=rosocp", cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBssl))
 	if err != nil {
 		fmt.Printf("Unable to get migration instance: %v\n", err)
 		os.Exit(1)
@@ -90,7 +90,6 @@ var seedCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("seed database")
 		db := database.GetDB()
-
 
 		// Changes for seeding API data; local testing
 

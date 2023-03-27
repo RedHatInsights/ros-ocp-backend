@@ -39,12 +39,12 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, limit int, offse
 	query := db.Joins(`
 		JOIN (
 			SELECT workload_id, MAX(monitoring_end_time) AS latest_monitoring_end_time 
-			FROM recommendation_sets GROUP BY workload_id
+			FROM rosocp.recommendation_sets GROUP BY workload_id
 		) latest_rs ON recommendation_sets.workload_id = latest_rs.workload_id 
 				AND recommendation_sets.monitoring_end_time = latest_rs.latest_monitoring_end_time
-			JOIN workloads ON recommendation_sets.workload_id = workloads.id
-			JOIN clusters ON workloads.cluster_id = clusters.id
-			JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
+			JOIN rosocp.workloads ON recommendation_sets.workload_id = workloads.id
+			JOIN rosocp.clusters ON workloads.cluster_id = clusters.id
+			JOIN rosocp.rh_accounts ON clusters.tenant_id = rh_accounts.id
 		`).Preload("Workload.Cluster").
 		Where("rh_accounts.org_id = ?", orgID)
 
@@ -76,9 +76,9 @@ func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendatio
 	var recommendationSet RecommendationSet
 	db := database.GetDB()
 
-	db.Joins("JOIN workloads ON recommendation_sets.workload_id = workloads.id").
-		Joins("JOIN clusters ON workloads.cluster_id = clusters.id").
-		Joins("JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id").
+	db.Joins("JOIN rosocp.workloads ON recommendation_sets.workload_id = workloads.id").
+		Joins("JOIN rosocp.clusters ON workloads.cluster_id = clusters.id").
+		Joins("JOIN rosocp.rh_accounts ON clusters.tenant_id = rh_accounts.id").
 		Preload("Workload.Cluster").
 		Where("rh_accounts.org_id = ?", orgID).
 		Where("recommendation_sets.id = ?", recommendationID).

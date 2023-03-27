@@ -32,12 +32,12 @@ type Config struct {
 	KruizeWaitTime string `mapstructure:"KRUIZE_WAIT_TIME"`
 
 	// Database config
-	DBName     string
-	DBUser     string
-	DBPassword string
-	DBHost     string
-	DBPort     string
-	DBssl      string
+	DBName     string `mapstructure:"ROSOCP_DB_NAME"`
+	DBUser     string `mapstructure:"ROSOCP_DB_USER"`
+	DBPassword string `mapstructure:"ROSOCP_DB_PASSWORD"`
+	DBHost     string `mapstructure:"ROSOCP_DB_HOST"`
+	DBPort     string `mapstructure:"ROSOCP_DB_PORT"`
+	DBssl      string `mapstructure:"ROSOCP_DB_SSL"`
 
 	API_PORT string
 }
@@ -70,12 +70,12 @@ func initConfig() {
 		}
 
 		// clowder DB Config
-		viper.SetDefault("DBName", c.Database.Name)
-		viper.SetDefault("DBUser", c.Database.Username)
-		viper.SetDefault("DBPassword", c.Database.Password)
-		viper.SetDefault("DBHost", c.Database.Hostname)
-		viper.SetDefault("DBPort", c.Database.Port)
-		viper.SetDefault("DBssl", c.Database.SslMode)
+		viper.SetDefault("ROSOCP_DB_NAME", "rosocp")
+		viper.SetDefault("ROSOCP_DB_USER", c.Database.Username)
+		viper.SetDefault("ROSOCP_DB_PASSWORD", c.Database.Password)
+		viper.SetDefault("ROSOCP_DB_HOST", c.Database.Hostname)
+		viper.SetDefault("ROSOCP_DB_PORT", c.Database.Port)
+		viper.SetDefault("ROSOCP_DB_SSL", c.Database.SslMode)
 
 	} else {
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
@@ -83,12 +83,19 @@ func initConfig() {
 		viper.SetDefault("EXPERIMENTS_TOPIC", "rosocp.kruize.experiments")
 
 		// default DB Config
-		viper.SetDefault("DBName", "postgres")
-		viper.SetDefault("DBUser", "postgres")
-		viper.SetDefault("DBPassword", "postgres")
-		viper.SetDefault("DBHost", "localhost")
-		viper.SetDefault("DBPort", "15432")
-		viper.SetDefault("DBssl", "disable")
+		viper.SetDefault("ROSOCP_DB_NAME", "rosocp")
+		viper.SetDefault("ROSOCP_DB_USER", "postgres")
+		viper.SetDefault("ROSOCP_DB_PASSWORD", "postgres")
+		viper.SetDefault("ROSOCP_DB_HOST", "localhost")
+		viper.SetDefault("ROSOCP_DB_PORT", "15432")
+		viper.SetDefault("ROSOCP_DB_SSL", "disable")
+
+		//default RBAC Config
+		viper.SetDefault("RBACHost", "localhost")
+		viper.SetDefault("RBACPort", "9080")
+		viper.SetDefault("RBACProtocol", "http")
+		viper.SetDefault("RBACEnabled", false)
+
 	}
 	viper.SetDefault("API_PORT", "8000")
 	viper.SetDefault("KRUIZE_WAIT_TIME", "30")

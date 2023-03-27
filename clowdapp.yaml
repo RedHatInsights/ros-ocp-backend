@@ -147,7 +147,7 @@ objects:
           - name: DB_DRIVER
             value: "jdbc:postgresql://"
     database:
-      name: rosocp
+      name: ${ROSOCP_DB_NAME}
       version: 13
     kafkaTopics:
       - topicName: hccm.ros.events
@@ -218,3 +218,6 @@ parameters:
 - description: Time to wait before hitting listRecommendation API
   name: KRUIZE_WAIT_TIME
   value: "120"
+- description: ROS OCP Database name
+  name: ROSOCP_DB_NAME
+  value: "rosocp"

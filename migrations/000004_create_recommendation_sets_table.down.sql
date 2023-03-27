@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS recommendation_sets;
+DROP TABLE IF EXISTS rosocp.recommendation_sets;

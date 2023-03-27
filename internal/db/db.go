@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 var DB *gorm.DB = nil
@@ -21,10 +22,15 @@ func initDB() {
 		dbname   = cfg.DBName
 		host     = cfg.DBHost
 		port     = cfg.DBPort
+		sslmode  = cfg.DBssl
 	)
-	dsn := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable", user, password, dbname, host, port)
+	dsn := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s", user, password, dbname, host, port, sslmode)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{
+			TablePrefix:   "rosocp.", // schema name
+			SingularTable: false,
+		}})
 	if err != nil {
 		log.Fatal(err)
 	}
