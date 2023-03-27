@@ -20,7 +20,7 @@ var log *logrus.Logger = logging.GetLogger()
 
 func Rbac(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		permissions := get_user_permissions(c.Request().Header.Get("X-Rh-Identity"))
+		permissions := get_user_permissions_from_rbac(c.Request().Header.Get("X-Rh-Identity"))
 		if permissions != nil {
 			c.Set("user.permissions", permissions)
 		} else {
@@ -30,6 +30,12 @@ func Rbac(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+// aggregate_permissions loop over all the permissions/roles/alcs of the user returned
+// from rbac and creates and return the map of permissions where key is
+// resourceType (openshift.cluster, openshift.node, openshift.project) and the values are the
+// slice of resources (cluster names, node names, project names).
+//
+// Sample output from the rbac - https://github.com/RedHatInsights/ros-ocp-backend/pull/24#issuecomment-1482708944
 func aggregate_permissions(acls []types.RbacData) map[string][]string {
 	permissions := map[string][]string{}
 	for _, acl := range acls {
@@ -52,7 +58,7 @@ func aggregate_permissions(acls []types.RbacData) map[string][]string {
 	return permissions
 }
 
-func get_user_permissions(encodedIdentity string) map[string][]string {
+func get_user_permissions_from_rbac(encodedIdentity string) map[string][]string {
 	cfg := config.GetConfig()
 	url := fmt.Sprintf(
 		"%s://%s:%s/api/rbac/v1/access/?application=cost-management&limit=100",
