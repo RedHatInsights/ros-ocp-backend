@@ -207,6 +207,17 @@ var seedCmd = &cobra.Command{
 	},
 }
 
+var setupCmd = &cobra.Command{
+	Use:   "setup",
+	Short: "Sets up the db by creating schema if not present",
+	Long:  "Sets up the db by creating schema if not present",
+	Run: func(cmd *cobra.Command, args []string) {
+		db := database.GetDB()
+		fmt.Println("Creating postgres schema rosocp")
+		db.Exec("CREATE SCHEMA IF NOT EXISTS rosocp;")
+	},
+}
+
 var dbCmd = &cobra.Command{Use: "db", Short: "Use to migrate or seed database"}
 
 func init() {
@@ -214,6 +225,7 @@ func init() {
 	dbCmd.AddCommand(migrateCmd)
 	dbCmd.AddCommand(seedCmd)
 	dbCmd.AddCommand(revision)
+	dbCmd.AddCommand(setupCmd)
 	migrateCmd.AddCommand(migrateUp)
 	migrateCmd.AddCommand(migratedown)
 	migratedown.Flags().Bool("all", false, "Used to undo all migrations")

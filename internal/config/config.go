@@ -70,7 +70,7 @@ func initConfig() {
 		}
 
 		// clowder DB Config
-		viper.SetDefault("ROSOCP_DB_NAME", "rosocp")
+		viper.SetDefault("ROSOCP_DB_NAME", c.Database.Name)
 		viper.SetDefault("ROSOCP_DB_USER", c.Database.Username)
 		viper.SetDefault("ROSOCP_DB_PASSWORD", c.Database.Password)
 		viper.SetDefault("ROSOCP_DB_HOST", c.Database.Hostname)
@@ -83,7 +83,7 @@ func initConfig() {
 		viper.SetDefault("EXPERIMENTS_TOPIC", "rosocp.kruize.experiments")
 
 		// default DB Config
-		viper.SetDefault("ROSOCP_DB_NAME", "rosocp")
+		viper.SetDefault("ROSOCP_DB_NAME", "postgres")
 		viper.SetDefault("ROSOCP_DB_USER", "postgres")
 		viper.SetDefault("ROSOCP_DB_PASSWORD", "postgres")
 		viper.SetDefault("ROSOCP_DB_HOST", "localhost")

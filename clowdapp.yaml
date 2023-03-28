@@ -18,7 +18,7 @@ objects:
       podSpec:
         image: ${IMAGE}:${IMAGE_TAG}
         command: ["sh"]
-        args: ["-c", "./rosocp db migrate up && ./rosocp start processor"]
+        args: ["-c", "./rosocp db setup && ./rosocp db migrate up && ./rosocp start processor"]
         resources:
           requests:
             cpu: ${CPU_REQUEST}
@@ -40,7 +40,7 @@ objects:
       podSpec:
         image: ${IMAGE}:${IMAGE_TAG}
         command: ["sh"]
-        args: ["-c", "./rosocp db migrate up && ./rosocp start recommender"]
+        args: ["-c", "./rosocp db setup &&  ./rosocp db migrate up && ./rosocp start recommender"]
         resources:
           requests:
             cpu: ${CPU_REQUEST}
@@ -66,7 +66,7 @@ objects:
       podSpec:
         image: ${IMAGE}:${IMAGE_TAG}
         command: ["sh"]
-        args: ["-c", "./rosocp db migrate up && ./rosocp start api"]
+        args: ["-c", "./rosocp db setup && ./rosocp db migrate up && ./rosocp start api"]
         resources:
           requests:
             cpu: ${CPU_REQUEST}
@@ -147,7 +147,7 @@ objects:
           - name: DB_DRIVER
             value: "jdbc:postgresql://"
     database:
-      name: ${ROSOCP_DB_NAME}
+      name: postgres
       version: 13
     kafkaTopics:
       - topicName: hccm.ros.events
@@ -218,6 +218,3 @@ parameters:
 - description: Time to wait before hitting listRecommendation API
   name: KRUIZE_WAIT_TIME
   value: "120"
-- description: ROS OCP Database name
-  name: ROSOCP_DB_NAME
-  value: "rosocp"

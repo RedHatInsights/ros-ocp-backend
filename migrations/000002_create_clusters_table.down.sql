@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS rosocp.clusters;
+DROP TABLE IF EXISTS clusters;

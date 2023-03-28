@@ -1,2 +1,1 @@
-DROP TABLE IF EXISTS rosocp.rh_accounts;
-DROP SCHEMA IF EXISTS rosocp
+DROP TABLE IF EXISTS rh_accounts CASCADE;
