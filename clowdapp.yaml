@@ -172,7 +172,7 @@ parameters:
 - description: Kruize image name
   name: KRUIZE_IMAGE
   required: true
-  value: quay.io/supatil/autotune_operator
+  value: quay.io/cloudservices/autotune
 - description: Kruize image tag
   name: KRUIZE_IMAGE_TAG
   required: true
