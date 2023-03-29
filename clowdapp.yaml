@@ -35,6 +35,8 @@ objects:
             value: ${KRUIZE_PORT}
           - name: KRUIZE_WAIT_TIME
             value: ${KRUIZE_WAIT_TIME}
+          - name: SSL_CERT_DIR
+            value: ${SSL_CERT_DIR}
     - name: recommender
       replicas: ${{RECOMMENDER_REPLICA_COUNT}}
       podSpec:
@@ -57,6 +59,8 @@ objects:
             value: ${KRUIZE_PORT}
           - name: KRUIZE_WAIT_TIME
             value: ${KRUIZE_WAIT_TIME}
+          - name: SSL_CERT_DIR
+            value: ${SSL_CERT_DIR}
     - name: api
       replicas: ${{API_REPLICA_COUNT}}
       webServices:
@@ -146,6 +150,8 @@ objects:
             value: "info"
           - name: DB_DRIVER
             value: "jdbc:postgresql://"
+          - name: SSL_CERT_DIR
+            value: ${SSL_CERT_DIR}
     database:
       name: rosocp
       version: 13
