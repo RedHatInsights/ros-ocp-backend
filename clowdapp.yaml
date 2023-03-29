@@ -108,7 +108,7 @@ objects:
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
     - name: kruize
-      replicas: 1
+      replicas: ${{KRUIZE_REPLICA_COUNT}}
       webServices:
         private:
           enabled: true
@@ -218,3 +218,6 @@ parameters:
 - description: Time to wait before hitting listRecommendation API
   name: KRUIZE_WAIT_TIME
   value: "120"
+- description: Replica count for kruize pod
+  name: KRUIZE_REPLICA_COUNT
+  value: "1"
