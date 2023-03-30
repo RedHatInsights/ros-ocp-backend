@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
@@ -40,4 +41,18 @@ func GetDB() *gorm.DB {
 		initDB()
 	}
 	return DB
+}
+
+func CreateCACertFile(certString string) string {
+	f, err := os.CreateTemp("", "RdsCa.pem")
+	if err != nil {
+		fmt.Printf("Unable to create RdsCa.pem: %s", err)
+		os.Exit(1)
+	}
+	_, err = f.Write([]byte(certString))
+	if err != nil {
+		fmt.Printf("Unable to write to RdsCa.pem: %s", err)
+		os.Exit(1)
+	}
+	return f.Name()
 }

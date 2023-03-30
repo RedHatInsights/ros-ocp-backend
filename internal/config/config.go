@@ -38,6 +38,7 @@ type Config struct {
 	DBHost     string
 	DBPort     string
 	DBssl      string
+	DBCACert   string
 
 	API_PORT string
 }
@@ -76,6 +77,7 @@ func initConfig() {
 		viper.SetDefault("DBHost", c.Database.Hostname)
 		viper.SetDefault("DBPort", c.Database.Port)
 		viper.SetDefault("DBssl", c.Database.SslMode)
+		viper.SetDefault("DBCACert", c.Database.RdsCa)
 
 	} else {
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
@@ -89,6 +91,7 @@ func initConfig() {
 		viper.SetDefault("DBHost", "localhost")
 		viper.SetDefault("DBPort", "15432")
 		viper.SetDefault("DBssl", "disable")
+		viper.SetDefault("DBCACert", "")
 	}
 	viper.SetDefault("API_PORT", "8000")
 	viper.SetDefault("KRUIZE_WAIT_TIME", "30")
