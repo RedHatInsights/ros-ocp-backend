@@ -59,7 +59,7 @@ func initConfig() {
 			viper.Set("KafkaUsername", broker.Sasl.Username)
 			viper.Set("KafkaPassword", broker.Sasl.Password)
 			viper.Set("KafkaSASLMechanism", broker.Sasl.SaslMechanism)
-			viper.Set("KafkaSecurityProtocol", broker.Sasl.SecurityProtocol)
+			viper.Set("KafkaSecurityProtocol", broker.Sasl.SecurityProtocol) //nolint:all
 		}
 
 		if broker.Cacert != nil {
