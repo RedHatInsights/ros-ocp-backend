@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -42,6 +43,14 @@ func StartConsumer(kafka_topic string, handler func(msg *kafka.Message)) {
 			"allow.auto.create.topics": true,
 		}
 	}
+
+	fmt.Println("================================")
+	fmt.Printf("configMap = %v \n", configMap)
+	fmt.Println("================================")
+	fmt.Printf("cfg.KafkaSASLMechanism = %s\n", cfg.KafkaSASLMechanism)
+	fmt.Println("================================")
+	fmt.Printf("security.protocol = %s\n", cfg.KafkaSecurityProtocol)
+	fmt.Println("================================")
 
 	consumer, err := kafka.NewConsumer(&configMap)
 	if err != nil {

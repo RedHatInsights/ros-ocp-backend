@@ -47,6 +47,9 @@ var cfg *Config = nil
 
 func initConfig() {
 	viper.AutomaticEnv()
+	fmt.Println("--------------------------------")
+	fmt.Printf("IsClowderEnabled = %v \n", clowder.IsClowderEnabled())
+	fmt.Println("--------------------------------")
 	if clowder.IsClowderEnabled() {
 		c := clowder.LoadedConfig
 		broker := c.Kafka.Brokers[0]
@@ -60,7 +63,16 @@ func initConfig() {
 			viper.Set("KafkaPassword", broker.Sasl.Password)
 			viper.Set("KafkaSASLMechanism", broker.Sasl.SaslMechanism)
 			viper.Set("KafkaSecurityProtocol", broker.SecurityProtocol)
+			fmt.Println("--------------------------------")
+			fmt.Printf("broker.SecurityProtocol = %v \n", broker.SecurityProtocol)
+			fmt.Println("--------------------------------")
+			fmt.Println("--------------------------------")
+			fmt.Printf("broker.Sasl.SaslMechanism = %v \n", broker.Sasl.SaslMechanism)
+			fmt.Println("--------------------------------")
 		}
+		fmt.Println("--------------------------------")
+		fmt.Printf("broker.Authtype = %v \n", broker.Authtype)
+		fmt.Println("--------------------------------")
 
 		if broker.Cacert != nil {
 			caPath, err := c.KafkaCa(broker)
