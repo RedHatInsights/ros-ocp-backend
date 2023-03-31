@@ -13,10 +13,10 @@ type kubernetesObject struct {
 }
 
 type container struct {
-	Container_image_name string                    `json:"container_image_name,omitempty"`
-	Container_name       string                    `json:"container_name,omitempty"`
-	Metrics              []metric                  `json:"metrics,omitempty"`
-	Recommendations      map[string]recommendation `json:"recommendations,omitempty"`
+	Container_image_name string         `json:"container_image_name,omitempty"`
+	Container_name       string         `json:"container_name,omitempty"`
+	Metrics              []metric       `json:"metrics,omitempty"`
+	Recommendations      recommendation `json:"recommendations,omitempty"`
 }
 
 type metric struct {
@@ -37,6 +37,16 @@ type aggregation_info struct {
 }
 
 type recommendation struct {
+	Data          map[string]recommendationType `json:"data,omitempty"`
+	Notifications []notification                `json:"notifications,omitempty"`
+}
+
+type notification struct {
+	NotifyType string `json:"type,omitempty"`
+	Message    string `json:"message,omitempty"`
+}
+
+type recommendationType struct {
 	Duration_based termbased `json:"duration_based,omitempty"`
 }
 

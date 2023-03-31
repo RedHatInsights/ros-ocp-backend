@@ -44,6 +44,7 @@ func ProcessEvent(msg *kafka.Message) {
 	data, err := processor.List_recommendations(kafkaMsg)
 	if err != nil {
 		log.Errorf("Unable to list recommendation for: %v", err)
+		return
 	}
 
 	if is_valid_recommendation(data) {
@@ -51,7 +52,7 @@ func ProcessEvent(msg *kafka.Message) {
 		container_names := make([]string, 0, len(containers))
 		for _, container := range containers {
 			container_names = append(container_names, container.Container_name)
-			for _, v := range container.Recommendations {
+			for _, v := range container.Recommendations.Data {
 				marshalData, err := json.Marshal(v)
 				if err != nil {
 					log.Errorf("Unable to list recommendation for: %v", err)
@@ -93,11 +94,10 @@ func ProcessEvent(msg *kafka.Message) {
 }
 
 func is_valid_recommendation(d []kruizePayload.ListRecommendations) bool {
-	for _, v := range d[0].Kubernetes_objects[0].Containers[0].Recommendations {
-		data := v.Duration_based.Short_term.Config
-		if data != (kruizePayload.ConfigObject{}) {
-			return true
-		}
+	notifications := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
+	if len(notifications) > 0 && notifications[0].Message == "Duration Based Recommendations Available" {
+		return true
+	} else {
+		return false
 	}
-	return false
 }

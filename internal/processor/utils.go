@@ -36,16 +36,16 @@ func Setup_kruize_performance_profile() {
 				log.Infof("Performance profile created successfully")
 				return
 			}
+			if res.StatusCode == 409 {
+				log.Infof("Performance Profile already exist")
+				return
+			}
 			defer res.Body.Close()
 			bodyBytes, _ := io.ReadAll(res.Body)
 			data := map[string]interface{}{}
 			if err := json.Unmarshal(bodyBytes, &data); err != nil {
 				log.Errorf("can not unmarshal response data: %v", err)
 				os.Exit(1)
-			}
-			if data["message"] == "Validation failed due to Performance Profile already exists!" {
-				log.Infof("Performance Profile already exist")
-				return
 			}
 		}
 		log.Infof("sleeping for 10 Seconds")
@@ -105,7 +105,7 @@ func convert2DarrayToMap(arr [][]string) []map[string]interface{} {
 func convertDateToISO8601(date string) string {
 	const date_format = "2006-01-02 15:04:05 -0700 MST"
 	t, _ := time.Parse(date_format, date)
-	return t.Format(time.RFC3339)
+	return t.Format("2006-01-02T15:04:05.000Z")
 }
 
 func findInStringSlice(str string, s []string) int {
