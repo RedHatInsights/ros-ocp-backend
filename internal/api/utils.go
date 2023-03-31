@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/lib/pq"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 )
@@ -135,7 +134,7 @@ func MapQueryParameters(c echo.Context) map[string]interface{} {
 
 	container := c.QueryParam("container")
 	if container != "" {
-		queryParams["workloads.containers @> ?"] = pq.StringArray{container}
+		queryParams["recommendation_sets.container_name LIKE ?"] = "%" + container + "%"
 	}
 
 	return queryParams

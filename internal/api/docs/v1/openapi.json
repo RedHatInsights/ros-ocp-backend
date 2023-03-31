@@ -141,7 +141,7 @@
                 "examples": {
                   "example1": {
                     "summary": "Recommendation Example",
-                    "value": "{ \n  \"cluster_uuid\": \"1ac7d92e-e721-45bf-b9bc-91cd6d4c30e8\",\n  \"cluster_alias\": \"6678\",\n  \"containers\": [\n    \"node\",\n    \"postgres\",\n    \"apache\"\n  ],\n  \"id\": \"aad02009-36d0-46cb-a7a9-c7d8c5924474\",\n  \"last_report\": \"2023-03-15T10:08:21+05:30\",\n  \"project\": \"proj_rxu\",\n  \"values\": {\n    \"cpu\": {\n      \"current\": {\n        \"limit\": 2,\n        \"request\": 5\n      },\n      \"recommended\": {\n        \"delta\": 2,\n        \"limit\": 3,\n        \"request\": 7\n      }\n    },\n    \"memory\": {\n      \"current\": {\n        \"limit\": 3,\n        \"request\": 5\n      },\n      \"recommended\": {\n        \"delta\": 1,\n        \"limit\": 2,\n        \"request\": 5\n      }\n    },\n    \"interval\": 15,\n    \"reported\": \"24/12/1992\"\n  },\n  \"workload\": \"deployment_proj_rxu\",\n  \"workload_type\": \"replicaset\"\n}\n"
+                    "value": "{ \n  \"cluster_uuid\": \"1ac7d92e-e721-45bf-b9bc-91cd6d4c30e8\",\n  \"cluster_alias\": \"6678\",\n  \"containers\": [\n    \"node\",\n    \"postgres\",\n    \"apache\"\n  ],\n  \"id\": \"aad02009-36d0-46cb-a7a9-c7d8c5924474\",\n  \"last_reported\": \"2023-03-15T10:08:21+05:30\",\n  \"project\": \"proj_rxu\",\n  \"recommendations\": {\n    \"cpu\": {\n      \"current\": {\n        \"limit\": 2,\n        \"request\": 5\n      },\n      \"recommended\": {\n        \"delta\": 2,\n        \"limit\": 3,\n        \"request\": 7\n      }\n    },\n    \"memory\": {\n      \"current\": {\n        \"limit\": 3,\n        \"request\": 5\n      },\n      \"recommended\": {\n        \"delta\": 1,\n        \"limit\": 2,\n        \"request\": 5\n      }\n    },\n    \"interval\": 15,\n    \"reported\": \"24/12/1992\"\n  },\n  \"workload\": \"deployment_proj_rxu\",\n  \"workload_type\": \"replicaset\"\n}\n"
                   }
                 }
               }
@@ -224,7 +224,11 @@
             "type": "string",
             "example": "container-1"
           },
-          "values": {
+          "last_reported": {
+            "type": "string",
+            "example": "2023-03-15T10:08:21+05:30"
+          },
+          "recommendations": {
             "type": "object",
             "properties": {
               "cpu": {

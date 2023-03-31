@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -20,6 +21,39 @@ func GetRecommendationSetList(c echo.Context) error {
 	}
 
 	log := logging.GetLogger()
+
+	orderBy := c.QueryParam("order_by")
+	if orderBy != "" {
+		var orderByOptions = map[string]string{
+			"cluster": "clusters.cluster_alias",
+			"workload_type": "workloads.workload_type",
+			"workload": "workloads.workload_name",
+			"project": "workloads.namespace",
+			"container": "recommendation_sets.container_name",
+			"last_reported": "clusters.last_reported_at",
+		}
+		orderByOption, keyError := orderByOptions[orderBy]
+		
+		if !keyError{
+			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid order_by value"})
+		} 
+		orderBy = orderByOption
+	} else {
+		orderBy = "clusters.last_reported_at"
+	}
+
+	orderHow := c.QueryParam("order_how")
+	if orderHow != "" {
+		orderHowUpper := strings.ToUpper(orderHow)
+		if (orderHowUpper != "ASC") && (orderHowUpper != "DESC") {
+			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid order_how value"})
+		}
+		orderHow = orderHowUpper
+	} else {
+		orderHow = "DESC"
+	}
+
+	orderQuery := orderBy + " " + orderHow
 
 	limitStr := c.QueryParam("limit")
 	limit := 10 // default value
@@ -41,7 +75,7 @@ func GetRecommendationSetList(c echo.Context) error {
 
 	queryParams := MapQueryParameters(c)
 	recommendationSet := model.RecommendationSet{}
-	recommendationSets, error := recommendationSet.GetRecommendationSets(OrgID, limit, offset, queryParams)
+	recommendationSets, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams)
 
 	if error != nil {
 		log.Error("unable to fetch records from database", error)
@@ -58,8 +92,8 @@ func GetRecommendationSetList(c echo.Context) error {
 		recommendationData["workload_type"] = recommendation.Workload.WorkloadType
 		recommendationData["workload"] = recommendation.Workload.WorkloadName
 		recommendationData["container"] = recommendation.ContainerName
-		recommendationData["last_report"] = recommendation.Workload.Cluster.LastReportedAtStr
-		recommendationData["values"] = recommendation.Recommendations
+		recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
+		recommendationData["recommendations"] = recommendation.Recommendations
 		allRecommendations = append(allRecommendations, recommendationData)
 	}
 
@@ -103,8 +137,8 @@ func GetRecommendationSet(c echo.Context) error {
 		recommendationSlice["workload_type"] = recommendationSet.Workload.WorkloadType
 		recommendationSlice["workload"] = recommendationSet.Workload.WorkloadName
 		recommendationSlice["container"] = recommendationSet.ContainerName
-		recommendationSlice["last_report"] = recommendationSet.Workload.Cluster.LastReportedAtStr
-		recommendationSlice["values"] = recommendationSet.Recommendations
+		recommendationSlice["last_reported"] = recommendationSet.Workload.Cluster.LastReportedAtStr
+		recommendationSlice["recommendations"] = recommendationSet.Recommendations
 	}
 
 	return c.JSON(http.StatusOK, recommendationSlice)
