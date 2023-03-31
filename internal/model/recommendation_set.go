@@ -45,7 +45,7 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 			JOIN workloads ON recommendation_sets.workload_id = workloads.id
 			JOIN clusters ON workloads.cluster_id = clusters.id
 			JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
-		`).Preload("Workload.Cluster").
+		`).Preload("Workload.Cluster.RHAccount").
 		Where("rh_accounts.org_id = ?", orgID)
 
 	for key, value := range queryParams {
@@ -74,7 +74,7 @@ func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendatio
 	db.Joins("JOIN workloads ON recommendation_sets.workload_id = workloads.id").
 		Joins("JOIN clusters ON workloads.cluster_id = clusters.id").
 		Joins("JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id").
-		Preload("Workload.Cluster").
+		Preload("Workload.Cluster.RHAccount").
 		Where("rh_accounts.org_id = ?", orgID).
 		Where("recommendation_sets.id = ?", recommendationID).
 		First(&recommendationSet)
