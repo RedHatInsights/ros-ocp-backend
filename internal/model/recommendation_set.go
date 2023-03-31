@@ -31,7 +31,7 @@ func (r *RecommendationSet) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
-func (r *RecommendationSet) GetRecommendationSets(orgID string, limit int, offset int, queryParams map[string]interface{}) ([]RecommendationSet, error) {
+func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string]interface{}) ([]RecommendationSet, error) {
 
 	var recommendationSets []RecommendationSet
 	db := database.GetDB()
@@ -48,19 +48,14 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, limit int, offse
 		`).Preload("Workload.Cluster").
 		Where("rh_accounts.org_id = ?", orgID)
 
-	var clusterKey string
 	for key, value := range queryParams {
 		if strings.Contains(key, "clusters") {
-			clusterKey = key
 			query.Where(key, value).Or("clusters.cluster_uuid LIKE ?", value)
 		}
-	}
-
-	delete(queryParams, clusterKey)
-
-	for key, value := range queryParams {
 		query.Where(key, value)
 	}
+
+	query.Order(orderQuery)
 
 	err := query.Offset(offset).Limit(limit).Find(&recommendationSets).Error
 
