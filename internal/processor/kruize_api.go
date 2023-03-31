@@ -107,7 +107,7 @@ func List_recommendations(experiment types.ExperimentEvent) ([]kruizePayload.Lis
 	}
 	q := req.URL.Query()
 	q.Add("experiment_name", experiment.Experiment_name)
-	q.Add("monitoring_end_time", experiment.Monitoring_end_time)
+	q.Add("monitoring_end_time", convertDateToISO8601(experiment.Monitoring_end_time))
 	req.URL.RawQuery = q.Encode()
 	res, err := client.Do(req)
 	if err != nil {
@@ -115,6 +115,13 @@ func List_recommendations(experiment types.ExperimentEvent) ([]kruizePayload.Lis
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
+	if res.StatusCode == 400 {
+		data := map[string]interface{}{}
+		if err := json.Unmarshal(body, &data); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal response of /listRecommendations API %v", err)
+		}
+		return nil, fmt.Errorf(data["message"].(string))
+	}
 	response := []kruizePayload.ListRecommendations{}
 	fmt.Println(string(body))
 	if err := json.Unmarshal(body, &response); err != nil {

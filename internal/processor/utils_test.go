@@ -11,7 +11,7 @@ import (
 
 func TestConvertDateToISO8601(t *testing.T) {
 	date := "2022-11-01 18:25:43 +0000 UTC"
-	expected_result := "2022-11-01T18:25:43Z"
+	expected_result := "2022-11-01T18:25:43.000Z"
 	result := convertDateToISO8601(date)
 
 	if diff := cmp.Diff(result, expected_result); diff != "" {

@@ -56,7 +56,7 @@ build:
 
 .PHONY: lint
 lint: golangci-lint
-	$(GOLANGCILINT) run ./...
+	$(GOLANGCILINT) run --timeout=3m ./...
 
 .PHONY: test
 test:
