@@ -25,18 +25,18 @@ func GetRecommendationSetList(c echo.Context) error {
 	orderBy := c.QueryParam("order_by")
 	if orderBy != "" {
 		var orderByOptions = map[string]string{
-			"cluster": "clusters.cluster_alias",
+			"cluster":       "clusters.cluster_alias",
 			"workload_type": "workloads.workload_type",
-			"workload": "workloads.workload_name",
-			"project": "workloads.namespace",
-			"container": "recommendation_sets.container_name",
+			"workload":      "workloads.workload_name",
+			"project":       "workloads.namespace",
+			"container":     "recommendation_sets.container_name",
 			"last_reported": "clusters.last_reported_at",
 		}
 		orderByOption, keyError := orderByOptions[orderBy]
-		
-		if !keyError{
+
+		if !keyError {
 			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid order_by value"})
-		} 
+		}
 		orderBy = orderByOption
 	} else {
 		orderBy = "clusters.last_reported_at"
@@ -75,8 +75,13 @@ func GetRecommendationSetList(c echo.Context) error {
 
 	queryParams := MapQueryParameters(c)
 	recommendationSet := model.RecommendationSet{}
+	log.Info("============================")
+	log.Infof("User orgID = %s", OrgID)
+	log.Info("============================")
 	recommendationSets, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams)
-
+	log.Info("============================")
+	log.Infof("recommendationSets got from DB = %v", recommendationSets)
+	log.Info("============================")
 	if error != nil {
 		log.Error("unable to fetch records from database", error)
 	}
@@ -101,8 +106,11 @@ func GetRecommendationSetList(c echo.Context) error {
 	for i, v := range allRecommendations {
 		interfaceSlice[i] = v
 	}
-
-	return c.JSON(http.StatusOK, CollectionResponse(interfaceSlice, c.Request(), len(allRecommendations), limit, offset))
+	results := CollectionResponse(interfaceSlice, c.Request(), len(allRecommendations), limit, offset)
+	log.Info("============================")
+	log.Infof("Data we are sending in response = %+v", results)
+	log.Info("============================")
+	return c.JSON(http.StatusOK, results)
 
 }
 
