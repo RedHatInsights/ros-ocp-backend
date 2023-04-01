@@ -1,0 +1,2 @@
+ALTER TABLE recommendation_sets
+DROP CONSTRAINT UQ_Recommendation;
