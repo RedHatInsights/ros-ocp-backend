@@ -9,6 +9,7 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB = nil
@@ -27,7 +28,9 @@ func initDB() {
 	rdsCA := CreateCACertFile(cfg.DBCACert)
 	dsn := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s sslrootcert=%s", user, password, dbname, host, port, dbssl, rdsCA)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
