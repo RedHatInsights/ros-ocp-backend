@@ -5,11 +5,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"time"
 
 	"github.com/labstack/echo/v4"
-
-	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 )
 
 type Collection struct {
@@ -81,36 +78,39 @@ func CollectionResponse(collection []interface{}, req *http.Request, count, limi
 
 func MapQueryParameters(c echo.Context) map[string]interface{} {
 
-	log := logging.GetLogger()
 	queryParams := make(map[string]interface{})
-	now := time.Now()
-	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
-	startDateStr := c.QueryParam("start_date")
-	var startDate time.Time
-	if startDateStr == "" {
-		startDate = firstOfMonth
-	} else {
-		var err error
-		startDate, err = time.Parse("2006-01-02", startDateStr)
-		if err != nil {
-			log.Error("error parsing start_date:", err)
-		}
-	}
-	queryParams["DATE(recommendation_sets.monitoring_start_time) >= ?"] = startDate.Format("2006-01-02")
+	// Commenting below code temporarily until below kruize bug is fixed.
+	// Bug - https://github.com/kruize/autotune/issues/696
 
-	endDateStr := c.QueryParam("end_date")
-	var endDate time.Time
-	if endDateStr == "" {
-		endDate = now
-	} else {
-		var err error
-		endDate, err = time.Parse("2006-01-02", endDateStr)
-		if err != nil {
-			log.Error("error parsing end_date:", err)
-		}
-	}
-	queryParams["DATE(recommendation_sets.monitoring_end_time) <= ?"] = endDate.Format("2006-01-02")
+	// now := time.Now()
+	// firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	// startDateStr := c.QueryParam("start_date")
+	// var startDate time.Time
+	// if startDateStr == "" {
+	// 	startDate = firstOfMonth
+	// } else {
+	// 	var err error
+	// 	startDate, err = time.Parse("2006-01-02", startDateStr)
+	// 	if err != nil {
+	// 		log.Error("error parsing start_date:", err)
+	// 	}
+	// }
+	// queryParams["DATE(recommendation_sets.monitoring_start_time) >= ?"] = startDate.Format("2006-01-02")
+
+	// endDateStr := c.QueryParam("end_date")
+	// var endDate time.Time
+	// if endDateStr == "" {
+	// 	endDate = now
+	// } else {
+	// 	var err error
+	// 	endDate, err = time.Parse("2006-01-02", endDateStr)
+	// 	if err != nil {
+	// 		log.Error("error parsing end_date:", err)
+	// 	}
+	// }
+	// queryParams["DATE(recommendation_sets.monitoring_end_time) <= ?"] = endDate.Format("2006-01-02")
 
 	cluster := c.QueryParam("cluster")
 	if cluster != "" {
