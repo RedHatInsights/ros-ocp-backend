@@ -82,9 +82,6 @@ func MapQueryParameters(c echo.Context) map[string]interface{} {
 	log := logging.GetLogger()
 	queryParams := make(map[string]interface{})
 
-	// Commenting below code temporarily until below kruize bug is fixed.
-	// Bug - https://github.com/kruize/autotune/issues/696
-
 	now := time.Now().UTC()
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
