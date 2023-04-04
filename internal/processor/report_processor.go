@@ -124,7 +124,7 @@ func ProcessReport(msg *kafka.Message) {
 				K8s_object_name:     k8s_object[0]["k8s_object_name"].(string),
 				K8s_object_type:     k8s_object[0]["k8s_object_type"].(string),
 				Namespace:           k8s_object[0]["namespace"].(string),
-				Fetch_time:          time.Now().Add(time.Second * time.Duration(waittime)),
+				Fetch_time:          time.Now().UTC().Add(time.Second * time.Duration(waittime)),
 				Monitoring_end_time: monitoring_end_time,
 				K8s_object:          k8s_object,
 			}
