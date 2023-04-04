@@ -35,7 +35,7 @@ func ProcessEvent(msg *kafka.Message) {
 		return
 	}
 
-	currentTime := time.Now()
+	currentTime := time.Now().UTC()
 	if currentTime.Before(kafkaMsg.Fetch_time) {
 		t := kafkaMsg.Fetch_time.Sub(currentTime)
 		log.Info("Sleeping for: ", t)
@@ -82,7 +82,7 @@ func ProcessEvent(msg *kafka.Message) {
 		if err := processor.Update_results(kafkaMsg.Experiment_name, kafkaMsg.K8s_object); err != nil {
 			log.Error(err)
 		}
-		kafkaMsg.Fetch_time = time.Now().Add(time.Minute * time.Duration(2))
+		kafkaMsg.Fetch_time = time.Now().UTC().Add(time.Minute * time.Duration(2))
 
 		msgBytes, err := json.Marshal(kafkaMsg)
 		if err != nil {

@@ -93,6 +93,20 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 		if strings.Contains(resdata["message"].(string), "already contains result for timestamp") {
 			log.Info(resdata["message"])
 		}
+
+		// Comparing string should be changed once kruize fix it some standard error message
+		if strings.Contains(resdata["message"].(string), "because \"performanceProfile\" is null") {
+			log.Error("Performance profile does not exist")
+			log.Info("Tring to create resource_optimization_openshift performance profile")
+			Setup_kruize_performance_profile()
+			if err := Update_results(experiment_name, k8s_object); err != nil {
+				return err
+			}
+		}
+
+		if strings.Contains(resdata["message"].(string), fmt.Sprintf("Experiment name: %s not found", experiment_name)) {
+			return fmt.Errorf("%s", resdata["message"])
+		}
 	}
 
 	return nil
