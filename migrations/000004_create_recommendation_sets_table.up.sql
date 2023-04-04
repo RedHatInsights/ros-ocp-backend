@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS recommendation_sets(
    monitoring_start_time TIMESTAMP WITH TIME ZONE NOT NULL,
    monitoring_end_time TIMESTAMP WITH TIME ZONE NOT NULL,
    recommendations jsonb NOT NULL,
-   created_at TIMESTAMP WITH TIME ZONE NOT NULL
+   updated_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 ALTER TABLE recommendation_sets

@@ -19,16 +19,16 @@ type RecommendationSet struct {
 	MonitoringStartTime    time.Time `gorm:"type:timestamp"`
 	MonitoringEndTime      time.Time `gorm:"type:timestamp"`
 	Recommendations        datatypes.JSON
-	CreatedAt              time.Time `gorm:"type:timestamp"`
+	UpdatedAt              time.Time `gorm:"type:timestamp"`
 	MonitoringStartTimeStr string    `gorm:"-"`
 	MonitoringEndTimeStr   string    `gorm:"-"`
-	CreatedAtStr           string    `gorm:"-"`
+	UpdatedAtStr           string    `gorm:"-"`
 }
 
 func (r *RecommendationSet) AfterFind(tx *gorm.DB) error {
 	r.MonitoringStartTimeStr = r.MonitoringStartTime.Format(time.RFC3339)
 	r.MonitoringEndTimeStr = r.MonitoringEndTime.Format(time.RFC3339)
-	r.CreatedAtStr = r.CreatedAt.Format(time.RFC3339)
+	r.UpdatedAtStr = r.UpdatedAt.Format(time.RFC3339)
 	return nil
 }
 
@@ -52,6 +52,7 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 	for key, value := range queryParams {
 		if strings.Contains(key, "clusters") {
 			query.Where(key, value).Or("clusters.cluster_uuid LIKE ?", value)
+			continue
 		}
 		query.Where(key, value)
 	}
@@ -86,8 +87,8 @@ func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendatio
 func (r *RecommendationSet) CreateRecommendationSet() error {
 	db := database.GetDB()
 	result := db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "workload_id"}, {Name: "container_name"}, {Name: "monitoring_start_time"}, {Name: "monitoring_end_time"}},
-		DoUpdates: clause.AssignmentColumns([]string{"recommendations", "created_at"}),
+		Columns:   []clause.Column{{Name: "workload_id"}, {Name: "container_name"}},
+		DoUpdates: clause.AssignmentColumns([]string{"monitoring_start_time", "monitoring_end_time", "recommendations", "updated_at"}),
 	}).Create(r)
 
 	if result.Error != nil {

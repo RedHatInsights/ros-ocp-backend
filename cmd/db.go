@@ -212,7 +212,7 @@ var seedCmd = &cobra.Command{
 			MonitoringStartTime: time.Now().Add(-time.Hour * 3),
 			MonitoringEndTime:   time.Now().Add(-time.Hour * 2),
 			Recommendations:     datatypes.JSON(jsonrecommendationSetData1),
-			CreatedAt:           time.Now(),
+			UpdatedAt:           time.Now(),
 		}
 		db.FirstOrCreate(&recommendationSet1)
 
@@ -222,7 +222,7 @@ var seedCmd = &cobra.Command{
 			MonitoringStartTime: time.Now().Add(-time.Hour * 2),
 			MonitoringEndTime:   time.Now().Add(-time.Hour * 1),
 			Recommendations:     datatypes.JSON(jsonrecommendationSetData2),
-			CreatedAt:           time.Now(),
+			UpdatedAt:           time.Now(),
 		}
 		db.Where(&model.RecommendationSet{Recommendations: jsonrecommendationSetData2}).FirstOrCreate(&recommendationSet2)
 
@@ -232,7 +232,7 @@ var seedCmd = &cobra.Command{
 			MonitoringStartTime: time.Now().Add(-time.Hour * 3),
 			MonitoringEndTime:   time.Now().Add(-time.Hour * 2),
 			Recommendations:     datatypes.JSON(jsonrecommendationSetData2),
-			CreatedAt:           time.Now(),
+			UpdatedAt:           time.Now(),
 		}
 		db.Where(&model.RecommendationSet{ContainerName: "nodejs"}).FirstOrCreate(&recommendationSet3)
 	},
