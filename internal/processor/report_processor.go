@@ -69,7 +69,7 @@ func ProcessReport(msg *kafka.Message) {
 		df = Aggregate_data(df)
 
 		// grouping container(row in csv) by there deployement.
-		k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name", "interval_start").GetGroups()
+		k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name", "interval_end").GetGroups()
 
 		// looping over each group.
 		for _, k8s_object_group := range k8s_object_groups {
@@ -78,7 +78,16 @@ func ProcessReport(msg *kafka.Message) {
 			namespace := k8s_object[0]["namespace"].(string)
 			k8s_object_type := k8s_object[0]["k8s_object_type"].(string)
 			k8s_object_name := k8s_object[0]["k8s_object_name"].(string)
-			monitoring_end_time := k8s_object[0]["interval_end"].(string)
+			interval_start, err := time.Parse("2006-01-02 15:04:05 -0700 MST", k8s_object[0]["interval_start"].(string))
+			if err != nil {
+				log.Errorf("unable to convert string to time: %s", err)
+				continue
+			}
+			interval_end, err := time.Parse("2006-01-02 15:04:05 -0700 MST", k8s_object[0]["interval_end"].(string))
+			if err != nil {
+				log.Errorf("unable to convert string to time: %s", err)
+				continue
+			}
 
 			experiment_name := generateExperimentName(
 				kafkaMsg.Metadata.Org_id,
@@ -109,10 +118,30 @@ func ProcessReport(msg *kafka.Message) {
 				return
 			}
 
-			if err := Update_results(experiment_name, k8s_object); err != nil {
+			usage_data_byte, err := Update_results(experiment_name, k8s_object)
+			if err != nil {
 				log.Error(err)
 				continue
 			}
+
+			for _, container := range usage_data_byte[0].Kubernetes_objects[0].Containers {
+				container_usage_metrics, err := json.Marshal(container.Metrics)
+				if err != nil {
+					log.Errorf("Unable to marshal container usage data: %v", err)
+				}
+				workload_metric := model.WorkloadMetrics{
+					WorkloadID:    workload.ID,
+					ContainerName: container.Container_name,
+					IntervalStart: interval_start,
+					IntervalEnd:   interval_end,
+					UsageMetrics:  container_usage_metrics,
+				}
+				if err := workload_metric.CreateWorkloadMetrics(); err != nil {
+					log.Errorf("unable to add record to workload_metrics table: %v. Error: %v", workload_metric, err)
+					return
+				}
+			}
+
 			waittime, err := strconv.Atoi(cfg.KruizeWaitTime)
 			if err != nil {
 				log.Error(err)
@@ -125,7 +154,7 @@ func ProcessReport(msg *kafka.Message) {
 				K8s_object_type:     k8s_object[0]["k8s_object_type"].(string),
 				Namespace:           k8s_object[0]["namespace"].(string),
 				Fetch_time:          time.Now().UTC().Add(time.Second * time.Duration(waittime)),
-				Monitoring_end_time: monitoring_end_time,
+				Monitoring_end_time: interval_end.String(),
 				K8s_object:          k8s_object,
 			}
 

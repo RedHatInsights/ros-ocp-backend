@@ -1,10 +1,6 @@
 package kruizePayload
 
-import (
-	"encoding/json"
-)
-
-type updateResult struct {
+type UpdateResult struct {
 	Version            string             `json:"version"`
 	Experiment_name    string             `json:"experiment_name"`
 	Start_timestamp    string             `json:"start_timestamp"`
@@ -12,12 +8,12 @@ type updateResult struct {
 	Kubernetes_objects []kubernetesObject `json:"kubernetes_objects"`
 }
 
-func GetUpdateResultPayload(experiment_name string, containers []map[string]interface{}, data map[string]string) ([]byte, error) {
+func GetUpdateResultPayload(experiment_name string, containers []map[string]interface{}, data map[string]string) []UpdateResult {
 	container_array := []container{}
 	for _, c := range containers {
 		container_array = append(container_array, make_container_data(c))
 	}
-	payload := []updateResult{
+	payload := []UpdateResult{
 		{
 			Version:         "1.0",
 			Experiment_name: experiment_name,
@@ -33,9 +29,5 @@ func GetUpdateResultPayload(experiment_name string, containers []map[string]inte
 			},
 		},
 	}
-	postBody, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
-	}
-	return postBody, nil
+	return payload
 }

@@ -61,7 +61,7 @@ func create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 	return container_names, nil
 }
 
-func Update_results(experiment_name string, k8s_object []map[string]interface{}) error {
+func Update_results(experiment_name string, k8s_object []map[string]interface{}) ([]kruizePayload.UpdateResult, error) {
 	data := map[string]string{
 		"namespace":       k8s_object[0]["namespace"].(string),
 		"k8s_object_type": k8s_object[0]["k8s_object_type"].(string),
@@ -69,17 +69,18 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 		"interval_start":  convertDateToISO8601(k8s_object[0]["interval_start"].(string)),
 		"interval_end":    convertDateToISO8601(k8s_object[0]["interval_end"].(string)),
 	}
-	payload_data, err := kruizePayload.GetUpdateResultPayload(experiment_name, k8s_object, data)
+	payload_data := kruizePayload.GetUpdateResultPayload(experiment_name, k8s_object, data)
+	postBody, err := json.Marshal(payload_data)
 	if err != nil {
-		return fmt.Errorf("unable to create payload: %v", err)
+		return nil, fmt.Errorf("unable to create payload: %v", err)
 	}
 
 	// Update metrics to kruize experiment
 	url := cfg.KruizeUrl + "/updateResults"
 
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload_data))
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
-		return fmt.Errorf("an Error Occured while sending metrics: %v", err)
+		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
 	}
 	if res.StatusCode == 201 {
 		log.Info("Metrics uploaded successfully")
@@ -88,7 +89,7 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 		body, _ := io.ReadAll(res.Body)
 		resdata := map[string]interface{}{}
 		if err := json.Unmarshal(body, &resdata); err != nil {
-			return fmt.Errorf("can not unmarshal response data: %v", err)
+			return nil, fmt.Errorf("can not unmarshal response data: %v", err)
 		}
 		if strings.Contains(resdata["message"].(string), "already contains result for timestamp") {
 			log.Info(resdata["message"])
@@ -99,17 +100,19 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 			log.Error("Performance profile does not exist")
 			log.Info("Tring to create resource_optimization_openshift performance profile")
 			Setup_kruize_performance_profile()
-			if err := Update_results(experiment_name, k8s_object); err != nil {
-				return err
+			if payload_data, err := Update_results(experiment_name, k8s_object); err != nil {
+				return nil, err
+			} else {
+				return payload_data, nil
 			}
 		}
 
 		if strings.Contains(resdata["message"].(string), fmt.Sprintf("Experiment name: %s not found", experiment_name)) {
-			return fmt.Errorf("%s", resdata["message"])
+			return nil, fmt.Errorf("%s", resdata["message"])
 		}
 	}
 
-	return nil
+	return payload_data, nil
 }
 
 func List_recommendations(experiment types.ExperimentEvent) ([]kruizePayload.ListRecommendations, error) {

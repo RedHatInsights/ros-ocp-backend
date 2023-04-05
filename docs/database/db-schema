@@ -39,6 +39,18 @@ Table workloads {
   }
 }
 
+Table workload_metrics {
+  id bigint [increment]
+  workload_id bigint [ref: > workloads.id]
+  container_name text
+  interval_start datetime
+  interval_end datetime
+  usage_metrics jsonb
+  Indexes {
+    id [pk]
+  }
+}
+
 Table recommendation_sets {
   id uuid [increment]
   workload_id bigint [ref: > workloads.id]
