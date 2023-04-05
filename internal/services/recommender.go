@@ -79,7 +79,7 @@ func ProcessEvent(msg *kafka.Message) {
 			return
 		}
 	} else {
-		if err := processor.Update_results(kafkaMsg.Experiment_name, kafkaMsg.K8s_object); err != nil {
+		if _, err := processor.Update_results(kafkaMsg.Experiment_name, kafkaMsg.K8s_object); err != nil {
 			log.Error(err)
 		}
 		kafkaMsg.Fetch_time = time.Now().UTC().Add(time.Minute * time.Duration(2))
