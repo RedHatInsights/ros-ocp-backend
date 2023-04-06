@@ -102,7 +102,7 @@ func GetRecommendationSetList(c echo.Context) error {
 	log.Info("============================")
 	log.Infof("User orgID = %s", OrgID)
 	log.Info("============================")
-	recommendationSets, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams)
+	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams)
 	log.Info("============================")
 	log.Infof("recommendationSets got from DB = %v", recommendationSets)
 	log.Info("============================")
@@ -144,7 +144,7 @@ func GetRecommendationSetList(c echo.Context) error {
 	for i, v := range allRecommendations {
 		interfaceSlice[i] = v
 	}
-	results := CollectionResponse(interfaceSlice, c.Request(), len(allRecommendations), limit, offset)
+	results := CollectionResponse(interfaceSlice, c.Request(), count, limit, offset)
 	log.Info("============================")
 	log.Infof("Data we are sending in response = %+v", results)
 	log.Info("============================")
