@@ -98,6 +98,26 @@
               "minimum": 1,
               "maximum": 100
             }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Options are cluster, project, workload_type, workload, container, last_reported",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "last_reported"
+            }
+          },
+          {
+            "name": "order_how",
+            "in": "query",
+            "description": "Options are ASC, DESC",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "DESC"
+            }
           }
         ],
         "responses": {

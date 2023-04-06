@@ -32,12 +32,12 @@ func (r *RecommendationSet) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
-func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string]interface{}) ([]RecommendationSet, error) {
+func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string]interface{}) ([]RecommendationSet, int, error) {
 
 	var recommendationSets []RecommendationSet
 	db := database.GetDB()
 
-	query := db.Joins(`
+	query := db.Table("recommendation_sets").Joins(`
 		JOIN (
 			SELECT workload_id, MAX(monitoring_end_time) AS latest_monitoring_end_time 
 			FROM recommendation_sets GROUP BY workload_id
@@ -46,8 +46,7 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 			JOIN workloads ON recommendation_sets.workload_id = workloads.id
 			JOIN clusters ON workloads.cluster_id = clusters.id
 			JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
-		`).Preload("Workload.Cluster.RHAccount").
-		Where("rh_accounts.org_id = ?", orgID)
+		`).Model(r).Preload("Workload.Cluster.RHAccount").Where("rh_accounts.org_id = ?", orgID)
 
 	for key, value := range queryParams {
 		if strings.Contains(key, "clusters") {
@@ -57,15 +56,14 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 		query.Where(key, value)
 	}
 
+	var count int64 = 0
+	query.Count(&count)
+	
 	query.Order(orderQuery)
 
 	err := query.Offset(offset).Limit(limit).Find(&recommendationSets).Error
 
-	if err != nil {
-		return nil, err
-	}
-
-	return recommendationSets, nil
+	return recommendationSets, int(count), err
 }
 
 func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendationID string) (RecommendationSet, error) {
