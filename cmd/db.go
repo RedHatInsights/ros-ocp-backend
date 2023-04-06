@@ -143,57 +143,151 @@ var seedCmd = &cobra.Command{
 		db.Where(&model.Workload{WorkloadType: workload.Deployment}).FirstOrCreate(&workload2)
 
 		recommendationSetData1 := map[string]interface{}{
-			"interval": 15,
-			"cpu": map[string]interface{}{
-				"current": map[string]interface{}{
-					"request": 5,
-					"limit":   2,
+			"duration_based": map[string]interface{}{
+				"long_term": map[string]interface{}{
+					"config": map[string]interface{}{
+						"limits": map[string]interface{}{
+							"cpu": map[string]interface{}{},
+							"memory": map[string]interface{}{},
+						},
+						"requests": map[string]interface{}{
+							"cpu": map[string]interface{}{},
+							"memory": map[string]interface{}{},
+						},
+					},
+					"notifications": []map[string]interface{}{
+						{
+							"type": "info",
+							"message": "There is not enough data available to generate a recommendation.",
+						},
+					},
+					"monitoring_end_time": "0001-01-01T00:00:00Z",
+					"monitoring_start_time": "0001-01-01T00:00:00Z",
 				},
-				"recommended": map[string]interface{}{
-					"request": 7,
-					"limit":   3,
-					"delta":   2,
+				"short_term": map[string]interface{}{
+					"config": map[string]interface{}{
+						"limits": map[string]interface{}{
+							"cpu": map[string]interface{}{
+								"amount": 0.06,
+								"format": "cores",
+							},
+							"memory": map[string]interface{}{
+								"amount": 513900544,
+								"format": "MiB",
+							},
+						},
+						"requests": map[string]interface{}{
+							"cpu": map[string]interface{}{
+								"amount": 0.05,
+								"format": "cores",
+							},
+							"memory": map[string]interface{}{
+								"amount": 493311537.55,
+								"format": "MiB",
+							},
+						},
+					},
+					"duration_in_hours": 0.23333333333333334,
+					"monitoring_end_time": "2023-04-02T00:15:00Z",
+					"monitoring_start_time": "2023-04-01T00:15:00Z",
+				},
+				"medium_term": map[string]interface{}{
+					"config": map[string]interface{}{
+						"limits": map[string]interface{}{
+							"cpu": map[string]interface{}{},
+							"memory": map[string]interface{}{},
+						},
+						"requests": map[string]interface{}{
+							"cpu": map[string]interface{}{},
+							"memory": map[string]interface{}{},
+						},
+					},
+					"notifications": []map[string]interface{}{
+						{
+							"type": "info",
+							"message": "There is not enough data available to generate a recommendation.",
+						},
+					},
+					"monitoring_end_time": "0001-01-01T00:00:00Z",
+					"monitoring_start_time": "0001-01-01T00:00:00Z",
 				},
 			},
-			"memory": map[string]interface{}{
-				"current": map[string]interface{}{
-					"request": 5,
-					"limit":   3,
-				},
-				"recommended": map[string]interface{}{
-					"request": 5,
-					"limit":   2,
-					"delta":   1,
-				},
-			},
-			"reported": "24/12/1992",
+			"workload": "servers",
+			"workload_type": "deployment",
 		}
 
 		recommendationSetData2 := map[string]interface{}{
-			"interval": 7,
-			"cpu": map[string]interface{}{
-				"current": map[string]interface{}{
-					"request": 51,
-					"limit":   2,
+			"duration_based": map[string]interface{}{
+				"long_term": map[string]interface{}{
+					"config": map[string]interface{}{
+						"limits": map[string]interface{}{
+							"cpu": map[string]interface{}{},
+							"memory": map[string]interface{}{},
+						},
+						"requests": map[string]interface{}{
+							"cpu": map[string]interface{}{},
+							"memory": map[string]interface{}{},
+						},
+					},
+					"notifications": []map[string]interface{}{
+						{
+							"type": "info",
+							"message": "There is not enough data available to generate a recommendation.",
+						},
+					},
+					"monitoring_end_time": "0001-01-01T00:00:00Z",
+					"monitoring_start_time": "0001-01-01T00:00:00Z",
 				},
-				"recommended": map[string]interface{}{
-					"request": 7,
-					"limit":   3,
-					"delta":   2,
+				"short_term": map[string]interface{}{
+					"config": map[string]interface{}{
+						"limits": map[string]interface{}{
+							"cpu": map[string]interface{}{
+								"amount": 0.06,
+								"format": "cores",
+							},
+							"memory": map[string]interface{}{
+								"amount": 513900544,
+								"format": "MiB",
+							},
+						},
+						"requests": map[string]interface{}{
+							"cpu": map[string]interface{}{
+								"amount": 0.05,
+								"format": "cores",
+							},
+							"memory": map[string]interface{}{
+								"amount": 493311537.55,
+								"format": "MiB",
+							},
+						},
+					},
+					"duration_in_hours": 0.23333333333333334,
+					"monitoring_end_time": "2023-04-02T00:15:00Z",
+					"monitoring_start_time": "2023-04-01T00:15:00Z",
+				},
+				"medium_term": map[string]interface{}{
+					"config": map[string]interface{}{
+						"limits": map[string]interface{}{
+							"cpu": map[string]interface{}{},
+							"memory": map[string]interface{}{},
+						},
+						"requests": map[string]interface{}{
+							"cpu": map[string]interface{}{},
+							"memory": map[string]interface{}{},
+						},
+					},
+					"notifications": []map[string]interface{}{
+						{
+							"type": "info",
+							"message": "There is not enough data available to generate a recommendation.",
+						},
+					},
+					"monitoring_end_time": "0001-01-01T00:00:00Z",
+					"monitoring_start_time": "0001-01-01T00:00:00Z",
 				},
 			},
-			"memory": map[string]interface{}{
-				"current": map[string]interface{}{
-					"request": 5,
-					"limit":   32,
-				},
-				"recommended": map[string]interface{}{
-					"request": 5,
-					"limit":   2,
-					"delta":   2,
-				},
-			},
-			"reported": "01/02/1996",
+			"workload": "servers",
+			"workload_type": "replicaset",
 		}
 
 		jsonrecommendationSetData1, err := json.Marshal(recommendationSetData1)
