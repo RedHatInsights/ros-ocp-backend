@@ -2,6 +2,7 @@ package processor
 
 import (
 	"encoding/json"
+	"sort"
 	"strconv"
 	"time"
 
@@ -71,19 +72,29 @@ func ProcessReport(msg *kafka.Message) {
 		// grouping container(row in csv) by there deployement.
 		k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name", "interval_end").GetGroups()
 
-		// looping over each group.
-		for _, k8s_object_group := range k8s_object_groups {
+		keys := make([]string, 0, len(k8s_object_groups))
+		for key := range k8s_object_groups {
+			keys = append(keys, key)
+		}
 
-			k8s_object := k8s_object_group.Maps()
+		sort.SliceStable(keys, func(i, j int) bool {
+			time_i, _ := convertStringToTime(k8s_object_groups[keys[i]].Col("interval_end").Val(0).(string))
+			time_j, _ := convertStringToTime(k8s_object_groups[keys[j]].Col("interval_end").Val(0).(string))
+			return time_i.Before(time_j)
+		})
+
+		// looping over each group in chronological order based on interval_end time.
+		for _, group_name := range keys {
+			k8s_object := k8s_object_groups[group_name].Maps()
 			namespace := k8s_object[0]["namespace"].(string)
 			k8s_object_type := k8s_object[0]["k8s_object_type"].(string)
 			k8s_object_name := k8s_object[0]["k8s_object_name"].(string)
-			interval_start, err := time.Parse("2006-01-02 15:04:05 -0700 MST", k8s_object[0]["interval_start"].(string))
+			interval_start, err := convertStringToTime(k8s_object[0]["interval_start"].(string))
 			if err != nil {
 				log.Errorf("unable to convert string to time: %s", err)
 				continue
 			}
-			interval_end, err := time.Parse("2006-01-02 15:04:05 -0700 MST", k8s_object[0]["interval_end"].(string))
+			interval_end, err := convertStringToTime(k8s_object[0]["interval_end"].(string))
 			if err != nil {
 				log.Errorf("unable to convert string to time: %s", err)
 				continue

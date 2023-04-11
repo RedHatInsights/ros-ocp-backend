@@ -108,6 +108,15 @@ func convertDateToISO8601(date string) string {
 	return t.Format("2006-01-02T15:04:05.000Z")
 }
 
+func convertStringToTime(data string) (time.Time, error) {
+	dateTime, err := time.Parse("2006-01-02 15:04:05 -0700 MST", data)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("unable to convert string to time: %s", err)
+	}
+	return dateTime, nil
+
+}
+
 func findInStringSlice(str string, s []string) int {
 	for i, e := range s {
 		if e == str {
