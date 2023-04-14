@@ -40,7 +40,7 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 	query := db.Table("recommendation_sets").Joins(`
 		JOIN (
 			SELECT workload_id, MAX(monitoring_end_time) AS latest_monitoring_end_time 
-			FROM recommendation_sets GROUP BY workload_id
+			FROM recommendation_sets GROUP BY workload_id, container_name
 		) latest_rs ON recommendation_sets.workload_id = latest_rs.workload_id 
 				AND recommendation_sets.monitoring_end_time = latest_rs.latest_monitoring_end_time
 			JOIN workloads ON recommendation_sets.workload_id = workloads.id
@@ -50,7 +50,8 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 
 	for key, value := range queryParams {
 		if strings.Contains(key, "clusters") {
-			query.Where(key, value).Or("clusters.cluster_uuid LIKE ?", value)
+			clusterQuery := "clusters.cluster_alias LIKE ? OR clusters.cluster_uuid LIKE ?"
+			query.Where(clusterQuery, value, value)
 			continue
 		}
 		query.Where(key, value)
@@ -60,7 +61,7 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 	query.Count(&count)
 	
 	query.Order(orderQuery)
-
+	
 	err := query.Offset(offset).Limit(limit).Find(&recommendationSets).Error
 
 	return recommendationSets, int(count), err
