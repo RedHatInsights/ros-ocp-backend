@@ -124,44 +124,54 @@ var seedCmd = &cobra.Command{
 
 		workload1 := &model.Workload{
 			Cluster:        *cluster1,
-			ExperimentName: "exfoo1",
+			ExperimentName: "exfoo",
 			Namespace:      "a_proj_rxu",
 			WorkloadType:   workload.Replicaset,
 			WorkloadName:   "replicaset_proj_rxu",
 			Containers:     []string{"node", "postgres", "apache"},
 		}
-		db.FirstOrCreate(&workload1)
+		db.Where(&model.Workload{Namespace: "a_proj_rxu"}).FirstOrCreate(&workload1)
 
 		workload2 := &model.Workload{
-			Cluster:        *cluster2,
-			ExperimentName: "exfoo2",
+			Cluster:        *cluster1,
+			ExperimentName: "exbar",
 			Namespace:      "b_proj_rxu",
+			WorkloadType:   workload.Statefulsets,
+			WorkloadName:   "stateful_proj_rxu",
+			Containers:     []string{"redis", "nginx"},
+		}
+		db.Where(&model.Workload{WorkloadType: workload.Statefulsets}).FirstOrCreate(&workload2)
+
+		workload3 := &model.Workload{
+			Cluster:        *cluster2,
+			ExperimentName: "exapp",
+			Namespace:      "c_proj_rxu",
 			WorkloadType:   workload.Deployment,
 			WorkloadName:   "deployment_proj_rxu",
 			Containers:     []string{"node", "postgres", "apache"},
 		}
-		db.Where(&model.Workload{WorkloadType: workload.Deployment}).FirstOrCreate(&workload2)
+		db.Where(&model.Workload{WorkloadType: workload.Deployment}).FirstOrCreate(&workload3)
 
 		recommendationSetData1 := map[string]interface{}{
 			"duration_based": map[string]interface{}{
 				"long_term": map[string]interface{}{
 					"config": map[string]interface{}{
 						"limits": map[string]interface{}{
-							"cpu": map[string]interface{}{},
+							"cpu":    map[string]interface{}{},
 							"memory": map[string]interface{}{},
 						},
 						"requests": map[string]interface{}{
-							"cpu": map[string]interface{}{},
+							"cpu":    map[string]interface{}{},
 							"memory": map[string]interface{}{},
 						},
 					},
 					"notifications": []map[string]interface{}{
 						{
-							"type": "info",
+							"type":    "info",
 							"message": "There is not enough data available to generate a recommendation.",
 						},
 					},
-					"monitoring_end_time": "0001-01-01T00:00:00Z",
+					"monitoring_end_time":   "0001-01-01T00:00:00Z",
 					"monitoring_start_time": "0001-01-01T00:00:00Z",
 				},
 				"short_term": map[string]interface{}{
@@ -187,32 +197,32 @@ var seedCmd = &cobra.Command{
 							},
 						},
 					},
-					"duration_in_hours": 0.23333333333333334,
-					"monitoring_end_time": "2023-04-02T00:15:00Z",
+					"duration_in_hours":     0.23333333333333334,
+					"monitoring_end_time":   "2023-04-02T00:15:00Z",
 					"monitoring_start_time": "2023-04-01T00:15:00Z",
 				},
 				"medium_term": map[string]interface{}{
 					"config": map[string]interface{}{
 						"limits": map[string]interface{}{
-							"cpu": map[string]interface{}{},
+							"cpu":    map[string]interface{}{},
 							"memory": map[string]interface{}{},
 						},
 						"requests": map[string]interface{}{
-							"cpu": map[string]interface{}{},
+							"cpu":    map[string]interface{}{},
 							"memory": map[string]interface{}{},
 						},
 					},
 					"notifications": []map[string]interface{}{
 						{
-							"type": "info",
+							"type":    "info",
 							"message": "There is not enough data available to generate a recommendation.",
 						},
 					},
-					"monitoring_end_time": "0001-01-01T00:00:00Z",
+					"monitoring_end_time":   "0001-01-01T00:00:00Z",
 					"monitoring_start_time": "0001-01-01T00:00:00Z",
 				},
 			},
-			"workload": "servers",
+			"workload":      "servers",
 			"workload_type": "deployment",
 		}
 
@@ -221,21 +231,21 @@ var seedCmd = &cobra.Command{
 				"long_term": map[string]interface{}{
 					"config": map[string]interface{}{
 						"limits": map[string]interface{}{
-							"cpu": map[string]interface{}{},
+							"cpu":    map[string]interface{}{},
 							"memory": map[string]interface{}{},
 						},
 						"requests": map[string]interface{}{
-							"cpu": map[string]interface{}{},
+							"cpu":    map[string]interface{}{},
 							"memory": map[string]interface{}{},
 						},
 					},
 					"notifications": []map[string]interface{}{
 						{
-							"type": "info",
+							"type":    "info",
 							"message": "There is not enough data available to generate a recommendation.",
 						},
 					},
-					"monitoring_end_time": "0001-01-01T00:00:00Z",
+					"monitoring_end_time":   "0001-01-01T00:00:00Z",
 					"monitoring_start_time": "0001-01-01T00:00:00Z",
 				},
 				"short_term": map[string]interface{}{
@@ -261,32 +271,32 @@ var seedCmd = &cobra.Command{
 							},
 						},
 					},
-					"duration_in_hours": 0.23333333333333334,
-					"monitoring_end_time": "2023-04-02T00:15:00Z",
+					"duration_in_hours":     0.23333333333333334,
+					"monitoring_end_time":   "2023-04-02T00:15:00Z",
 					"monitoring_start_time": "2023-04-01T00:15:00Z",
 				},
 				"medium_term": map[string]interface{}{
 					"config": map[string]interface{}{
 						"limits": map[string]interface{}{
-							"cpu": map[string]interface{}{},
+							"cpu":    map[string]interface{}{},
 							"memory": map[string]interface{}{},
 						},
 						"requests": map[string]interface{}{
-							"cpu": map[string]interface{}{},
+							"cpu":    map[string]interface{}{},
 							"memory": map[string]interface{}{},
 						},
 					},
 					"notifications": []map[string]interface{}{
 						{
-							"type": "info",
+							"type":    "info",
 							"message": "There is not enough data available to generate a recommendation.",
 						},
 					},
-					"monitoring_end_time": "0001-01-01T00:00:00Z",
+					"monitoring_end_time":   "0001-01-01T00:00:00Z",
 					"monitoring_start_time": "0001-01-01T00:00:00Z",
 				},
 			},
-			"workload": "servers",
+			"workload":      "servers",
 			"workload_type": "replicaset",
 		}
 
@@ -308,7 +318,7 @@ var seedCmd = &cobra.Command{
 			Recommendations:     datatypes.JSON(jsonrecommendationSetData1),
 			UpdatedAt:           time.Now(),
 		}
-		db.FirstOrCreate(&recommendationSet1)
+		db.Where(&model.RecommendationSet{Recommendations: jsonrecommendationSetData1}).FirstOrCreate(&recommendationSet1)
 
 		recommendationSet2 := &model.RecommendationSet{
 			Workload:            *workload1,
@@ -321,14 +331,35 @@ var seedCmd = &cobra.Command{
 		db.Where(&model.RecommendationSet{Recommendations: jsonrecommendationSetData2}).FirstOrCreate(&recommendationSet2)
 
 		recommendationSet3 := &model.RecommendationSet{
-			Workload:            *workload2,
-			ContainerName:       "nodejs",
+			Workload:            *workload1,
+			ContainerName:       "hadoop",
 			MonitoringStartTime: time.Now().Add(-time.Hour * 3),
 			MonitoringEndTime:   time.Now().Add(-time.Hour * 2),
 			Recommendations:     datatypes.JSON(jsonrecommendationSetData2),
 			UpdatedAt:           time.Now(),
 		}
-		db.Where(&model.RecommendationSet{ContainerName: "nodejs"}).FirstOrCreate(&recommendationSet3)
+		db.Where(&model.RecommendationSet{ContainerName: "hadoop"}).FirstOrCreate(&recommendationSet3)
+
+		recommendationSet4 := &model.RecommendationSet{
+			Workload:            *workload2,
+			ContainerName:       "nginx",
+			MonitoringStartTime: time.Now().Add(-time.Hour * 3),
+			MonitoringEndTime:   time.Now().Add(-time.Hour * 2),
+			Recommendations:     datatypes.JSON(jsonrecommendationSetData2),
+			UpdatedAt:           time.Now(),
+		}
+		db.Where(&model.RecommendationSet{ContainerName: "nginx"}).FirstOrCreate(&recommendationSet4)
+
+		recommendationSet5 := &model.RecommendationSet{
+			Workload:            *workload3,
+			ContainerName:       "redis",
+			MonitoringStartTime: time.Now().Add(-time.Hour * 3),
+			MonitoringEndTime:   time.Now().Add(-time.Hour * 2),
+			Recommendations:     datatypes.JSON(jsonrecommendationSetData2),
+			UpdatedAt:           time.Now(),
+		}
+		db.Where(&model.RecommendationSet{ContainerName: "redis"}).FirstOrCreate(&recommendationSet5)
+
 	},
 }
 
