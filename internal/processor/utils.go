@@ -117,6 +117,6 @@ func findInStringSlice(str string, s []string) int {
 	return -1
 }
 
-func generateExperimentName(org_id, cluster_id, namespace, k8s_object_type, k8s_object_name string) string {
-	return fmt.Sprintf("%s|%s|%s|%s|%s", org_id, cluster_id, namespace, k8s_object_type, k8s_object_name)
+func generateExperimentName(org_id, source_id, cluster_id, namespace, k8s_object_type, k8s_object_name string) string {
+	return fmt.Sprintf("%s|%s|%s|%s|%s|%s", org_id, source_id, cluster_id, namespace, k8s_object_type, k8s_object_name)
 }

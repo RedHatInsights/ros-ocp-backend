@@ -50,7 +50,8 @@ func ProcessReport(msg *kafka.Message) {
 	// Create cluster record(if not present) for incoming archive.
 	cluster := model.Cluster{
 		TenantID:       rh_account.ID,
-		ClusterUUID:    kafkaMsg.Metadata.Source_id,
+		SourceId:       kafkaMsg.Metadata.Source_id,
+		ClusterUUID:    kafkaMsg.Metadata.Cluster_uuid,
 		ClusterAlias:   kafkaMsg.Metadata.Cluster_alias,
 		LastReportedAt: time.Now(),
 	}
@@ -91,6 +92,7 @@ func ProcessReport(msg *kafka.Message) {
 
 			experiment_name := generateExperimentName(
 				kafkaMsg.Metadata.Org_id,
+				kafkaMsg.Metadata.Source_id,
 				kafkaMsg.Metadata.Cluster_uuid,
 				namespace,
 				k8s_object_type,

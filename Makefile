@@ -100,5 +100,5 @@ ifdef env
 else
 	curl -H "x-rh-identity: ${b64_identity}" \
 		 -H "x-rh-request_id: testtesttest" \
-		 http://localhost:8000/api/cost-management/v1/recommendations/openshift
+		 http://localhost:8000/api/cost-management/v1/recommendations/openshift | jq
 endif
