@@ -54,3 +54,11 @@ func TestReadCSVFromUrl(t *testing.T) {
 		t.Error(diff)
 	}
 }
+
+func TestConvertStringToTime(t *testing.T) {
+	input_data := "2022-11-01 01:00:00 +0000 UTC"
+	result, _ := convertStringToTime(input_data)
+	if result.String() != input_data {
+		t.Errorf("Output %q not equal to expected %q", result.String(), input_data)
+	}
+}
