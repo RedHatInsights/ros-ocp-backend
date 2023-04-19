@@ -58,9 +58,7 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 
 	var count int64 = 0
 	query.Count(&count)
-	
 	query.Order(orderQuery)
-	
 	err := query.Offset(offset).Limit(limit).Find(&recommendationSets).Error
 
 	return recommendationSets, int(count), err

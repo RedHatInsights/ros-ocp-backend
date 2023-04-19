@@ -1,10 +1,10 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
-	"encoding/json"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -15,26 +15,26 @@ import (
 )
 
 var variationDummyObject = map[string]interface{}{
-    "limits": map[string]interface{}{
-        "cpu": map[string]interface{}{
-            "amount": 0.02,
-            "format": "cores",
-        },
-        "memory": map[string]interface{}{
-            "amount": 513900,
-            "format": "MiB",
-        },
-    },
-    "requests": map[string]interface{}{
-        "cpu": map[string]interface{}{
-            "amount": 0.01,
-            "format": "cores",
-        },
-        "memory": map[string]interface{}{
-            "amount": 4933.5,
-            "format": "MiB",
-        },
-    },
+	"limits": map[string]interface{}{
+		"cpu": map[string]interface{}{
+			"amount": 0.02,
+			"format": "cores",
+		},
+		"memory": map[string]interface{}{
+			"amount": 513900,
+			"format": "MiB",
+		},
+	},
+	"requests": map[string]interface{}{
+		"cpu": map[string]interface{}{
+			"amount": 0.01,
+			"format": "cores",
+		},
+		"memory": map[string]interface{}{
+			"amount": 4933.5,
+			"format": "MiB",
+		},
+	},
 }
 
 func GetRecommendationSetList(c echo.Context) error {
@@ -117,10 +117,10 @@ func GetRecommendationSetList(c echo.Context) error {
 
 		// Adding dummy variation object
 		var recommendationObject map[string]interface{}
-    	if err := json.Unmarshal(recommendation.Recommendations, &recommendationObject); err != nil {
+		if err := json.Unmarshal(recommendation.Recommendations, &recommendationObject); err != nil {
 			log.Error("unable to unmarshall duration based recommendations", error)
 		}
-		
+
 		longTermSection := recommendationObject["duration_based"].(map[string]interface{})["long_term"].(map[string]interface{})
 		shortTermSection := recommendationObject["duration_based"].(map[string]interface{})["short_term"].(map[string]interface{})
 		mediumTermSection := recommendationObject["duration_based"].(map[string]interface{})["medium_term"].(map[string]interface{})
@@ -129,6 +129,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		longTermSection["variation"] = variationDummyObject
 
 		recommendationData["id"] = recommendation.ID
+		recommendationData["source_id"] = recommendation.Workload.Cluster.SourceId
 		recommendationData["cluster_uuid"] = recommendation.Workload.Cluster.ClusterUUID
 		recommendationData["cluster_alias"] = recommendation.Workload.Cluster.ClusterAlias
 		recommendationData["project"] = recommendation.Workload.Namespace
@@ -190,6 +191,7 @@ func GetRecommendationSet(c echo.Context) error {
 		longTermSection["variation"] = variationDummyObject
 
 		recommendationSlice["id"] = recommendationSet.ID
+		recommendationSlice["source_id"] = recommendationSet.Workload.Cluster.SourceId
 		recommendationSlice["cluster_uuid"] = recommendationSet.Workload.Cluster.ClusterUUID
 		recommendationSlice["cluster_alias"] = recommendationSet.Workload.Cluster.ClusterAlias
 		recommendationSlice["project"] = recommendationSet.Workload.Namespace
