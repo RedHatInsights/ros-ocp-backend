@@ -49,9 +49,7 @@ func ProcessEvent(msg *kafka.Message) {
 
 	if is_valid_recommendation(data) {
 		containers := data[0].Kubernetes_objects[0].Containers
-		container_names := make([]string, 0, len(containers))
 		for _, container := range containers {
-			container_names = append(container_names, container.Container_name)
 			for _, v := range container.Recommendations.Data {
 				marshalData, err := json.Marshal(v)
 				if err != nil {
@@ -71,12 +69,6 @@ func ProcessEvent(msg *kafka.Message) {
 					return
 				}
 			}
-		}
-
-		// Delete stale container of current workload.
-		if err := model.DeleteStaleRecommendationSet(kafkaMsg.WorkloadID, container_names); err != nil {
-			log.Errorf("unable remove stale containers, Error: %v", err)
-			return
 		}
 	} else {
 		if _, err := processor.Update_results(kafkaMsg.Experiment_name, kafkaMsg.K8s_object); err != nil {

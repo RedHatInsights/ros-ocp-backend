@@ -86,7 +86,7 @@ func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendatio
 func (r *RecommendationSet) CreateRecommendationSet() error {
 	db := database.GetDB()
 	result := db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "workload_id"}, {Name: "container_name"}},
+		Columns:   []clause.Column{{Name: "workload_id"}, {Name: "container_name"}, {Name: "monitoring_end_time"}},
 		DoUpdates: clause.AssignmentColumns([]string{"monitoring_start_time", "monitoring_end_time", "recommendations", "updated_at"}),
 	}).Create(r)
 
@@ -97,12 +97,3 @@ func (r *RecommendationSet) CreateRecommendationSet() error {
 	return nil
 }
 
-func DeleteStaleRecommendationSet(workload_id uint, containers []string) error {
-	db := database.GetDB()
-	result := db.Where("workload_id = ? AND container_name NOT IN ?", workload_id, containers).Delete(&RecommendationSet{})
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
-}
