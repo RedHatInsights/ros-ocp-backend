@@ -157,17 +157,17 @@ func parseQueryParams(param string, values []string) (string, []string) {
 	valuesSlice := []string{}
 
 	var paramMap = map[string]string{
-		"cluster":       "clusters.cluster_alias LIKE ?",
+		"cluster":       "clusters.cluster_alias ILIKE ?",
 		"workload_type": "workloads.workload_type = ?",
-		"workload":      "workloads.workload_name LIKE ?",
-		"project":       "workloads.namespace LIKE ?",
-		"container":     "recommendation_sets.container_name LIKE ?",
+		"workload":      "workloads.workload_name ILIKE ?",
+		"project":       "workloads.namespace ILIKE ?",
+		"container":     "recommendation_sets.container_name ILIKE ?",
 	}
 
 	if len(values) > 1{
 		for _, value := range values {
 			if param == "cluster"{
-				parsedKeyMultipleVal = parsedKeyMultipleVal + paramMap[param] + " OR " + "clusters.cluster_uuid LIKE ?" + " OR "
+				parsedKeyMultipleVal = parsedKeyMultipleVal + paramMap[param] + " OR " + "clusters.cluster_uuid ILIKE ?" + " OR "
 				valuesSlice = append(valuesSlice, "%" + value + "%")
 				valuesSlice = append(valuesSlice, "%" + value + "%")
 			} else {
@@ -183,7 +183,7 @@ func parseQueryParams(param string, values []string) (string, []string) {
 		return parsedKeyMultipleVal, valuesSlice
 	} else {
 		if param == "cluster"{
-			paramMap[param] = paramMap[param] + " OR " + "clusters.cluster_uuid LIKE ?"
+			paramMap[param] = paramMap[param] + " OR " + "clusters.cluster_uuid ILIKE ?"
 			valuesSlice = append(valuesSlice, "%" + values[0] + "%")
 			valuesSlice = append(valuesSlice, "%" + values[0] + "%")
 		} else if param == "workload_type" {
