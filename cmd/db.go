@@ -136,11 +136,11 @@ var seedCmd = &cobra.Command{
 			Cluster:        *cluster1,
 			ExperimentName: "exbar",
 			Namespace:      "b_proj_rxu",
-			WorkloadType:   workload.Statefulsets,
+			WorkloadType:   workload.Statefulset,
 			WorkloadName:   "stateful_proj_rxu",
 			Containers:     []string{"redis", "nginx"},
 		}
-		db.Where(&model.Workload{WorkloadType: workload.Statefulsets}).FirstOrCreate(&workload2)
+		db.Where(&model.Workload{WorkloadType: workload.Statefulset}).FirstOrCreate(&workload2)
 
 		workload3 := &model.Workload{
 			Cluster:        *cluster2,
