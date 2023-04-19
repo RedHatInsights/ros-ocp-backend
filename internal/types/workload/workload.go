@@ -9,7 +9,8 @@ const (
 	Deploymentconfig      WorkloadType = "deploymentconfig"
 	Replicaset            WorkloadType = "replicaset"
 	Replicationcontroller WorkloadType = "replicationcontroller"
-	Statefulsets          WorkloadType = "statefulsets"
+	Statefulset           WorkloadType = "statefulset"
+	Daemonset             WorkloadType = "daemonset"
 )
 
 func (p *WorkloadType) Scan(value interface{}) error {
@@ -31,8 +32,10 @@ func (p WorkloadType) String() string {
 		return "replicaset"
 	case Replicationcontroller:
 		return "replicationcontroller"
-	case Statefulsets:
+	case Statefulset:
 		return "statefulsets"
+	case Daemonset:
+		return "daemonset"
 	}
 	return "unknown"
 }

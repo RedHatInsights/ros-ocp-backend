@@ -1,4 +1,4 @@
-CREATE TYPE workloadtype AS ENUM ('deployment', 'deploymentconfig', 'replicaset', 'replicationcontroller', 'statefulsets');
+CREATE TYPE workloadtype AS ENUM ('deployment', 'deploymentconfig', 'replicaset', 'replicationcontroller', 'statefulset', 'daemonset');
 
 CREATE TABLE IF NOT EXISTS workloads(
    id BIGSERIAL PRIMARY KEY,
