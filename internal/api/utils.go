@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -78,13 +79,14 @@ func CollectionResponse(collection []interface{}, req *http.Request, count, limi
 	}
 }
 
-func MapQueryParameters(c echo.Context) map[string]interface{} {
+func MapQueryParameters(c echo.Context) map[string][]string {
 	log := logging.GetLogger()
-	queryParams := make(map[string]interface{})
+	queryParams := make(map[string][]string)
 
 	now := time.Now().UTC()
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
+	dateSlice := []string{}
 	startDateStr := c.QueryParam("start_date")
 	var startDate time.Time
 	if startDateStr == "" {
@@ -96,7 +98,8 @@ func MapQueryParameters(c echo.Context) map[string]interface{} {
 			log.Error("error parsing start_date:", err)
 		}
 	}
-	queryParams["DATE(recommendation_sets.monitoring_start_time) >= ?"] = startDate.Format("2006-01-02")
+	startDateSlice := append(dateSlice, startDate.Format("2006-01-02"))
+	queryParams["DATE(recommendation_sets.monitoring_start_time) >= ?"] = startDateSlice
 
 	endDateStr := c.QueryParam("end_date")
 	var endDate time.Time
@@ -109,33 +112,86 @@ func MapQueryParameters(c echo.Context) map[string]interface{} {
 			log.Error("error parsing end_date:", err)
 		}
 	}
-	queryParams["DATE(recommendation_sets.monitoring_end_time) <= ?"] = endDate.Format("2006-01-02")
+	endDateSlice := append(dateSlice, endDate.Format("2006-01-02"))
 
-	cluster := c.QueryParam("cluster")
-	if cluster != "" {
-		queryParams["clusters.cluster_alias LIKE ?"] = "%" + cluster + "%"
+	queryParams["DATE(recommendation_sets.monitoring_end_time) <= ?"] = endDateSlice
+
+	clusters := c.QueryParams()["cluster"]
+	if len(clusters) > 0{
+		paramString, values := parseQueryParams("cluster", clusters)
+		queryParams[paramString] = values
 	}
 
-	project := c.QueryParam("project")
-	if project != "" {
-		queryParams["workloads.namespace LIKE ?"] = "%" + project + "%"
+	projects := c.QueryParams()["project"]
+	if len(projects) > 0{
+		paramString, values := parseQueryParams("project", projects)
+		queryParams[paramString] = values
 	}
 
-	workloadType := c.QueryParam("workload_type")
-	if workloadType != "" {
-		queryParams["workloads.workload_type = ?"] = workloadType
+	workloadNames := c.QueryParams()["workload"]
+	if len(workloadNames) > 0{
+		paramString, values := parseQueryParams("workload", workloadNames)
+		queryParams[paramString] = values
+	}
+	
+	workloadTypes := c.QueryParams()["workload_type"]
+	if len(workloadTypes) > 0{
+		paramString, values := parseQueryParams("workload_type", workloadTypes)
+		queryParams[paramString] = values
 	}
 
-	workloadName := c.QueryParam("workload")
-	if workloadName != "" {
-		queryParams["workloads.workload_name LIKE ?"] = "%" + workloadName + "%"
-	}
-
-	container := c.QueryParam("container")
-	if container != "" {
-		queryParams["recommendation_sets.container_name LIKE ?"] = "%" + container + "%"
+	containers := c.QueryParams()["container"]
+	if len(containers) > 0{
+		paramString, values := parseQueryParams("container", containers)
+		queryParams[paramString] = values
 	}
 
 	return queryParams
+
+}
+
+
+func parseQueryParams(param string, values []string) (string, []string) {
+ 
+	parsedKeyMultipleVal := ""
+	valuesSlice := []string{}
+
+	var paramMap = map[string]string{
+		"cluster":       "clusters.cluster_alias LIKE ?",
+		"workload_type": "workloads.workload_type = ?",
+		"workload":      "workloads.workload_name LIKE ?",
+		"project":       "workloads.namespace LIKE ?",
+		"container":     "recommendation_sets.container_name LIKE ?",
+	}
+
+	if len(values) > 1{
+		for _, value := range values {
+			if param == "cluster"{
+				parsedKeyMultipleVal = parsedKeyMultipleVal + paramMap[param] + " OR " + "clusters.cluster_uuid LIKE ?" + " OR "
+				valuesSlice = append(valuesSlice, "%" + value + "%")
+				valuesSlice = append(valuesSlice, "%" + value + "%")
+			} else {
+				parsedKeyMultipleVal = parsedKeyMultipleVal + paramMap[param] + " OR "
+				if param == "workload_type"{
+					valuesSlice = append(valuesSlice, value)
+				} else {
+					valuesSlice = append(valuesSlice, "%" + value + "%")
+				}
+			}
+		}
+		parsedKeyMultipleVal = strings.TrimSuffix(parsedKeyMultipleVal, " OR ")
+		return parsedKeyMultipleVal, valuesSlice
+	} else {
+		if param == "cluster"{
+			paramMap[param] = paramMap[param] + " OR " + "clusters.cluster_uuid LIKE ?"
+			valuesSlice = append(valuesSlice, "%" + values[0] + "%")
+			valuesSlice = append(valuesSlice, "%" + values[0] + "%")
+		} else if param == "workload_type" {
+			valuesSlice = append(valuesSlice, values[0])
+		} else {
+			valuesSlice = append(valuesSlice, "%" + values[0] + "%")
+		}
+		return paramMap[param], valuesSlice
+	}
 
 }

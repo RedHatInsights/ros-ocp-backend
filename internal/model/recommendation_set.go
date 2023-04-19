@@ -1,7 +1,6 @@
 package model
 
 import (
-	"strings"
 	"time"
 
 	"gorm.io/datatypes"
@@ -32,29 +31,29 @@ func (r *RecommendationSet) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
-func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string]interface{}) ([]RecommendationSet, int, error) {
+func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string][]string) ([]RecommendationSet, int, error) {
 
 	var recommendationSets []RecommendationSet
 	db := database.GetDB()
 
 	query := db.Table("recommendation_sets").Joins(`
 		JOIN (
-			SELECT workload_id, MAX(monitoring_end_time) AS latest_monitoring_end_time 
+			SELECT workload_id, container_name, MAX(monitoring_end_time) AS latest_monitoring_end_time 
 			FROM recommendation_sets GROUP BY workload_id, container_name
-		) latest_rs ON recommendation_sets.workload_id = latest_rs.workload_id 
+		) latest_rs ON recommendation_sets.workload_id = latest_rs.workload_id
+				AND recommendation_sets.container_name = latest_rs.container_name
 				AND recommendation_sets.monitoring_end_time = latest_rs.latest_monitoring_end_time
 			JOIN workloads ON recommendation_sets.workload_id = workloads.id
 			JOIN clusters ON workloads.cluster_id = clusters.id
 			JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
 		`).Model(r).Preload("Workload.Cluster.RHAccount").Where("rh_accounts.org_id = ?", orgID)
 
-	for key, value := range queryParams {
-		if strings.Contains(key, "clusters") {
-			clusterQuery := "clusters.cluster_alias LIKE ? OR clusters.cluster_uuid LIKE ?"
-			query.Where(clusterQuery, value, value)
-			continue
+	for key, values := range queryParams {
+		valuesInterface := make([]interface{}, len(values))
+		for i, v := range values {
+			valuesInterface[i] = v
 		}
-		query.Where(key, value)
+		query.Where(key, valuesInterface...)
 	}
 
 	var count int64 = 0
