@@ -1,4 +1,4 @@
-package processor
+package utils
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 func TestConvertDateToISO8601(t *testing.T) {
 	date := "2022-11-01 18:25:43 +0000 UTC"
 	expected_result := "2022-11-01T18:25:43.000Z"
-	result := convertDateToISO8601(date)
+	result := ConvertDateToISO8601(date)
 
 	if diff := cmp.Diff(result, expected_result); diff != "" {
 		t.Error(diff)
@@ -26,7 +26,7 @@ func TestConvert2DarrayToMap(t *testing.T) {
 		"key2": "value2",
 		"key3": "value3",
 	}}
-	result := convert2DarrayToMap(arr)
+	result := Convert2DarrayToMap(arr)
 	if diff := cmp.Diff(result, expected_result); diff != "" {
 		t.Error(diff)
 	}
@@ -48,7 +48,7 @@ func TestReadCSVFromUrl(t *testing.T) {
 		fmt.Fprint(w, testdata)
 	}))
 	defer server.Close()
-	result, _ := readCSVFromUrl(server.URL)
+	result, _ := ReadCSVFromUrl(server.URL)
 	expected_result := [][]string{{"container_name", "cpu_request_avg_container"}, {"ros", "23"}, {"test_container", "24"}}
 	if diff := cmp.Diff(result, expected_result); diff != "" {
 		t.Error(diff)
@@ -57,7 +57,7 @@ func TestReadCSVFromUrl(t *testing.T) {
 
 func TestConvertStringToTime(t *testing.T) {
 	input_data := "2022-11-01 01:00:00 +0000 UTC"
-	result, _ := convertStringToTime(input_data)
+	result, _ := ConvertStringToTime(input_data)
 	if result.String() != input_data {
 		t.Errorf("Output %q not equal to expected %q", result.String(), input_data)
 	}

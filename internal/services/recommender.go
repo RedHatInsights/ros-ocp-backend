@@ -10,16 +10,14 @@ import (
 	p "github.com/redhatinsights/ros-ocp-backend/internal/kafka"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
-	"github.com/redhatinsights/ros-ocp-backend/internal/processor"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
-	"github.com/sirupsen/logrus"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils/kruize"
 )
 
-var log *logrus.Logger = logging.GetLogger()
-var cfg *config.Config = config.GetConfig()
-
 func ProcessEvent(msg *kafka.Message) {
+	log := logging.GetLogger()
+	cfg := config.GetConfig()
 	validate := validator.New()
 	var kafkaMsg types.ExperimentEvent
 	if !json.Valid([]byte(msg.Value)) {
@@ -41,7 +39,7 @@ func ProcessEvent(msg *kafka.Message) {
 		log.Info("Sleeping for: ", t)
 		time.Sleep(t)
 	}
-	data, err := processor.List_recommendations(kafkaMsg)
+	data, err := kruize.List_recommendations(kafkaMsg)
 	if err != nil {
 		log.Errorf("Unable to list recommendation for: %v", err)
 		return
@@ -71,7 +69,7 @@ func ProcessEvent(msg *kafka.Message) {
 			}
 		}
 	} else {
-		if _, err := processor.Update_results(kafkaMsg.Experiment_name, kafkaMsg.K8s_object); err != nil {
+		if _, err := kruize.Update_results(kafkaMsg.Experiment_name, kafkaMsg.K8s_object); err != nil {
 			log.Error(err)
 		}
 		kafkaMsg.Fetch_time = time.Now().UTC().Add(time.Minute * time.Duration(2))

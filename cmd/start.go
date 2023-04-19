@@ -8,8 +8,8 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/api"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/kafka"
-	"github.com/redhatinsights/ros-ocp-backend/internal/processor"
 	"github.com/redhatinsights/ros-ocp-backend/internal/services"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
 
 var startCmd = &cobra.Command{Use: "start", Short: "Use to start ros-ocp-backend services"}
@@ -20,8 +20,8 @@ var processorCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("starting ros-ocp processor")
 		cfg := config.GetConfig()
-		processor.Setup_kruize_performance_profile()
-		kafka.StartConsumer(cfg.UploadTopic, processor.ProcessReport)
+		utils.Setup_kruize_performance_profile()
+		kafka.StartConsumer(cfg.UploadTopic, services.ProcessReport)
 	},
 }
 
@@ -31,7 +31,7 @@ var recommenderCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("starting ros-ocp recommender service")
 		cfg := config.GetConfig()
-		processor.Setup_kruize_performance_profile()
+		utils.Setup_kruize_performance_profile()
 		kafka.StartConsumer(cfg.ExperimentsTopic, services.ProcessEvent)
 	},
 }

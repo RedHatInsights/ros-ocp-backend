@@ -1,4 +1,4 @@
-package processor
+package utils
 
 import (
 	"strings"
