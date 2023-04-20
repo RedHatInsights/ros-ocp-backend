@@ -6,6 +6,8 @@ ros_ocp_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"ac
 
 file=./scripts/samples/cost-mgmt.tar.gz
 CSVfile=./scripts/samples/ros-ocp-usage.csv
+CSVfile_name_tuple := $(subst /, ,$(CSVfile:%=%))
+CSVfile_name := $(word 4,$(CSVfile_name_tuple))
 INGRESS_PORT ?= 3000
 
 ifdef env
@@ -75,7 +77,8 @@ ifeq (,$(wildcard $(MCCILINT)))
 endif
 	bin/mc alias set myminio http://env-${env}-minio-${env}.apps.c-rh-c-eph.8p0c.p1.openshiftapps.com ${minio_accessKey} ${minio_secretKey}
 	bin/mc cp ${CSVfile} myminio/insights-upload-perma/
-	$(eval SHAREURL=$(shell bin/mc share download --json myminio/insights-upload-perma/ros-ocp-usage.csv | jq -r '.share'))
+	sleep 5
+	$(eval SHAREURL=$(shell bin/mc share download --json myminio/insights-upload-perma/${CSVfile_name} | jq -r '.share'))
 	$(eval KAFKAPOD=$(shell oc get pods -o custom-columns=POD:.metadata.name --no-headers -n ${env} | grep kafka))
 	$(eval ros_ocp_msg_ephemeral = '{\"request_id\": \"uuid1234\", \"b64_identity\": \"test\", \"metadata\": {\"account\": \"2234\", \"org_id\": \"3340851\", \"source_id\": \"111\", \"cluster_uuid\": \"222\", \"cluster_alias\": \"name222\"}, \"files\": [\"$(SHAREURL)\"]}')
 	oc exec ${KAFKAPOD} -n ${env} -- /bin/bash -c "echo ${ros_ocp_msg_ephemeral} | /opt/kafka/bin/kafka-console-producer.sh --topic hccm.ros.events   --broker-list localhost:9092"
