@@ -1,4 +1,4 @@
-package processor
+package services
 
 import (
 	"encoding/json"
@@ -9,7 +9,6 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-playground/validator/v10"
-	"github.com/sirupsen/logrus"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	p "github.com/redhatinsights/ros-ocp-backend/internal/kafka"
@@ -17,14 +16,15 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils/kruize"
 )
 
-var log *logrus.Logger = logging.GetLogger()
-var cfg *config.Config = config.GetConfig()
-
 func ProcessReport(msg *kafka.Message) {
+	log := logging.GetLogger()
+	cfg := config.GetConfig()
 	validate := validator.New()
-	var kafkaMsg KafkaMsg
+	var kafkaMsg types.KafkaMsg
 	if !json.Valid([]byte(msg.Value)) {
 		log.Errorf("Received message on kafka topic is not vaild JSON: %s", msg.Value)
 		return
@@ -62,13 +62,13 @@ func ProcessReport(msg *kafka.Message) {
 	}
 
 	for _, file := range kafkaMsg.Files {
-		data, err := readCSVFromUrl(file)
+		data, err := utils.ReadCSVFromUrl(file)
 		if err != nil {
 			log.Errorf("Unable to read CSV from URL. Error: %s", err)
 			return
 		}
 		df := dataframe.LoadRecords(data)
-		df = Aggregate_data(df)
+		df = utils.Aggregate_data(df)
 
 		// grouping container(row in csv) by there deployement.
 		k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name", "interval_end").GetGroups()
@@ -79,8 +79,8 @@ func ProcessReport(msg *kafka.Message) {
 		}
 
 		sort.SliceStable(keys, func(i, j int) bool {
-			time_i, _ := convertStringToTime(k8s_object_groups[keys[i]].Col("interval_end").Val(0).(string))
-			time_j, _ := convertStringToTime(k8s_object_groups[keys[j]].Col("interval_end").Val(0).(string))
+			time_i, _ := utils.ConvertStringToTime(k8s_object_groups[keys[i]].Col("interval_end").Val(0).(string))
+			time_j, _ := utils.ConvertStringToTime(k8s_object_groups[keys[j]].Col("interval_end").Val(0).(string))
 			return time_i.Before(time_j)
 		})
 
@@ -90,18 +90,18 @@ func ProcessReport(msg *kafka.Message) {
 			namespace := k8s_object[0]["namespace"].(string)
 			k8s_object_type := k8s_object[0]["k8s_object_type"].(string)
 			k8s_object_name := k8s_object[0]["k8s_object_name"].(string)
-			interval_start, err := convertStringToTime(k8s_object[0]["interval_start"].(string))
+			interval_start, err := utils.ConvertStringToTime(k8s_object[0]["interval_start"].(string))
 			if err != nil {
 				log.Errorf("unable to convert string to time: %s", err)
 				continue
 			}
-			interval_end, err := convertStringToTime(k8s_object[0]["interval_end"].(string))
+			interval_end, err := utils.ConvertStringToTime(k8s_object[0]["interval_end"].(string))
 			if err != nil {
 				log.Errorf("unable to convert string to time: %s", err)
 				continue
 			}
 
-			experiment_name := generateExperimentName(
+			experiment_name := utils.GenerateExperimentName(
 				kafkaMsg.Metadata.Org_id,
 				kafkaMsg.Metadata.Source_id,
 				kafkaMsg.Metadata.Cluster_uuid,
@@ -110,7 +110,7 @@ func ProcessReport(msg *kafka.Message) {
 				k8s_object_name,
 			)
 
-			container_names, err := create_kruize_experiments(experiment_name, k8s_object)
+			container_names, err := kruize.Create_kruize_experiments(experiment_name, k8s_object)
 			if err != nil {
 				log.Error(err)
 				continue
@@ -131,7 +131,7 @@ func ProcessReport(msg *kafka.Message) {
 				return
 			}
 
-			usage_data_byte, err := Update_results(experiment_name, k8s_object)
+			usage_data_byte, err := kruize.Update_results(experiment_name, k8s_object)
 			if err != nil {
 				log.Error(err)
 				continue

@@ -1,4 +1,4 @@
-package processor
+package utils
 
 import (
 	"bytes"
@@ -10,7 +10,14 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/sirupsen/logrus"
 )
+
+var log *logrus.Logger = logging.GetLogger()
+var cfg *config.Config = config.GetConfig()
 
 func Setup_kruize_performance_profile() {
 	// This func needs to be revisited once kruize implements this API
@@ -54,7 +61,7 @@ func Setup_kruize_performance_profile() {
 
 }
 
-func readCSVFromUrl(url string) ([][]string, error) {
+func ReadCSVFromUrl(url string) ([][]string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -86,7 +93,7 @@ func unique[T uniqueTypes](x []T) []T {
 	return list
 }
 
-func convert2DarrayToMap(arr [][]string) []map[string]interface{} {
+func Convert2DarrayToMap(arr [][]string) []map[string]interface{} {
 	data := []map[string]interface{}{}
 	for i := 1; i < len(arr); i++ {
 		m := make(map[string]interface{})
@@ -102,13 +109,13 @@ func convert2DarrayToMap(arr [][]string) []map[string]interface{} {
 	return data
 }
 
-func convertDateToISO8601(date string) string {
+func ConvertDateToISO8601(date string) string {
 	const date_format = "2006-01-02 15:04:05 -0700 MST"
 	t, _ := time.Parse(date_format, date)
 	return t.Format("2006-01-02T15:04:05.000Z")
 }
 
-func convertStringToTime(data string) (time.Time, error) {
+func ConvertStringToTime(data string) (time.Time, error) {
 	dateTime, err := time.Parse("2006-01-02 15:04:05 -0700 MST", data)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("unable to convert string to time: %s", err)
@@ -126,6 +133,7 @@ func findInStringSlice(str string, s []string) int {
 	return -1
 }
 
-func generateExperimentName(org_id, source_id, cluster_id, namespace, k8s_object_type, k8s_object_name string) string {
+func GenerateExperimentName(org_id, source_id, cluster_id, namespace, k8s_object_type, k8s_object_name string) string {
 	return fmt.Sprintf("%s|%s|%s|%s|%s|%s", org_id, source_id, cluster_id, namespace, k8s_object_type, k8s_object_name)
+
 }

@@ -1,4 +1,4 @@
-package processor
+package kruize
 
 import (
 	"bytes"
@@ -8,11 +8,18 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
+	"github.com/sirupsen/logrus"
 )
 
-func create_kruize_experiments(experiment_name string, k8s_object []map[string]interface{}) ([]string, error) {
+var log *logrus.Logger = logging.GetLogger()
+var cfg *config.Config = config.GetConfig()
+
+func Create_kruize_experiments(experiment_name string, k8s_object []map[string]interface{}) ([]string, error) {
 	// k8s_object (can) contain multiple containers of same k8s object type.
 	data := map[string]string{
 		"namespace":       k8s_object[0]["namespace"].(string),
@@ -66,8 +73,8 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 		"namespace":       k8s_object[0]["namespace"].(string),
 		"k8s_object_type": k8s_object[0]["k8s_object_type"].(string),
 		"k8s_object_name": k8s_object[0]["k8s_object_name"].(string),
-		"interval_start":  convertDateToISO8601(k8s_object[0]["interval_start"].(string)),
-		"interval_end":    convertDateToISO8601(k8s_object[0]["interval_end"].(string)),
+		"interval_start":  utils.ConvertDateToISO8601(k8s_object[0]["interval_start"].(string)),
+		"interval_end":    utils.ConvertDateToISO8601(k8s_object[0]["interval_end"].(string)),
 	}
 	payload_data := kruizePayload.GetUpdateResultPayload(experiment_name, k8s_object, data)
 	postBody, err := json.Marshal(payload_data)
@@ -99,7 +106,7 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 		if strings.Contains(resdata["message"].(string), "because \"performanceProfile\" is null") {
 			log.Error("Performance profile does not exist")
 			log.Info("Tring to create resource_optimization_openshift performance profile")
-			Setup_kruize_performance_profile()
+			utils.Setup_kruize_performance_profile()
 			if payload_data, err := Update_results(experiment_name, k8s_object); err != nil {
 				return nil, err
 			} else {
@@ -124,7 +131,7 @@ func List_recommendations(experiment types.ExperimentEvent) ([]kruizePayload.Lis
 	}
 	q := req.URL.Query()
 	q.Add("experiment_name", experiment.Experiment_name)
-	q.Add("monitoring_end_time", convertDateToISO8601(experiment.Monitoring_end_time))
+	q.Add("monitoring_end_time", utils.ConvertDateToISO8601(experiment.Monitoring_end_time))
 	req.URL.RawQuery = q.Encode()
 	res, err := client.Do(req)
 	if err != nil {
