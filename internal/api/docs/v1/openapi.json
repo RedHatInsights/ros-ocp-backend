@@ -130,6 +130,17 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "User is not authorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "User is not authorized to access the resource"
+                }
+              }
+            }
           }
         }
       }
