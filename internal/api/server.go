@@ -23,6 +23,7 @@ func StartAPIServer() {
 	}))
 
 	app.GET("/status", GetAppStatus)
+	app.File("/api/cost-management/v1/recommendations/openshift/openapi.json", "internal/api/docs/v1/openapi.json")
 
 	v1 := app.Group("/api/cost-management/v1")
 	v1.Use(ros_middleware.Identity)
@@ -31,7 +32,6 @@ func StartAPIServer() {
 	}
 	v1.GET("/recommendations/openshift", GetRecommendationSetList)
 	v1.GET("/recommendations/openshift/:recommendation-id", GetRecommendationSet)
-	v1.File("/recommendations/openshift/openapi.json", "openapi.json")
 
 	s := http.Server{
 		Addr:    ":" + cfg.API_PORT, //local dev server
