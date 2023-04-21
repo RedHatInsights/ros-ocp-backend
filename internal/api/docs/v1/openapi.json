@@ -294,7 +294,7 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "number",
+                                    "type": "integer",
                                     "example": 3221225472
                                   },
                                   "format": {
@@ -325,7 +325,7 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "number",
+                                    "type": "integer",
                                     "example": 1719193370
                                   },
                                   "format": {
@@ -338,8 +338,30 @@
                           }
                         }
                       },
+                      "notifications": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "message": {
+                              "type": "string",
+                              "example": "There is not enough data available to generate a recommendation."
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "info",
+                                "warning",
+                                "error",
+                                "success"
+                              ]
+                            }
+                          }
+                        },
+                        "nullable": true
+                      },
                       "duration_in_hours": {
-                        "type": "number",
+                        "type": "integer",
                         "example": 361
                       },
                       "monitoring_end_time": {
@@ -375,7 +397,7 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "number",
+                                    "type": "integer",
                                     "example": 513900
                                   },
                                   "format": {
@@ -447,7 +469,7 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "number",
+                                    "type": "integer",
                                     "example": 3221225472
                                   },
                                   "format": {
@@ -478,7 +500,7 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "number",
+                                    "type": "integer",
                                     "example": 1719193370
                                   },
                                   "format": {
@@ -491,8 +513,30 @@
                           }
                         }
                       },
+                      "notifications": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "message": {
+                              "type": "string",
+                              "example": "There is not enough data available to generate a recommendation."
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "info",
+                                "warning",
+                                "error",
+                                "success"
+                              ]
+                            }
+                          },
+                          "nullable": true
+                        }
+                      },
                       "duration_in_hours": {
-                        "type": "number",
+                        "type": "integer",
                         "example": 169
                       },
                       "monitoring_end_time": {
@@ -528,7 +572,7 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "number",
+                                    "type": "integer",
                                     "example": 513900
                                   },
                                   "format": {
@@ -600,7 +644,7 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "number",
+                                    "type": "integer",
                                     "example": 3221225472
                                   },
                                   "format": {
@@ -631,7 +675,7 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "number",
+                                    "type": "integer",
                                     "example": 1719193370
                                   },
                                   "format": {
@@ -644,8 +688,30 @@
                           }
                         }
                       },
+                      "notifications": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "message": {
+                              "type": "string",
+                              "example": "There is not enough data available to generate a recommendation."
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "info",
+                                "warning",
+                                "error",
+                                "success"
+                              ]
+                            }
+                          },
+                          "nullable": true
+                        }
+                      },
                       "duration_in_hours": {
-                        "type": "number",
+                        "type": "integer",
                         "example": 25
                       },
                       "monitoring_end_time": {
@@ -681,7 +747,7 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "number",
+                                    "type": "integer",
                                     "example": 513900
                                   },
                                   "format": {
@@ -748,3 +814,4 @@
     }
   }
 }
+
