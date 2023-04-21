@@ -10,7 +10,7 @@
     }
   },
   "paths": {
-    "/api/cost-management/v1/recommendations/openshift": {
+    "/recommendations/openshift": {
       "get": {
         "summary": "Get all recommendations",
         "operationId": "getRecommendationList",
@@ -18,7 +18,7 @@
           {
             "name": "cluster",
             "in": "query",
-            "description": "Cluster alias or ID",
+            "description": "Cluster alias or UUID",
             "required": false,
             "schema": {
               "type": "string"
@@ -134,7 +134,7 @@
         }
       }
     },
-    "/api/cost-management/v1/recommendations/openshift/{recommendation-id}": {
+    "/recommendations/openshift/{recommendation-id}": {
       "get": {
         "operationId": "getRecommendationById",
         "parameters": [
@@ -143,26 +143,19 @@
             "name": "recommendation-id",
             "required": true,
             "schema": {
-              "type": "string",
-              "minimum": 1
+              "type": "string"
             },
             "description": "The recommendation UUID"
           }
         ],
-        "summary": "Get recommendation for workload",
+        "summary": "Get recommendation for container",
         "responses": {
           "200": {
-            "description": "Auto generated using Swagger Inspector",
+            "description": "OK",
             "content": {
               "application/json; charset=UTF-8": {
                 "schema": {
                   "$ref": "#/components/schemas/Recommendation"
-                },
-                "examples": {
-                  "example1": {
-                    "summary": "Recommendation Example",
-                    "value": "{ \n  \"cluster_uuid\": \"1ac7d92e-e721-45bf-b9bc-91cd6d4c30e8\",\n  \"cluster_alias\": \"6678\",\n  \"containers\": [\n    \"node\",\n    \"postgres\",\n    \"apache\"\n  ],\n  \"id\": \"aad02009-36d0-46cb-a7a9-c7d8c5924474\",\n  \"last_reported\": \"2023-03-15T10:08:21+05:30\",\n  \"project\": \"proj_rxu\",\n  \"recommendations\": {\n    \"cpu\": {\n      \"current\": {\n        \"limit\": 2,\n        \"request\": 5\n      },\n      \"recommended\": {\n        \"delta\": 2,\n        \"limit\": 3,\n        \"request\": 7\n      }\n    },\n    \"memory\": {\n      \"current\": {\n        \"limit\": 3,\n        \"request\": 5\n      },\n      \"recommended\": {\n        \"delta\": 1,\n        \"limit\": 2,\n        \"request\": 5\n      }\n    },\n    \"interval\": 15,\n    \"reported\": \"24/12/1992\"\n  },\n  \"workload\": \"deployment_proj_rxu\",\n  \"workload_type\": \"replicaset\"\n}\n"
-                  }
                 }
               }
             }
@@ -206,6 +199,12 @@
               "first": {
                 "type": "string"
               },
+              "previous": {
+                "type": "string"
+              },
+              "next": {
+                "type": "string"
+              },
               "last": {
                 "type": "string"
               }
@@ -216,120 +215,511 @@
       "Recommendation": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "integer",
-            "example": 1
+          "cluster_alias": {
+            "type": "string",
+            "example": "test_cost_ocp_ros_3c462dbe"
           },
           "cluster_uuid": {
             "type": "string",
-            "example": "f0501829-e2bc-4ef0-9b4d-2875344c5ac8"
-          },
-          "cluster_alias": {
-            "type": "string",
-            "example": "6678"
-          },
-          "project": {
-            "type": "string",
-            "example": "proj_rxu"
-          },
-          "workload": {
-            "type": "string",
-            "example": "deployment_proj_rxu"
-          },
-          "workload_type": {
-            "type": "string",
-            "example": "replicaset"
+            "example": "d29c4b8b-f1a8-471c-ab95-b64e36bb51a9"
           },
           "container": {
             "type": "string",
-            "example": "container-1"
+            "example": "pod-ros-A11"
+          },
+          "id": {
+            "type": "string",
+            "example": "721eb376-13a9-43ab-868e-755aa1ce7f2a"
           },
           "last_reported": {
             "type": "string",
-            "example": "2023-03-15T10:08:21+05:30"
+            "format": "date-time",
+            "example": "2023-04-18T15:48:54.000Z"
+          },
+          "project": {
+            "type": "string",
+            "example": "project-ros-A1"
           },
           "recommendations": {
             "type": "object",
             "properties": {
-              "cpu": {
+              "duration_based": {
                 "type": "object",
                 "properties": {
-                  "current": {
+                  "long_term": {
                     "type": "object",
                     "properties": {
-                      "limit": {
-                        "type": "integer",
-                        "example": 2
+                      "config": {
+                        "type": "object",
+                        "properties": {
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 2.11
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 3221225472
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "requests": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1.92
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1719193370
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
                       },
-                      "request": {
-                        "type": "integer",
-                        "example": 5
+                      "duration_in_hours": {
+                        "type": "number",
+                        "example": 361
+                      },
+                      "monitoring_end_time": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-18T15:00:00.000Z"
+                      },
+                      "monitoring_start_time": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-03T15:00:00.000Z"
+                      },
+                      "variation": {
+                        "type": "object",
+                        "properties": {
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 0.02
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 513900
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "requests": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 0.01
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 4933.5
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
                       }
                     }
                   },
-                  "recommended": {
+                  "medium_term": {
                     "type": "object",
                     "properties": {
-                      "delta": {
-                        "type": "integer",
-                        "example": 2
+                      "config": {
+                        "type": "object",
+                        "properties": {
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 2.11
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 3221225472
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "requests": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1.92
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1719193370
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
                       },
-                      "limit": {
-                        "type": "integer",
-                        "example": 3
+                      "duration_in_hours": {
+                        "type": "number",
+                        "example": 169
                       },
-                      "request": {
-                        "type": "integer",
-                        "example": 7
+                      "monitoring_end_time": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-18T15:00:00.000Z"
+                      },
+                      "monitoring_start_time": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-11T15:00:00.000Z"
+                      },
+                      "variation": {
+                        "type": "object",
+                        "properties": {
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 0.02
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 513900
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "requests": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 0.01
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 4933.5
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "short_term": {
+                    "type": "object",
+                    "properties": {
+                      "config": {
+                        "type": "object",
+                        "properties": {
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 2.11
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 3221225472
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "requests": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1.92
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1719193370
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "duration_in_hours": {
+                        "type": "number",
+                        "example": 25
+                      },
+                      "monitoring_end_time": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-18T15:00:00.000Z"
+                      },
+                      "monitoring_start_time": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-17T15:00:00.000Z"
+                      },
+                      "variation": {
+                        "type": "object",
+                        "properties": {
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 0.02
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 513900
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "requests": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 0.01
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 4933.5
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
                       }
                     }
                   }
                 }
-              },
-              "memory": {
-                "type": "object",
-                "properties": {
-                  "current": {
-                    "type": "object",
-                    "properties": {
-                      "limit": {
-                        "type": "integer",
-                        "example": 3
-                      },
-                      "request": {
-                        "type": "integer",
-                        "example": 5
-                      }
-                    }
-                  },
-                  "recommended": {
-                    "type": "object",
-                    "properties": {
-                      "delta": {
-                        "type": "integer",
-                        "example": 1
-                      },
-                      "limit": {
-                        "type": "integer",
-                        "example": 2
-                      },
-                      "request": {
-                        "type": "integer",
-                        "example": 5
-                      }
-                    }
-                  }
-                }
-              },
-              "interval": {
-                "type": "integer",
-                "example": 15
-              },
-              "reported": {
-                "type": "string",
-                "example": "24/12/1992"
               }
             }
+          },
+          "source_id": {
+            "type": "string",
+            "example": "0920ff0d-f1d6-4fe2-8bf3-18e6074bd27b"
+          },
+          "workload": {
+            "type": "string",
+            "example": "pod-ros-A11"
+          },
+          "workload_type": {
+            "type": "string",
+            "example": "deploymentconfig"
           }
         }
       }
