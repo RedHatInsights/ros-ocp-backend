@@ -9,9 +9,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
-	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/platform-go-middlewares/identity"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
-	"github.com/redhatinsights/ros-ocp-backend/internal/types/identity"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 )
 
 var variationDummyObject = map[string]interface{}{
@@ -38,13 +38,9 @@ var variationDummyObject = map[string]interface{}{
 }
 
 func GetRecommendationSetList(c echo.Context) error {
-	var identity identity.IdentityData
-	OrgID, err := identity.GetOrgIDFromRequest(c)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "org_id not found"})
-	}
-
-	log := logging.GetLogger()
+	XRHID := c.Get("Identity").(identity.XRHID)
+	OrgID := XRHID.Identity.OrgID
+	user_permissions := get_user_permissions(c)
 
 	orderBy := c.QueryParam("order_by")
 	if orderBy != "" {
@@ -97,6 +93,13 @@ func GetRecommendationSetList(c echo.Context) error {
 		}
 	}
 
+	if !is_user_authorized_for_resource(types.ResourceObject{
+		Cluster: c.QueryParam("cluster"),
+		Project: c.QueryParam("project"),
+	}, user_permissions) {
+		return c.JSON(http.StatusUnauthorized, "User is not authorized to access the resource")
+	}
+
 	queryParams := MapQueryParameters(c)
 	recommendationSet := model.RecommendationSet{}
 	log.Info("============================")
@@ -113,32 +116,37 @@ func GetRecommendationSetList(c echo.Context) error {
 	allRecommendations := []map[string]interface{}{}
 
 	for _, recommendation := range recommendationSets {
-		recommendationData := make(map[string]interface{})
+		if is_user_authorized_for_resource(types.ResourceObject{
+			Cluster: recommendation.Workload.Cluster.ClusterUUID,
+			Project: recommendation.Workload.Namespace,
+		}, user_permissions) {
+			recommendationData := make(map[string]interface{})
 
-		// Adding dummy variation object
-		var recommendationObject map[string]interface{}
-		if err := json.Unmarshal(recommendation.Recommendations, &recommendationObject); err != nil {
-			log.Error("unable to unmarshall duration based recommendations", error)
+			// Adding dummy variation object
+			var recommendationObject map[string]interface{}
+			if err := json.Unmarshal(recommendation.Recommendations, &recommendationObject); err != nil {
+				log.Error("unable to unmarshall duration based recommendations", error)
+			}
+
+			longTermSection := recommendationObject["duration_based"].(map[string]interface{})["long_term"].(map[string]interface{})
+			shortTermSection := recommendationObject["duration_based"].(map[string]interface{})["short_term"].(map[string]interface{})
+			mediumTermSection := recommendationObject["duration_based"].(map[string]interface{})["medium_term"].(map[string]interface{})
+			shortTermSection["variation"] = variationDummyObject
+			mediumTermSection["variation"] = variationDummyObject
+			longTermSection["variation"] = variationDummyObject
+
+			recommendationData["id"] = recommendation.ID
+			recommendationData["source_id"] = recommendation.Workload.Cluster.SourceId
+			recommendationData["cluster_uuid"] = recommendation.Workload.Cluster.ClusterUUID
+			recommendationData["cluster_alias"] = recommendation.Workload.Cluster.ClusterAlias
+			recommendationData["project"] = recommendation.Workload.Namespace
+			recommendationData["workload_type"] = recommendation.Workload.WorkloadType
+			recommendationData["workload"] = recommendation.Workload.WorkloadName
+			recommendationData["container"] = recommendation.ContainerName
+			recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
+			recommendationData["recommendations"] = recommendationObject
+			allRecommendations = append(allRecommendations, recommendationData)
 		}
-
-		longTermSection := recommendationObject["duration_based"].(map[string]interface{})["long_term"].(map[string]interface{})
-		shortTermSection := recommendationObject["duration_based"].(map[string]interface{})["short_term"].(map[string]interface{})
-		mediumTermSection := recommendationObject["duration_based"].(map[string]interface{})["medium_term"].(map[string]interface{})
-		shortTermSection["variation"] = variationDummyObject
-		mediumTermSection["variation"] = variationDummyObject
-		longTermSection["variation"] = variationDummyObject
-
-		recommendationData["id"] = recommendation.ID
-		recommendationData["source_id"] = recommendation.Workload.Cluster.SourceId
-		recommendationData["cluster_uuid"] = recommendation.Workload.Cluster.ClusterUUID
-		recommendationData["cluster_alias"] = recommendation.Workload.Cluster.ClusterAlias
-		recommendationData["project"] = recommendation.Workload.Namespace
-		recommendationData["workload_type"] = recommendation.Workload.WorkloadType
-		recommendationData["workload"] = recommendation.Workload.WorkloadName
-		recommendationData["container"] = recommendation.ContainerName
-		recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
-		recommendationData["recommendations"] = recommendationObject
-		allRecommendations = append(allRecommendations, recommendationData)
 	}
 
 	interfaceSlice := make([]interface{}, len(allRecommendations))
@@ -154,12 +162,9 @@ func GetRecommendationSetList(c echo.Context) error {
 }
 
 func GetRecommendationSet(c echo.Context) error {
-	log := logging.GetLogger()
-	var identity identity.IdentityData
-	OrgID, err := identity.GetOrgIDFromRequest(c)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "org_id not found"})
-	}
+	XRHID := c.Get("Identity").(identity.XRHID)
+	OrgID := XRHID.Identity.OrgID
+	user_permissions := get_user_permissions(c)
 
 	RecommendationIDStr := c.Param("recommendation-id")
 	RecommendationUUID, err := uuid.Parse(RecommendationIDStr)
@@ -174,6 +179,12 @@ func GetRecommendationSet(c echo.Context) error {
 		log.Error("unable to fetch records from database", error)
 	}
 
+	if !is_user_authorized_for_resource(types.ResourceObject{
+		Cluster: recommendationSet.Workload.Cluster.ClusterUUID,
+		Project: recommendationSet.Workload.Namespace,
+	}, user_permissions) {
+		return c.JSON(http.StatusUnauthorized, "User is not authorized to access the resource")
+	}
 	recommendationSlice := make(map[string]interface{})
 
 	if len(recommendationSet.Recommendations) != 0 {
@@ -203,4 +214,12 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, recommendationSlice)
+
+}
+
+func GetAppStatus(c echo.Context) error {
+	status := map[string]string{
+		"api-server": "working",
+	}
+	return c.JSON(http.StatusOK, status)
 }

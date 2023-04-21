@@ -81,7 +81,7 @@ objects:
         livenessProbe:
           failureThreshold: 3
           httpGet:
-            path: /api/cost-management/v1/recommendations/openshift/openapi.json
+            path: /status
             port: 8000
             scheme: HTTP
           initialDelaySeconds: 30
@@ -90,7 +90,7 @@ objects:
           timeoutSeconds: 3
         readinessProbe:
           httpGet:
-            path: /api/cost-management/v1/recommendations/openshift/openapi.json
+            path: /status
             port: 8000
             scheme: HTTP
           initialDelaySeconds: 3

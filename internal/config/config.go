@@ -40,6 +40,12 @@ type Config struct {
 	DBssl      string
 	DBCACert   string
 
+	//RBAC config
+	RBACHost     string
+	RBACPort     string
+	RBACProtocol string
+	RBACEnabled  bool
+
 	API_PORT string
 }
 
@@ -79,6 +85,16 @@ func initConfig() {
 		viper.SetDefault("DBssl", c.Database.SslMode)
 		viper.SetDefault("DBCACert", c.Database.RdsCa)
 
+		// clowder RBAC Config
+		for _, endpoint := range c.Endpoints {
+			if endpoint.App == "rbac" {
+				viper.SetDefault("RBACHost", endpoint.Hostname)
+				viper.SetDefault("RBACPort", endpoint.Port)
+				viper.SetDefault("RBACProtocol", "https")
+				viper.SetDefault("RBACEnabled", true)
+			}
+		}
+
 	} else {
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
 		viper.SetDefault("UPLOAD_TOPIC", "hccm.ros.events")
@@ -92,6 +108,13 @@ func initConfig() {
 		viper.SetDefault("DBPort", "15432")
 		viper.SetDefault("DBssl", "disable")
 		viper.SetDefault("DBCACert", "")
+
+		//default RBAC Config
+		viper.SetDefault("RBACHost", "localhost")
+		viper.SetDefault("RBACPort", "9080")
+		viper.SetDefault("RBACProtocol", "http")
+		viper.SetDefault("RBACEnabled", false)
+
 	}
 	viper.SetDefault("API_PORT", "8000")
 	viper.SetDefault("KRUIZE_WAIT_TIME", "30")
