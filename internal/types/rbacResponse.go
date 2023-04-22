@@ -17,7 +17,7 @@ type rbacResourceDefinitions struct {
 
 type attributeFilter struct {
 	Key       string
-	Value     []string
+	Value     interface{}
 	Operation string
 }
 
