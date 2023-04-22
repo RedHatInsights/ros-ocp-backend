@@ -12,6 +12,7 @@ objects:
     envName: ${ENV_NAME}
     dependencies:
     - ingress
+    - rbac
     deployments:
     - name: processor
       replicas: ${{PROCESSOR_REPLICA_COUNT}}
