@@ -90,7 +90,7 @@ func initConfig() {
 			if endpoint.App == "rbac" {
 				viper.SetDefault("RBACHost", endpoint.Hostname)
 				viper.SetDefault("RBACPort", endpoint.Port)
-				viper.SetDefault("RBACProtocol", "https")
+				viper.SetDefault("RBACProtocol", "http")
 				viper.SetDefault("RBACEnabled", true)
 			}
 		}
