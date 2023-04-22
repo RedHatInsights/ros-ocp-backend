@@ -216,7 +216,13 @@ func get_user_permissions(c echo.Context) map[string][]string {
 }
 
 func is_user_authorized_for_resource(resourceObject types.ResourceObject, user_permissions map[string][]string) bool {
+	log := logging.GetLogger()
 	if cfg.RBACEnabled {
+		log.Info("#########################################")
+		log.Infof("user_permissions = %s", user_permissions)
+		log.Info("-------")
+		log.Infof("ResourceObject = %s", resourceObject)
+		log.Info("#########################################")
 		if _, ok := user_permissions["*"]; ok {
 			return true
 		}

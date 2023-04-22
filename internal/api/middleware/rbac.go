@@ -3,9 +3,9 @@ package middleware
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
-	"io"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -48,7 +48,14 @@ func aggregate_permissions(acls []types.RbacData) map[string][]string {
 				permissions[resourceType] = append(permissions[resourceType], "*")
 			} else {
 				for _, resourceDefinition := range acl.ResourceDefinitions {
-					permissions[resourceType] = append(permissions[resourceType], resourceDefinition.AttributeFilter.Value...)
+					switch t := resourceDefinition.AttributeFilter.Value.(type) {
+					case []interface{}:
+						for _, v := range t {
+							permissions[resourceType] = append(permissions[resourceType], fmt.Sprint(v))
+						}
+					case string:
+						permissions[resourceType] = append(permissions[resourceType], t)
+					}
 				}
 			}
 		} else if resourceType == "*" {

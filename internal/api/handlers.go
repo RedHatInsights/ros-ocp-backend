@@ -117,7 +117,7 @@ func GetRecommendationSetList(c echo.Context) error {
 
 	for _, recommendation := range recommendationSets {
 		if is_user_authorized_for_resource(types.ResourceObject{
-			Cluster: recommendation.Workload.Cluster.ClusterUUID,
+			Cluster: recommendation.Workload.Cluster.ClusterAlias,
 			Project: recommendation.Workload.Namespace,
 		}, user_permissions) {
 			recommendationData := make(map[string]interface{})
