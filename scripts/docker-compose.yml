@@ -78,14 +78,32 @@ services:
     depends_on:
        - kafka
   kruize-autotune:
-    image: quay.io/cloudservices/autotune:08f052c
+    image: kruize/autotune_operator:0.0.13_rm
+    volumes:
+      - ./cdappconfig.json:/tmp/cdappconfig.json
     ports:
       - 8080:8080
     environment:
-      - CLUSTER_TYPE=kubernetes
-      - K8S_TYPE=openshift
-      - MONITORING_AGENT=prometheus
-      - MONITORING_SERVICE=prometheus-k8s
-      - MONITORING_AGENT_ENDPOINT=prometheus-k8s
       - LOGGING_LEVEL=info
       - ROOT_LOGGING_LEVEL=info
+      - DB_CONFIG_FILE=/tmp/cdappconfig.json
+      - dbdriver=jdbc:postgresql://
+      - database_name=postgres
+      - clustertype=kubernetes
+      - k8stype=openshift
+      - authtype=""
+      - monitoringagent=prometheus
+      - monitoringservice=prometheus-k8s
+      - monitoringendpoint=prometheus-k8s
+      - savetodb=true
+      - hibernate_dialect=org.hibernate.dialect.PostgreSQLDialect
+      - hibernate_driver=org.postgresql.Driver
+      - hibernate_c3p0minsize=2
+      - hibernate_c3p0maxsize=5
+      - hibernate_c3p0timeout=300
+      - hibernate_c3p0maxstatements=50
+      - hibernate_hbm2ddlauto=update
+      - hibernate_showsql=false
+      - hibernate_timezone=UTC
+    depends_on:
+        - db-ros

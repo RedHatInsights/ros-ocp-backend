@@ -13,29 +13,6 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 )
 
-var variationDummyObject = map[string]interface{}{
-	"limits": map[string]interface{}{
-		"cpu": map[string]interface{}{
-			"amount": 0.02,
-			"format": "cores",
-		},
-		"memory": map[string]interface{}{
-			"amount": 513900,
-			"format": "MiB",
-		},
-	},
-	"requests": map[string]interface{}{
-		"cpu": map[string]interface{}{
-			"amount": 0.01,
-			"format": "cores",
-		},
-		"memory": map[string]interface{}{
-			"amount": 4933.5,
-			"format": "MiB",
-		},
-	},
-}
-
 func GetRecommendationSetList(c echo.Context) error {
 	XRHID := c.Get("Identity").(identity.XRHID)
 	OrgID := XRHID.Identity.OrgID
@@ -110,19 +87,6 @@ func GetRecommendationSetList(c echo.Context) error {
 	for _, recommendation := range recommendationSets {
 		recommendationData := make(map[string]interface{})
 
-		// Adding dummy variation object
-		var recommendationObject map[string]interface{}
-		if err := json.Unmarshal(recommendation.Recommendations, &recommendationObject); err != nil {
-			log.Error("unable to unmarshall duration based recommendations", error)
-		}
-
-		longTermSection := recommendationObject["duration_based"].(map[string]interface{})["long_term"].(map[string]interface{})
-		shortTermSection := recommendationObject["duration_based"].(map[string]interface{})["short_term"].(map[string]interface{})
-		mediumTermSection := recommendationObject["duration_based"].(map[string]interface{})["medium_term"].(map[string]interface{})
-		shortTermSection["variation"] = variationDummyObject
-		mediumTermSection["variation"] = variationDummyObject
-		longTermSection["variation"] = variationDummyObject
-
 		recommendationData["id"] = recommendation.ID
 		recommendationData["source_id"] = recommendation.Workload.Cluster.SourceId
 		recommendationData["cluster_uuid"] = recommendation.Workload.Cluster.ClusterUUID
@@ -132,7 +96,6 @@ func GetRecommendationSetList(c echo.Context) error {
 		recommendationData["workload"] = recommendation.Workload.WorkloadName
 		recommendationData["container"] = recommendation.ContainerName
 		recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
-		recommendationData["recommendations"] = recommendationObject
 		allRecommendations = append(allRecommendations, recommendationData)
 
 	}
@@ -176,12 +139,6 @@ func GetRecommendationSet(c echo.Context) error {
 		if err := json.Unmarshal(recommendationSet.Recommendations, &recommendationObject); err != nil {
 			log.Error("unable to unmarshall duration based recommendations", error)
 		}
-		longTermSection := recommendationObject["duration_based"].(map[string]interface{})["long_term"].(map[string]interface{})
-		shortTermSection := recommendationObject["duration_based"].(map[string]interface{})["short_term"].(map[string]interface{})
-		mediumTermSection := recommendationObject["duration_based"].(map[string]interface{})["medium_term"].(map[string]interface{})
-		shortTermSection["variation"] = variationDummyObject
-		mediumTermSection["variation"] = variationDummyObject
-		longTermSection["variation"] = variationDummyObject
 
 		recommendationSlice["id"] = recommendationSet.ID
 		recommendationSlice["source_id"] = recommendationSet.Workload.Cluster.SourceId

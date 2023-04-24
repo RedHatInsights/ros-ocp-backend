@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -12,6 +13,7 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils/kruize"
 )
 
@@ -41,6 +43,9 @@ func ProcessEvent(msg *kafka.Message) {
 	}
 	data, err := kruize.List_recommendations(kafkaMsg)
 	if err != nil {
+		if err.Error() == fmt.Sprintf("Recommendation for timestamp - \" %s \" does not exist", utils.ConvertDateToISO8601(kafkaMsg.Monitoring_end_time)) {
+			return
+		}
 		log.Errorf("Unable to list recommendation for: %v", err)
 		return
 	}
