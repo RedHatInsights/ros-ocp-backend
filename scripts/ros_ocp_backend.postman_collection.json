@@ -23,7 +23,7 @@
 					}
 				],
 				"url": {
-					"raw": "localhost:8000/api/cost-management/v1/recommendations/openshift?start_date=2023-03-12&end_date=2023-03-21&project=proj_rxu&cluster=6678&workload_type=replicaset&workload=deployment_proj_&container=postgres&limit=1",
+					"raw": "localhost:8000/api/cost-management/v1/recommendations/openshift?workload=replicaset&limit=1&offset=1&order_by=cluster&order_how=ASC&cluster=Foo&project=A_PROJ_r&workload=replicaset_pr&container=hadoo&container=post&workload_type=replicaset&workload_type=deployment&end_date=2023-04-24",
 					"host": [
 						"localhost"
 					],
@@ -38,31 +38,17 @@
 					"query": [
 						{
 							"key": "start_date",
-							"value": "2023-03-12"
-						},
-						{
-							"key": "end_date",
-							"value": "2023-03-21"
-						},
-						{
-							"key": "project",
-							"value": "proj_rxu"
-						},
-						{
-							"key": "cluster",
-							"value": "6678"
-						},
-						{
-							"key": "workload_type",
-							"value": "replicaset"
+							"value": "2023-04-05",
+							"disabled": true
 						},
 						{
 							"key": "workload",
-							"value": "deployment_proj_"
+							"value": "replicaset"
 						},
 						{
 							"key": "container",
-							"value": "postgres"
+							"value": "REDIS",
+							"disabled": true
 						},
 						{
 							"key": "limit",
@@ -70,8 +56,72 @@
 						},
 						{
 							"key": "offset",
-							"value": "1",
+							"value": "1"
+						},
+						{
+							"key": "order_by",
+							"value": "cluster"
+						},
+						{
+							"key": "order_how",
+							"value": "ASC"
+						},
+						{
+							"key": "cluster",
+							"value": "Foo"
+						},
+						{
+							"key": "project",
+							"value": "A_PROJ_r"
+						},
+						{
+							"key": "order_by",
+							"value": "container",
 							"disabled": true
+						},
+						{
+							"key": "workload",
+							"value": "replicaset_pr"
+						},
+						{
+							"key": "workload",
+							"value": "deployment_proj_rx",
+							"disabled": true
+						},
+						{
+							"key": "workload",
+							"value": "yy",
+							"disabled": true
+						},
+						{
+							"key": "cluster",
+							"value": "Bar",
+							"disabled": true
+						},
+						{
+							"key": "container",
+							"value": "hadoo"
+						},
+						{
+							"key": "container",
+							"value": "post"
+						},
+						{
+							"key": "workload_type",
+							"value": "replicaset"
+						},
+						{
+							"key": "workload_type",
+							"value": "statefulsets",
+							"disabled": true
+						},
+						{
+							"key": "workload_type",
+							"value": "deployment"
+						},
+						{
+							"key": "end_date",
+							"value": "2023-04-24"
 						}
 					]
 				}
@@ -95,11 +145,11 @@
 					}
 				],
 				"url": {
-					"raw": "localhost:8000/api/cost-management/v1/recommendations/openshift/{recommendation-id}",
+					"raw": "localhost:8088/api/cost-management/v1/recommendations/openshift/{recommendation-id}",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "8088",
 					"path": [
 						"api",
 						"cost-management",
@@ -118,11 +168,11 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "localhost:8000/api/cost-management/v1/recommendations/openshift/openapi.json",
+					"raw": "localhost:8088/api/cost-management/v1/recommendations/openshift/openapi.json",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "8088",
 					"path": [
 						"api",
 						"cost-management",

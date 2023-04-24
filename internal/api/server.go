@@ -23,7 +23,7 @@ func StartAPIServer() {
 	}))
 
 	app.GET("/status", GetAppStatus)
-	app.File("/api/cost-management/v1/recommendations/openshift/openapi.json", "internal/api/docs/v1/openapi.json")
+	app.File("/api/cost-management/v1/recommendations/openshift/openapi.json", "openapi.json")
 
 	v1 := app.Group("/api/cost-management/v1")
 	v1.Use(ros_middleware.Identity)
