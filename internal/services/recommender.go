@@ -54,22 +54,24 @@ func ProcessEvent(msg *kafka.Message) {
 		containers := data[0].Kubernetes_objects[0].Containers
 		for _, container := range containers {
 			for _, v := range container.Recommendations.Data {
-				marshalData, err := json.Marshal(v)
-				if err != nil {
-					log.Errorf("Unable to list recommendation for: %v", err)
-				}
+				if len(v.Duration_based.Short_term.Notifications) == 0 {
+					marshalData, err := json.Marshal(v)
+					if err != nil {
+						log.Errorf("Unable to list recommendation for: %v", err)
+					}
 
-				// Create RecommendationSet entry into the table.
-				recommendationSet := model.RecommendationSet{
-					WorkloadID:          kafkaMsg.WorkloadID,
-					ContainerName:       container.Container_name,
-					MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
-					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
-					Recommendations:     marshalData,
-				}
-				if err := recommendationSet.CreateRecommendationSet(); err != nil {
-					log.Errorf("unable to get or add record to recommendation set table: %v. Error: %v", recommendationSet, err)
-					return
+					// Create RecommendationSet entry into the table.
+					recommendationSet := model.RecommendationSet{
+						WorkloadID:          kafkaMsg.WorkloadID,
+						ContainerName:       container.Container_name,
+						MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
+						MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
+						Recommendations:     marshalData,
+					}
+					if err := recommendationSet.CreateRecommendationSet(); err != nil {
+						log.Errorf("unable to get or add record to recommendation set table: %v. Error: %v", recommendationSet, err)
+						return
+					}
 				}
 			}
 		}
