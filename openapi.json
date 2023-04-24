@@ -294,8 +294,8 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "integer",
-                                    "example": 3221225472
+                                    "type": "number",
+                                    "example": 32212254.72
                                   },
                                   "format": {
                                     "type": "string",
@@ -325,8 +325,8 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "integer",
-                                    "example": 1719193370
+                                    "type": "number",
+                                    "example": 17191933.70
                                   },
                                   "format": {
                                     "type": "string",
@@ -361,7 +361,7 @@
                         "nullable": true
                       },
                       "duration_in_hours": {
-                        "type": "integer",
+                        "type": "number",
                         "example": 361
                       },
                       "monitoring_end_time": {
@@ -397,8 +397,8 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "integer",
-                                    "example": 513900
+                                    "type": "number",
+                                    "example": 5139.00
                                   },
                                   "format": {
                                     "type": "string",
@@ -469,8 +469,8 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "integer",
-                                    "example": 3221225472
+                                    "type": "number",
+                                    "example": 32212254.72
                                   },
                                   "format": {
                                     "type": "string",
@@ -500,8 +500,8 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "integer",
-                                    "example": 1719193370
+                                    "type": "number",
+                                    "example": 17191933.70
                                   },
                                   "format": {
                                     "type": "string",
@@ -536,7 +536,7 @@
                         }
                       },
                       "duration_in_hours": {
-                        "type": "integer",
+                        "type": "number",
                         "example": 169
                       },
                       "monitoring_end_time": {
@@ -572,8 +572,8 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "integer",
-                                    "example": 513900
+                                    "type": "number",
+                                    "example": 5139.00
                                   },
                                   "format": {
                                     "type": "string",
@@ -644,8 +644,8 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "integer",
-                                    "example": 3221225472
+                                    "type": "number",
+                                    "example": 32212254.72
                                   },
                                   "format": {
                                     "type": "string",
@@ -675,7 +675,7 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "integer",
+                                    "type": "number",
                                     "example": 1719193370
                                   },
                                   "format": {
@@ -711,7 +711,7 @@
                         }
                       },
                       "duration_in_hours": {
-                        "type": "integer",
+                        "type": "number",
                         "example": 25
                       },
                       "monitoring_end_time": {
@@ -747,8 +747,8 @@
                                 "type": "object",
                                 "properties": {
                                   "amount": {
-                                    "type": "integer",
-                                    "example": 513900
+                                    "type": "number",
+                                    "example": 51390.0
                                   },
                                   "format": {
                                     "type": "string",
@@ -814,4 +814,3 @@
     }
   }
 }
-
