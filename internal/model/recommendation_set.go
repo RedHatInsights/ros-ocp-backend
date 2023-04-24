@@ -7,7 +7,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
 
 type RecommendationSet struct {
@@ -31,7 +33,7 @@ func (r *RecommendationSet) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
-func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string][]string) ([]RecommendationSet, int, error) {
+func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string][]string, user_permissions map[string][]string) ([]RecommendationSet, int, error) {
 
 	var recommendationSets []RecommendationSet
 	db := database.GetDB()
@@ -47,6 +49,8 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 			JOIN clusters ON workloads.cluster_id = clusters.id
 			JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
 		`).Model(r).Preload("Workload.Cluster.RHAccount").Where("rh_accounts.org_id = ?", orgID)
+
+	add_rbac_filter(query, user_permissions)
 
 	for key, values := range queryParams {
 		valuesInterface := make([]interface{}, len(values))
@@ -64,18 +68,20 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 	return recommendationSets, int(count), err
 }
 
-func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendationID string) (RecommendationSet, error) {
+func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendationID string, user_permissions map[string][]string) (RecommendationSet, error) {
 
 	var recommendationSet RecommendationSet
 	db := database.GetDB()
 
-	db.Joins("JOIN workloads ON recommendation_sets.workload_id = workloads.id").
+	query := db.Joins("JOIN workloads ON recommendation_sets.workload_id = workloads.id").
 		Joins("JOIN clusters ON workloads.cluster_id = clusters.id").
 		Joins("JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id").
 		Preload("Workload.Cluster.RHAccount").
 		Where("rh_accounts.org_id = ?", orgID).
-		Where("recommendation_sets.id = ?", recommendationID).
-		First(&recommendationSet)
+		Where("recommendation_sets.id = ?", recommendationID)
+
+	add_rbac_filter(query, user_permissions)
+	query.First(&recommendationSet)
 
 	return recommendationSet, nil
 }
@@ -94,3 +100,41 @@ func (r *RecommendationSet) CreateRecommendationSet() error {
 	return nil
 }
 
+func add_rbac_filter(query *gorm.DB, user_permissions map[string][]string) {
+	cfg := config.GetConfig()
+	if cfg.RBACEnabled {
+		if _, ok := user_permissions["*"]; ok {
+			return
+		}
+		// if user has cluster level permision but project level permissions is not explicitly set
+		// that means user have access to all projects in that cluster
+		if cluster_permissions, ok := user_permissions["openshift.cluster"]; ok {
+			if _, ok := user_permissions["openshift.project"]; !ok {
+				if !utils.StringInSlice("*", cluster_permissions) {
+					query.Where("clusters.cluster_alias IN (?)", cluster_permissions)
+					return
+				}
+			}
+		}
+
+		// if user has project level permision but cluster level permissions is not explicitly set
+		// that means user have access to project in all the clusters
+		if _, ok := user_permissions["openshift.cluster"]; !ok {
+			if project_permissions, ok := user_permissions["openshift.project"]; ok {
+				if !utils.StringInSlice("*", project_permissions) {
+					query.Where("workloads.namespace IN (?)", project_permissions)
+					return
+				}
+			}
+		}
+
+		if project_permissions, ok := user_permissions["openshift.project"]; ok {
+			if cluster_permissions, ok := user_permissions["openshift.cluster"]; ok {
+				query.Where("clusters.cluster_alias IN (?)", cluster_permissions)
+				query.Where("workloads.namespace IN (?)", project_permissions)
+				return
+			}
+		}
+
+	}
+}

@@ -105,7 +105,7 @@ func GetRecommendationSetList(c echo.Context) error {
 	log.Info("============================")
 	log.Infof("User orgID = %s", OrgID)
 	log.Info("============================")
-	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams)
+	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams, user_permissions)
 	log.Info("============================")
 	log.Infof("recommendationSets got from DB = %v", recommendationSets)
 	log.Info("============================")
@@ -173,7 +173,7 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	recommendationSetVar := model.RecommendationSet{}
-	recommendationSet, error := recommendationSetVar.GetRecommendationSetByID(OrgID, RecommendationUUID.String())
+	recommendationSet, error := recommendationSetVar.GetRecommendationSetByID(OrgID, RecommendationUUID.String(), user_permissions)
 
 	if error != nil {
 		log.Error("unable to fetch records from database", error)
