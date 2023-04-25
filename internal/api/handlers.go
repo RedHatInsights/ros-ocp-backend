@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -96,6 +95,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		recommendationData["workload"] = recommendation.Workload.WorkloadName
 		recommendationData["container"] = recommendation.ContainerName
 		recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
+		recommendationData["recommendations"] = recommendation.Recommendations
 		allRecommendations = append(allRecommendations, recommendationData)
 
 	}
@@ -133,13 +133,6 @@ func GetRecommendationSet(c echo.Context) error {
 	recommendationSlice := make(map[string]interface{})
 
 	if len(recommendationSet.Recommendations) != 0 {
-
-		// Adding dummy variation object
-		var recommendationObject map[string]interface{}
-		if err := json.Unmarshal(recommendationSet.Recommendations, &recommendationObject); err != nil {
-			log.Error("unable to unmarshall duration based recommendations", error)
-		}
-
 		recommendationSlice["id"] = recommendationSet.ID
 		recommendationSlice["source_id"] = recommendationSet.Workload.Cluster.SourceId
 		recommendationSlice["cluster_uuid"] = recommendationSet.Workload.Cluster.ClusterUUID
@@ -149,7 +142,7 @@ func GetRecommendationSet(c echo.Context) error {
 		recommendationSlice["workload"] = recommendationSet.Workload.WorkloadName
 		recommendationSlice["container"] = recommendationSet.ContainerName
 		recommendationSlice["last_reported"] = recommendationSet.Workload.Cluster.LastReportedAtStr
-		recommendationSlice["recommendations"] = recommendationObject
+		recommendationSlice["recommendations"] = recommendationSet.Recommendations
 	}
 
 	return c.JSON(http.StatusOK, recommendationSlice)
