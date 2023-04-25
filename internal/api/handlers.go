@@ -11,7 +11,6 @@ import (
 
 	"github.com/redhatinsights/platform-go-middlewares/identity"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
-	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 )
 
 var variationDummyObject = map[string]interface{}{
@@ -91,13 +90,6 @@ func GetRecommendationSetList(c echo.Context) error {
 		if err == nil {
 			offset = offsetInt
 		}
-	}
-
-	if !is_user_authorized_for_resource(types.ResourceObject{
-		Cluster: c.QueryParam("cluster"),
-		Project: c.QueryParam("project"),
-	}, user_permissions) {
-		return c.JSON(http.StatusUnauthorized, "User is not authorized to access the resource")
 	}
 
 	queryParams := MapQueryParameters(c)

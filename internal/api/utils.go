@@ -10,7 +10,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
-	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 )
 
 type Collection struct {
@@ -195,14 +194,6 @@ func parseQueryParams(param string, values []string) (string, []string) {
 	}
 
 }
-func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
-}
 
 func get_user_permissions(c echo.Context) map[string][]string {
 	var user_permissions map[string][]string
@@ -213,56 +204,4 @@ func get_user_permissions(c echo.Context) map[string][]string {
 		user_permissions = map[string][]string{}
 	}
 	return user_permissions
-}
-
-func is_user_authorized_for_resource(resourceObject types.ResourceObject, user_permissions map[string][]string) bool {
-	if cfg.RBACEnabled {
-		if _, ok := user_permissions["*"]; ok {
-			return true
-		}
-		if resourceObject.Cluster == "" && resourceObject.Project == "" {
-			return true
-		}
-
-		has_cluster_permission := false
-		has_project_permission := false
-
-		// if user has cluster level permision but project level permissions is not explicitly set
-		// that means user have access to all projects in that cluster
-		if _, ok := user_permissions["openshift.cluster"]; ok {
-			if _, ok := user_permissions["openshift.project"]; !ok {
-				has_project_permission = true
-			}
-		}
-
-		// if user has project level permision but cluster level permissions is not explicitly set
-		// that means user have access to project in all the clusters
-		if _, ok := user_permissions["openshift.cluster"]; !ok {
-			if _, ok := user_permissions["openshift.project"]; ok {
-				has_cluster_permission = true
-			}
-		}
-
-		// check project level permission
-		if project_permissions, ok := user_permissions["openshift.project"]; ok {
-			if stringInSlice("*", project_permissions) || stringInSlice(resourceObject.Project, project_permissions) {
-				has_project_permission = true
-			}
-		}
-
-		// check cluster level permission
-		if cluster_permissions, ok := user_permissions["openshift.cluster"]; ok {
-			if stringInSlice("*", cluster_permissions) || stringInSlice(resourceObject.Cluster, cluster_permissions) {
-				has_cluster_permission = true
-			}
-		}
-
-		if has_cluster_permission && has_project_permission {
-			return true
-		}
-
-	} else {
-		return true
-	}
-	return false
 }
