@@ -76,6 +76,10 @@ func ProcessEvent(msg *kafka.Message) {
 			}
 		}
 	} else {
+		if kafkaMsg.Attempt > 5 {
+			return
+		}
+		kafkaMsg.Attempt = kafkaMsg.Attempt + 1
 		if _, err := kruize.Update_results(kafkaMsg.Experiment_name, kafkaMsg.K8s_object); err != nil {
 			log.Error(err)
 		}
