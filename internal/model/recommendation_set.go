@@ -106,6 +106,15 @@ func add_rbac_filter(query *gorm.DB, user_permissions map[string][]string) {
 		if _, ok := user_permissions["*"]; ok {
 			return
 		}
+
+		if cluster_permissions, ok := user_permissions["openshift.cluster"]; ok {
+			if project_permissions, ok := user_permissions["openshift.project"]; ok {
+				if utils.StringInSlice("*", cluster_permissions) && utils.StringInSlice("*", project_permissions) {
+					return
+				}
+			}
+		}
+
 		// if user has cluster level permision but project level permissions is not explicitly set
 		// that means user have access to all projects in that cluster
 		if cluster_permissions, ok := user_permissions["openshift.cluster"]; ok {
