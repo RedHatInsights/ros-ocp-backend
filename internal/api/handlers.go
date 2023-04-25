@@ -175,12 +175,6 @@ func GetRecommendationSet(c echo.Context) error {
 		log.Error("unable to fetch records from database", error)
 	}
 
-	if !is_user_authorized_for_resource(types.ResourceObject{
-		Cluster: recommendationSet.Workload.Cluster.ClusterUUID,
-		Project: recommendationSet.Workload.Namespace,
-	}, user_permissions) {
-		return c.JSON(http.StatusUnauthorized, "User is not authorized to access the resource")
-	}
 	recommendationSlice := make(map[string]interface{})
 
 	if len(recommendationSet.Recommendations) != 0 {
