@@ -105,7 +105,7 @@ func GetRecommendationSetList(c echo.Context) error {
 	log.Info("============================")
 	log.Infof("User orgID = %s", OrgID)
 	log.Info("============================")
-	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams)
+	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams, user_permissions)
 	log.Info("============================")
 	log.Infof("recommendationSets got from DB = %v", recommendationSets)
 	log.Info("============================")
@@ -116,37 +116,33 @@ func GetRecommendationSetList(c echo.Context) error {
 	allRecommendations := []map[string]interface{}{}
 
 	for _, recommendation := range recommendationSets {
-		if is_user_authorized_for_resource(types.ResourceObject{
-			Cluster: recommendation.Workload.Cluster.ClusterAlias,
-			Project: recommendation.Workload.Namespace,
-		}, user_permissions) {
-			recommendationData := make(map[string]interface{})
+		recommendationData := make(map[string]interface{})
 
-			// Adding dummy variation object
-			var recommendationObject map[string]interface{}
-			if err := json.Unmarshal(recommendation.Recommendations, &recommendationObject); err != nil {
-				log.Error("unable to unmarshall duration based recommendations", error)
-			}
-
-			longTermSection := recommendationObject["duration_based"].(map[string]interface{})["long_term"].(map[string]interface{})
-			shortTermSection := recommendationObject["duration_based"].(map[string]interface{})["short_term"].(map[string]interface{})
-			mediumTermSection := recommendationObject["duration_based"].(map[string]interface{})["medium_term"].(map[string]interface{})
-			shortTermSection["variation"] = variationDummyObject
-			mediumTermSection["variation"] = variationDummyObject
-			longTermSection["variation"] = variationDummyObject
-
-			recommendationData["id"] = recommendation.ID
-			recommendationData["source_id"] = recommendation.Workload.Cluster.SourceId
-			recommendationData["cluster_uuid"] = recommendation.Workload.Cluster.ClusterUUID
-			recommendationData["cluster_alias"] = recommendation.Workload.Cluster.ClusterAlias
-			recommendationData["project"] = recommendation.Workload.Namespace
-			recommendationData["workload_type"] = recommendation.Workload.WorkloadType
-			recommendationData["workload"] = recommendation.Workload.WorkloadName
-			recommendationData["container"] = recommendation.ContainerName
-			recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
-			recommendationData["recommendations"] = recommendationObject
-			allRecommendations = append(allRecommendations, recommendationData)
+		// Adding dummy variation object
+		var recommendationObject map[string]interface{}
+		if err := json.Unmarshal(recommendation.Recommendations, &recommendationObject); err != nil {
+			log.Error("unable to unmarshall duration based recommendations", error)
 		}
+
+		longTermSection := recommendationObject["duration_based"].(map[string]interface{})["long_term"].(map[string]interface{})
+		shortTermSection := recommendationObject["duration_based"].(map[string]interface{})["short_term"].(map[string]interface{})
+		mediumTermSection := recommendationObject["duration_based"].(map[string]interface{})["medium_term"].(map[string]interface{})
+		shortTermSection["variation"] = variationDummyObject
+		mediumTermSection["variation"] = variationDummyObject
+		longTermSection["variation"] = variationDummyObject
+
+		recommendationData["id"] = recommendation.ID
+		recommendationData["source_id"] = recommendation.Workload.Cluster.SourceId
+		recommendationData["cluster_uuid"] = recommendation.Workload.Cluster.ClusterUUID
+		recommendationData["cluster_alias"] = recommendation.Workload.Cluster.ClusterAlias
+		recommendationData["project"] = recommendation.Workload.Namespace
+		recommendationData["workload_type"] = recommendation.Workload.WorkloadType
+		recommendationData["workload"] = recommendation.Workload.WorkloadName
+		recommendationData["container"] = recommendation.ContainerName
+		recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
+		recommendationData["recommendations"] = recommendationObject
+		allRecommendations = append(allRecommendations, recommendationData)
+
 	}
 
 	interfaceSlice := make([]interface{}, len(allRecommendations))
@@ -173,18 +169,12 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	recommendationSetVar := model.RecommendationSet{}
-	recommendationSet, error := recommendationSetVar.GetRecommendationSetByID(OrgID, RecommendationUUID.String())
+	recommendationSet, error := recommendationSetVar.GetRecommendationSetByID(OrgID, RecommendationUUID.String(), user_permissions)
 
 	if error != nil {
 		log.Error("unable to fetch records from database", error)
 	}
 
-	if !is_user_authorized_for_resource(types.ResourceObject{
-		Cluster: recommendationSet.Workload.Cluster.ClusterUUID,
-		Project: recommendationSet.Workload.Namespace,
-	}, user_permissions) {
-		return c.JSON(http.StatusUnauthorized, "User is not authorized to access the resource")
-	}
 	recommendationSlice := make(map[string]interface{})
 
 	if len(recommendationSet.Recommendations) != 0 {
