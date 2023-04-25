@@ -169,6 +169,7 @@ func ProcessReport(msg *kafka.Message) {
 				Fetch_time:          time.Now().UTC().Add(time.Second * time.Duration(waittime)),
 				Monitoring_end_time: interval_end.String(),
 				K8s_object:          k8s_object,
+				Attempt:             1,
 			}
 
 			msgBytes, err := json.Marshal(experimentEventMsg)

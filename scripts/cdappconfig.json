@@ -1,0 +1,11 @@
+{
+    "database": {
+        "adminPassword": "postgres",
+        "adminUsername": "postgres",
+        "hostname": "db-ros",
+        "name": "postgres",
+        "password": "postgres",
+        "port": 5432,
+        "username": "postgres"
+      }
+}

@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -12,6 +13,7 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils/kruize"
 )
 
@@ -41,6 +43,9 @@ func ProcessEvent(msg *kafka.Message) {
 	}
 	data, err := kruize.List_recommendations(kafkaMsg)
 	if err != nil {
+		if err.Error() == fmt.Sprintf("Recommendation for timestamp - \" %s \" does not exist", utils.ConvertDateToISO8601(kafkaMsg.Monitoring_end_time)) {
+			return
+		}
 		log.Errorf("Unable to list recommendation for: %v", err)
 		return
 	}
@@ -49,26 +54,32 @@ func ProcessEvent(msg *kafka.Message) {
 		containers := data[0].Kubernetes_objects[0].Containers
 		for _, container := range containers {
 			for _, v := range container.Recommendations.Data {
-				marshalData, err := json.Marshal(v)
-				if err != nil {
-					log.Errorf("Unable to list recommendation for: %v", err)
-				}
+				if len(v.Duration_based.Short_term.Notifications) == 0 {
+					marshalData, err := json.Marshal(v)
+					if err != nil {
+						log.Errorf("Unable to list recommendation for: %v", err)
+					}
 
-				// Create RecommendationSet entry into the table.
-				recommendationSet := model.RecommendationSet{
-					WorkloadID:          kafkaMsg.WorkloadID,
-					ContainerName:       container.Container_name,
-					MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
-					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
-					Recommendations:     marshalData,
-				}
-				if err := recommendationSet.CreateRecommendationSet(); err != nil {
-					log.Errorf("unable to get or add record to recommendation set table: %v. Error: %v", recommendationSet, err)
-					return
+					// Create RecommendationSet entry into the table.
+					recommendationSet := model.RecommendationSet{
+						WorkloadID:          kafkaMsg.WorkloadID,
+						ContainerName:       container.Container_name,
+						MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
+						MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
+						Recommendations:     marshalData,
+					}
+					if err := recommendationSet.CreateRecommendationSet(); err != nil {
+						log.Errorf("unable to get or add record to recommendation set table: %v. Error: %v", recommendationSet, err)
+						return
+					}
 				}
 			}
 		}
 	} else {
+		if kafkaMsg.Attempt > 5 {
+			return
+		}
+		kafkaMsg.Attempt = kafkaMsg.Attempt + 1
 		if _, err := kruize.Update_results(kafkaMsg.Experiment_name, kafkaMsg.K8s_object); err != nil {
 			log.Error(err)
 		}
