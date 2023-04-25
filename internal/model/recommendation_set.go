@@ -111,6 +111,16 @@ func add_rbac_filter(query *gorm.DB, user_permissions map[string][]string) {
 			if project_permissions, ok := user_permissions["openshift.project"]; ok {
 				if utils.StringInSlice("*", cluster_permissions) && utils.StringInSlice("*", project_permissions) {
 					return
+				} else if utils.StringInSlice("*", cluster_permissions) {
+					query.Where("workloads.namespace IN (?)", project_permissions)
+					return
+				} else if utils.StringInSlice("*", project_permissions) {
+					query.Where("clusters.cluster_alias IN (?)", cluster_permissions)
+					return
+				} else {
+					query.Where("clusters.cluster_alias IN (?)", cluster_permissions)
+					query.Where("workloads.namespace IN (?)", project_permissions)
+					return
 				}
 			}
 		}
@@ -136,14 +146,5 @@ func add_rbac_filter(query *gorm.DB, user_permissions map[string][]string) {
 				}
 			}
 		}
-
-		if project_permissions, ok := user_permissions["openshift.project"]; ok {
-			if cluster_permissions, ok := user_permissions["openshift.cluster"]; ok {
-				query.Where("clusters.cluster_alias IN (?)", cluster_permissions)
-				query.Where("workloads.namespace IN (?)", project_permissions)
-				return
-			}
-		}
-
 	}
 }
