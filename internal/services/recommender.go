@@ -95,10 +95,13 @@ func ProcessEvent(msg *kafka.Message) {
 }
 
 func is_valid_recommendation(d []kruizePayload.ListRecommendations) bool {
-	notifications := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
-	if len(notifications) > 0 && notifications[0].Message == "Duration Based Recommendations Available" {
-		return true
-	} else {
-		return false
+	if len(d) > 0 {
+		notifications := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
+		if len(notifications) > 0 && notifications[0].Message == "Duration Based Recommendations Available" {
+			return true
+		} else {
+			return false
+		}
 	}
+	return false
 }
