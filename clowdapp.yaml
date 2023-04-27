@@ -121,6 +121,7 @@ objects:
         image: ${KRUIZE_IMAGE}:${KRUIZE_IMAGE_TAG}
         command: ["sh"]
         args: ["-c", "export DB_CONFIG_FILE=${ACG_CONFIG} && bash target/bin/Autotune"]
+        machinePool: ${MACHINE_POOL_OPTION}
         resources:
           requests:
             cpu: ${KRUIZE_CPU_REQUEST}
@@ -273,3 +274,5 @@ parameters:
 - description: Replica count for kruize pod
   name: KRUIZE_REPLICA_COUNT
   value: "1"
+- name: MACHINE_POOL_OPTION
+  value: ''
