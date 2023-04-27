@@ -360,6 +360,14 @@
                         },
                         "nullable": true
                       },
+                      "pods_count": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "confidence_level": {
+                        "type": "number",
+                        "example": 0.5
+                      },
                       "duration_in_hours": {
                         "type": "number",
                         "example": 361
@@ -535,6 +543,14 @@
                           "nullable": true
                         }
                       },
+                      "pods_count": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "confidence_level": {
+                        "type": "number",
+                        "example": 0.5
+                      },
                       "duration_in_hours": {
                         "type": "number",
                         "example": 169
@@ -709,6 +725,14 @@
                           },
                           "nullable": true
                         }
+                      },
+                      "pods_count": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "confidence_level": {
+                        "type": "number",
+                        "example": 0.5
                       },
                       "duration_in_hours": {
                         "type": "number",
