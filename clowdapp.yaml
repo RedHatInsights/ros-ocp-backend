@@ -123,11 +123,11 @@ objects:
         args: ["-c", "export DB_CONFIG_FILE=${ACG_CONFIG} && bash target/bin/Autotune"]
         resources:
           requests:
-            cpu: ${CPU_REQUEST}
-            memory: ${MEMORY_REQUEST}
+            cpu: ${KRUIZE_CPU_REQUEST}
+            memory: ${KRUIZE_MEMORY_REQUEST}
           limits:
-            cpu: ${CPU_LIMIT}
-            memory: ${MEMORY_LIMIT}
+            cpu: ${KRUIZE_CPU_LIMIT}
+            memory: ${KRUIZE_MEMORY_LIMIT}
         env:
           - name: AUTOTUNE_SERVER_PORT
             value: ${KRUIZE_PORT}
@@ -216,6 +216,26 @@ parameters:
   name: KRUIZE_PORT
   required: true
   value: "10000"
+- description: Initial kruize cpu request.
+  displayName: KRUIZE CPU Request
+  name: KRUIZE_CPU_REQUEST
+  required: true
+  value: 500m
+- description: Initial amount of memory kruize container will request.
+  displayName: KRUIZE Memory Request
+  name: KRUIZE_MEMORY_REQUEST
+  required: true
+  value: 1Gi
+- description: Maximum amount of memory kruize container can use.
+  displayName: KRUIZE Memory Limit
+  name: KRUIZE_MEMORY_LIMIT
+  required: true
+  value: 1Gi
+- description: Maximum amount of CPU kruize container can use.
+  displayName: KRUIZE CPU Limit
+  name: KRUIZE_CPU_LIMIT
+  required: true
+  value: '1'
 - description: Initial cpu request.
   displayName: CPU Request
   name: CPU_REQUEST
