@@ -18,6 +18,7 @@ import (
 
 var log *logrus.Logger = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
+var	experimentCreateAttempt bool = true
 
 func Create_kruize_experiments(experiment_name string, k8s_object []map[string]interface{}) ([]string, error) {
 	// k8s_object (can) contain multiple containers of same k8s object type.
@@ -53,6 +54,23 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 	if err := json.Unmarshal(body, &resdata); err != nil {
 		return nil, fmt.Errorf("can not unmarshal response data: %v", err)
 	}
+
+	// Temporary fix
+	// Currently, once Kruize pod inits it does not load performance-profile from DB
+	if strings.Contains(resdata["message"].(string), "Performance Profile doesn't exist") && experimentCreateAttempt {
+		log.Error("Performance profile does not exist")
+		log.Info("Tring to create resource_optimization_openshift performance profile")
+		utils.Setup_kruize_performance_profile()
+		experimentCreateAttempt = false  // Attempting only once
+		container_names, err := Create_kruize_experiments(experiment_name, k8s_object)
+		experimentCreateAttempt = true
+		if err != nil {
+            return nil, err
+        } else {
+            return container_names, nil
+        }
+	}
+
 	if strings.Contains(resdata["message"].(string), "is duplicate") {
 		log.Info("Experiment already exist")
 	}
