@@ -38,6 +38,8 @@ objects:
             value: ${KRUIZE_WAIT_TIME}
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
+          - name: ServiceName
+            value: "rosocp-processor"
     - name: recommender
       replicas: ${{RECOMMENDER_REPLICA_COUNT}}
       podSpec:
@@ -62,6 +64,8 @@ objects:
             value: ${KRUIZE_WAIT_TIME}
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
+          - name: ServiceName
+            value: "rosocp-recommender"
     - name: api
       replicas: ${{API_REPLICA_COUNT}}
       webServices:
@@ -112,6 +116,8 @@ objects:
             value: ${DB_MAX_OVERFLOW}
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
+          - name: ServiceName
+            value: "rosocp-api"
     - name: kruize
       replicas: ${{KRUIZE_REPLICA_COUNT}}
       webServices:

@@ -13,7 +13,9 @@ import (
 
 type Config struct {
 	//Application config
-	LogLevel string `mapstructure:"LogLevel"`
+	ServiceName string `mapstructure:"ServiceName"`
+	LogLevel    string `mapstructure:"LogLevel"`
+	LogFormater string `mapstructure:"LogFormater"`
 
 	//Kafka configs
 	KafkaBootstrapServers string `mapstructure:"KAFKA_BOOTSTRAP_SERVERS"`
@@ -47,6 +49,12 @@ type Config struct {
 	RBACEnabled  bool
 
 	API_PORT string
+
+	// Cloudwatch config
+	CwLogGroup  string
+	CwRegion    string
+	CwAccessKey string
+	CwSecretKey string
 }
 
 var cfg *Config = nil
@@ -54,6 +62,8 @@ var cfg *Config = nil
 func initConfig() {
 	viper.AutomaticEnv()
 	if clowder.IsClowderEnabled() {
+		viper.SetDefault("LogFormater", "json")
+
 		c := clowder.LoadedConfig
 		broker := c.Kafka.Brokers[0]
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", strings.Join(clowder.KafkaServers, ","))
@@ -95,7 +105,15 @@ func initConfig() {
 			}
 		}
 
+		//clowder cloudwatch config
+		viper.SetDefault("CwLogGroup", c.Logging.Cloudwatch.LogGroup)
+		viper.SetDefault("CwRegion", c.Logging.Cloudwatch.Region)
+		viper.SetDefault("CwAccessKey", c.Logging.Cloudwatch.AccessKeyId)
+		viper.SetDefault("CwSecretKey", c.Logging.Cloudwatch.SecretAccessKey)
+
 	} else {
+		viper.SetDefault("LogFormater", "text")
+
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
 		viper.SetDefault("UPLOAD_TOPIC", "hccm.ros.events")
 		viper.SetDefault("EXPERIMENTS_TOPIC", "rosocp.kruize.experiments")
@@ -116,6 +134,7 @@ func initConfig() {
 		viper.SetDefault("RBACEnabled", false)
 
 	}
+	viper.SetDefault("ServiceName", "rosocp")
 	viper.SetDefault("API_PORT", "8000")
 	viper.SetDefault("KRUIZE_WAIT_TIME", "30")
 	viper.SetDefault("KAFKA_CONSUMER_GROUP_ID", "ros-ocp")

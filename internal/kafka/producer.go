@@ -8,7 +8,7 @@ import (
 )
 
 var p *kafka.Producer = nil
-var log *logrus.Logger = nil
+var log *logrus.Entry = nil
 
 func startProducer() {
 	cfg := config.GetConfig()
@@ -46,7 +46,7 @@ func startProducer() {
 
 }
 
-func SendMessage(msg []byte, topic *string) {
+func SendMessage(msg []byte, topic *string) error {
 	if p == nil {
 		log = logging.GetLogger()
 		log.Info("initializing kafka producer")
@@ -60,15 +60,17 @@ func SendMessage(msg []byte, topic *string) {
 	}, delivery_chan)
 	if err != nil {
 		log.Errorf("Failed to produce message to kafka: %v\n", err)
-		return
+		return err
 	}
 	e := <-delivery_chan
 	m := e.(*kafka.Message)
 	if m.TopicPartition.Error != nil {
 		log.Errorf("Delivery failed: %v\n", m.TopicPartition.Error)
+		return m.TopicPartition.Error
 	} else {
-		log.Infof("Delivered message to topic %s [%d] at offset %v\n",
+		log.Debugf("Delivered message to topic %s [%d] at offset %v\n",
 			*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
+		return nil
 	}
 
 }

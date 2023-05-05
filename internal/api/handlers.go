@@ -70,13 +70,7 @@ func GetRecommendationSetList(c echo.Context) error {
 
 	queryParams := MapQueryParameters(c)
 	recommendationSet := model.RecommendationSet{}
-	log.Info("============================")
-	log.Infof("User orgID = %s", OrgID)
-	log.Info("============================")
 	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams, user_permissions)
-	log.Info("============================")
-	log.Infof("recommendationSets got from DB = %v", recommendationSets)
-	log.Info("============================")
 	if error != nil {
 		log.Error("unable to fetch records from database", error)
 	}
@@ -105,9 +99,6 @@ func GetRecommendationSetList(c echo.Context) error {
 		interfaceSlice[i] = v
 	}
 	results := CollectionResponse(interfaceSlice, c.Request(), count, limit, offset)
-	log.Info("============================")
-	log.Infof("Data we are sending in response = %+v", results)
-	log.Info("============================")
 	return c.JSON(http.StatusOK, results)
 
 }

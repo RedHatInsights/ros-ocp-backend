@@ -34,16 +34,18 @@ func ProcessEvent(msg *kafka.Message) {
 		log.Errorf("Invalid kafka message: %s", err)
 		return
 	}
-
+	logging.Set_request_details(kafkaMsg.Kafka_request_msg)
 	currentTime := time.Now().UTC()
 	if currentTime.Before(kafkaMsg.Fetch_time) {
 		t := kafkaMsg.Fetch_time.Sub(currentTime)
-		log.Info("Sleeping for: ", t)
+		log.Debug("Sleeping for: ", t)
 		time.Sleep(t)
 	}
 	data, err := kruize.List_recommendations(kafkaMsg)
 	if err != nil {
-		if err.Error() == fmt.Sprintf("Recommendation for timestamp - \" %s \" does not exist", utils.ConvertDateToISO8601(kafkaMsg.Monitoring_end_time)) {
+		end_interval := utils.ConvertDateToISO8601(kafkaMsg.Monitoring_end_time)
+		if err.Error() == fmt.Sprintf("Recommendation for timestamp - \" %s \" does not exist", end_interval) {
+			log.Infof("Recommendation does not exist for timestamp - \" %s \"", end_interval)
 			return
 		}
 		log.Errorf("Unable to list recommendation for: %v", err)
@@ -71,12 +73,15 @@ func ProcessEvent(msg *kafka.Message) {
 					if err := recommendationSet.CreateRecommendationSet(); err != nil {
 						log.Errorf("unable to get or add record to recommendation set table: %v. Error: %v", recommendationSet, err)
 						return
+					} else {
+						log.Infof("Recommendation saved for experiment - %s and end_interval - %s", kafkaMsg.Experiment_name, recommendationSet.MonitoringEndTime)
 					}
 				}
 			}
 		}
 	} else {
 		if kafkaMsg.Attempt > 5 {
+			log.Infof("Invalid recommendation provided by kruize - \n %+v\n", data)
 			return
 		}
 		kafkaMsg.Attempt = kafkaMsg.Attempt + 1
@@ -89,7 +94,7 @@ func ProcessEvent(msg *kafka.Message) {
 		if err != nil {
 			log.Errorf("Unable convert list_of_experiments to json: %s", err)
 		}
-		p.SendMessage(msgBytes, &cfg.ExperimentsTopic)
+		_ = p.SendMessage(msgBytes, &cfg.ExperimentsTopic)
 	}
 
 }

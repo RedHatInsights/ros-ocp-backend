@@ -12,7 +12,7 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 )
 
-var log *logrus.Logger = logging.GetLogger()
+var log *logrus.Entry = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
 
 func StartAPIServer() {

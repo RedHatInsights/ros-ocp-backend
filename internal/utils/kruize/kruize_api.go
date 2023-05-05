@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log *logrus.Logger = logging.GetLogger()
+var log *logrus.Entry = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
 var experimentCreateAttempt bool = true
 
@@ -48,34 +48,35 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 	if err != nil {
 		return nil, fmt.Errorf("error Occured while creating experiment: %v", err)
 	}
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	resdata := map[string]interface{}{}
-	if err := json.Unmarshal(body, &resdata); err != nil {
-		return nil, fmt.Errorf("can not unmarshal response data: %v", err)
-	}
-
-	// Temporary fix
-	// Currently, once Kruize pod inits it does not load performance-profile from DB
-	if strings.Contains(resdata["message"].(string), "Performance Profile doesn't exist") && experimentCreateAttempt {
-		log.Error("Performance profile does not exist")
-		log.Info("Tring to create resource_optimization_openshift performance profile")
-		utils.Setup_kruize_performance_profile()
-		experimentCreateAttempt = false // Attempting only once
-		container_names, err := Create_kruize_experiments(experiment_name, k8s_object)
-		experimentCreateAttempt = true
-		if err != nil {
-			return nil, err
-		} else {
-			return container_names, nil
+	if res.StatusCode != 201 {
+		defer res.Body.Close()
+		body, _ := io.ReadAll(res.Body)
+		resdata := map[string]interface{}{}
+		if err := json.Unmarshal(body, &resdata); err != nil {
+			return nil, fmt.Errorf("can not unmarshal response data: %v", err)
 		}
-	}
 
-	if strings.Contains(resdata["message"].(string), "is duplicate") {
-		log.Info("Experiment already exist")
-	}
-	if res.StatusCode == 201 {
-		log.Info("Experiment Created successfully")
+		// Temporary fix
+		// Currently, once Kruize pod inits it does not load performance-profile from DB
+		if strings.Contains(resdata["message"].(string), "Performance Profile doesn't exist") && experimentCreateAttempt {
+			log.Error("Performance profile does not exist")
+			log.Info("Tring to create resource_optimization_openshift performance profile")
+			utils.Setup_kruize_performance_profile()
+			experimentCreateAttempt = false // Attempting only once
+			container_names, err := Create_kruize_experiments(experiment_name, k8s_object)
+			experimentCreateAttempt = true
+			if err != nil {
+				return nil, err
+			} else {
+				return container_names, nil
+			}
+		}
+
+		if strings.Contains(resdata["message"].(string), "Experiment name already exists") {
+			log.Debug("Experiment already exist")
+		} else {
+			return nil, fmt.Errorf("%s", resdata["message"])
+		}
 	}
 
 	container_names := make([]string, 0, len(containers))
@@ -108,16 +109,11 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
 	}
 	defer res.Body.Close()
-	if res.StatusCode == 201 {
-		log.Info("Metrics uploaded successfully")
-	} else {
+	if res.StatusCode != 201 {
 		body, _ := io.ReadAll(res.Body)
 		resdata := map[string]interface{}{}
 		if err := json.Unmarshal(body, &resdata); err != nil {
 			return nil, fmt.Errorf("can not unmarshal response data: %v", err)
-		}
-		if strings.Contains(resdata["message"].(string), "already contains result for timestamp") {
-			log.Info(resdata["message"])
 		}
 
 		// Comparing string should be changed once kruize fix it some standard error message
@@ -132,9 +128,12 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 			}
 		}
 
-		if strings.Contains(resdata["message"].(string), fmt.Sprintf("Experiment name: %s not found", experiment_name)) {
+		if strings.Contains(resdata["message"].(string), "already contains result for timestamp") {
+			log.Debug(resdata["message"])
+		} else {
 			return nil, fmt.Errorf("%s", resdata["message"])
 		}
+
 	}
 
 	return payload_data, nil
@@ -165,7 +164,6 @@ func List_recommendations(experiment types.ExperimentEvent) ([]kruizePayload.Lis
 		return nil, fmt.Errorf(data["message"].(string))
 	}
 	response := []kruizePayload.ListRecommendations{}
-	fmt.Println(string(body))
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal response of /listRecommendations API %v", err)
 	}

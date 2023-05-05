@@ -38,6 +38,8 @@ func ProcessReport(msg *kafka.Message) {
 		return
 	}
 
+	logging.Set_request_details(kafkaMsg)
+
 	// Create user account(if not present) for incoming archive.
 	rh_account := model.RHAccount{
 		Account: kafkaMsg.Metadata.Account,
@@ -61,6 +63,7 @@ func ProcessReport(msg *kafka.Message) {
 		return
 	}
 
+	record_counter := 0
 	for _, file := range kafkaMsg.Files {
 		data, err := utils.ReadCSVFromUrl(file)
 		if err != nil {
@@ -170,16 +173,20 @@ func ProcessReport(msg *kafka.Message) {
 				Monitoring_end_time: interval_end.String(),
 				K8s_object:          k8s_object,
 				Attempt:             1,
+				Kafka_request_msg:   kafkaMsg,
 			}
 
 			msgBytes, err := json.Marshal(experimentEventMsg)
 			if err != nil {
 				log.Errorf("Unable convert list_of_experiments to json: %s", err)
 			}
-			p.SendMessage(msgBytes, &cfg.ExperimentsTopic)
+			if err := p.SendMessage(msgBytes, &cfg.ExperimentsTopic); err == nil {
+				record_counter++
+			}
 
 		}
 
 	}
+	log.Infof("Total records upload to rosocp.kruize.experiments = %v", record_counter)
 
 }
