@@ -25,10 +25,11 @@ func Setup_kruize_performance_profile() {
 	list_performance_profile_url := cfg.KruizeUrl + "/listPerformanceProfiles"
 	for i := 0; i < 5; i++ {
 		log.Infof("Fetching performance profile list")
-		_, err := http.Get(list_performance_profile_url)
+		response, err := http.Get(list_performance_profile_url)
 		if err != nil {
 			log.Errorf("An Error Occured %v \n", err)
 		} else {
+			defer response.Body.Close()
 			create_performance_profile_url := cfg.KruizeUrl + "/createPerformanceProfile"
 			postBody, err := os.ReadFile("./resource_optimization_openshift.json")
 			if err != nil {
