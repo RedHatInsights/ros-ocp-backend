@@ -40,6 +40,7 @@ func Setup_kruize_performance_profile() {
 			if e != nil {
 				log.Errorf("unable to create performance profile in kruize: %v \n", e)
 			}
+			defer res.Body.Close()
 			if res.StatusCode == 201 {
 				log.Infof("Performance profile created successfully")
 				return
@@ -48,7 +49,6 @@ func Setup_kruize_performance_profile() {
 				log.Infof("Performance Profile already exist")
 				return
 			}
-			defer res.Body.Close()
 			bodyBytes, _ := io.ReadAll(res.Body)
 			data := map[string]interface{}{}
 			if err := json.Unmarshal(bodyBytes, &data); err != nil {
