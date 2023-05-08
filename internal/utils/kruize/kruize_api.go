@@ -18,7 +18,7 @@ import (
 
 var log *logrus.Logger = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
-var	experimentCreateAttempt bool = true
+var experimentCreateAttempt bool = true
 
 func Create_kruize_experiments(experiment_name string, k8s_object []map[string]interface{}) ([]string, error) {
 	// k8s_object (can) contain multiple containers of same k8s object type.
@@ -61,14 +61,14 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 		log.Error("Performance profile does not exist")
 		log.Info("Tring to create resource_optimization_openshift performance profile")
 		utils.Setup_kruize_performance_profile()
-		experimentCreateAttempt = false  // Attempting only once
+		experimentCreateAttempt = false // Attempting only once
 		container_names, err := Create_kruize_experiments(experiment_name, k8s_object)
 		experimentCreateAttempt = true
 		if err != nil {
-            return nil, err
-        } else {
-            return container_names, nil
-        }
+			return nil, err
+		} else {
+			return container_names, nil
+		}
 	}
 
 	if strings.Contains(resdata["message"].(string), "is duplicate") {
@@ -107,10 +107,10 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 	if err != nil {
 		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
 	}
+	defer res.Body.Close()
 	if res.StatusCode == 201 {
 		log.Info("Metrics uploaded successfully")
 	} else {
-		defer res.Body.Close()
 		body, _ := io.ReadAll(res.Body)
 		resdata := map[string]interface{}{}
 		if err := json.Unmarshal(body, &resdata); err != nil {
