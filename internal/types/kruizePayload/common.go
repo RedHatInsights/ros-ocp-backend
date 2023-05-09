@@ -224,7 +224,7 @@ func make_container_data(c map[string]interface{}) container {
 	// memoryRSS
 	sum = convertMetricToString(c["memory_rss_usage_container_sum_SUM"])
 	avg = convertMetricToString(c["memory_rss_usage_container_avg_MEAN"])
-	max = convertMetricToString(c["memory_rss_usage_container_min_MIN"])
+	max = convertMetricToString(c["memory_rss_usage_container_max_MAX"])
 	min = convertMetricToString(c["memory_rss_usage_container_min_MIN"])
 	if sum != "" && avg != "" {
 		metrics = append(metrics, metric{
