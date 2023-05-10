@@ -105,13 +105,13 @@ func make_container_data(c map[string]interface{}) container {
 		// CPU Request
 		"cpuRequest": {
 			"sum":    "cpu_request_container_sum_SUM",
-			"avg":    "cpu_request_container_sum_MEAN",
+			"avg":    "cpu_request_container_avg_MEAN",
 			"format": "cores",
 		},
 		// CPU Limit
 		"cpuLimit": {
 			"sum":    "cpu_limit_container_sum_SUM",
-			"avg":    "cpu_limit_container_sum_MEAN",
+			"avg":    "cpu_limit_container_avg_MEAN",
 			"format": "cores",
 		},
 		// CPU Usage
