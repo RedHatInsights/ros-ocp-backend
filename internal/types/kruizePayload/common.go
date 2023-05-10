@@ -91,103 +91,160 @@ func convertMetricToString(data interface{}) string {
 	if metric, ok := data.(float64); ok {
 		return fmt.Sprintf("%.2f", metric)
 	} else {
-		return "-1"
+		return ""
 	}
 }
 
 func make_container_data(c map[string]interface{}) container {
+
+	metrics := []metric{}
+
+	// cpuRequest
+	sum := convertMetricToString(c["cpu_request_container_sum_SUM"])
+	avg := convertMetricToString(c["cpu_request_container_avg_MEAN"])
+	if sum != "" && avg != "" {
+		metrics = append(metrics, metric{
+			Name: "cpuRequest",
+			Results: result{
+				Aggregation_info: aggregation_info{
+					Sum:    sum,
+					Avg:    avg,
+					Format: "cores",
+				},
+			},
+		})
+	}
+
+	// cpuLimit
+	sum = convertMetricToString(c["cpu_limit_container_sum_SUM"])
+	avg = convertMetricToString(c["cpu_limit_container_avg_MEAN"])
+	if sum != "" && avg != "" {
+		metrics = append(metrics, metric{
+			Name: "cpuLimit",
+			Results: result{
+				Aggregation_info: aggregation_info{
+					Sum:    sum,
+					Avg:    avg,
+					Format: "cores",
+				},
+			},
+		})
+	}
+
+	// cpuUsage
+	sum = convertMetricToString(c["cpu_usage_container_sum_SUM"])
+	avg = convertMetricToString(c["cpu_usage_container_avg_MEAN"])
+	max := convertMetricToString(c["cpu_usage_container_max_MAX"])
+	min := convertMetricToString(c["cpu_usage_container_min_MIN"])
+	if sum != "" && avg != "" {
+		metrics = append(metrics, metric{
+			Name: "cpuUsage",
+			Results: result{
+				Aggregation_info: aggregation_info{
+					Min:    min,
+					Max:    max,
+					Sum:    sum,
+					Avg:    avg,
+					Format: "cores",
+				},
+			},
+		})
+	}
+
+	// cpuThrottle
+	sum = convertMetricToString(c["cpu_throttle_container_sum_SUM"])
+	avg = convertMetricToString(c["cpu_throttle_container_avg_MEAN"])
+	max = convertMetricToString(c["cpu_throttle_container_max_MAX"])
+	if sum != "" && avg != "" {
+		metrics = append(metrics, metric{
+			Name: "cpuThrottle",
+			Results: result{
+				Aggregation_info: aggregation_info{
+					Max:    max,
+					Sum:    sum,
+					Avg:    avg,
+					Format: "cores",
+				},
+			},
+		})
+	}
+
+	// memoryRequest
+	sum = convertMetricToString(c["memory_request_container_sum_SUM"])
+	avg = convertMetricToString(c["memory_request_container_avg_MEAN"])
+	if sum != "" && avg != "" {
+		metrics = append(metrics, metric{
+			Name: "memoryRequest",
+			Results: result{
+				Aggregation_info: aggregation_info{
+					Sum:    sum,
+					Avg:    avg,
+					Format: "MiB",
+				},
+			},
+		})
+	}
+
+	// memoryLimit
+	sum = convertMetricToString(c["memory_limit_container_sum_SUM"])
+	avg = convertMetricToString(c["memory_limit_container_avg_MEAN"])
+	if sum != "" && avg != "" {
+		metrics = append(metrics, metric{
+			Name: "memoryLimit",
+			Results: result{
+				Aggregation_info: aggregation_info{
+					Sum:    sum,
+					Avg:    avg,
+					Format: "MiB",
+				},
+			},
+		})
+	}
+
+	// memoryUsage
+	sum = convertMetricToString(c["memory_usage_container_sum_SUM"])
+	avg = convertMetricToString(c["memory_usage_container_avg_MEAN"])
+	min = convertMetricToString(c["memory_usage_container_min_MIN"])
+	max = convertMetricToString(c["memory_usage_container_max_MAX"])
+	if sum != "" && avg != "" {
+		metrics = append(metrics, metric{
+			Name: "memoryUsage",
+			Results: result{
+				Aggregation_info: aggregation_info{
+					Min:    min,
+					Max:    max,
+					Sum:    sum,
+					Avg:    avg,
+					Format: "MiB",
+				},
+			},
+		})
+	}
+
+	// memoryRSS
+	sum = convertMetricToString(c["memory_rss_usage_container_sum_SUM"])
+	avg = convertMetricToString(c["memory_rss_usage_container_avg_MEAN"])
+	max = convertMetricToString(c["memory_rss_usage_container_max_MAX"])
+	min = convertMetricToString(c["memory_rss_usage_container_min_MIN"])
+	if sum != "" && avg != "" {
+		metrics = append(metrics, metric{
+			Name: "memoryRSS",
+			Results: result{
+				Aggregation_info: aggregation_info{
+					Min:    min,
+					Max:    max,
+					Sum:    sum,
+					Avg:    avg,
+					Format: "MiB",
+				},
+			},
+		})
+	}
+
 	container_data := container{
 		Container_image_name: c["image_name"].(string),
 		Container_name:       c["container_name"].(string),
-		Metrics: []metric{
-			{
-				Name: "cpuRequest",
-				Results: result{
-					Aggregation_info: aggregation_info{
-						Sum:    convertMetricToString(c["cpu_request_container_sum_SUM"]),
-						Avg:    convertMetricToString(c["cpu_request_container_avg_MEAN"]),
-						Format: "cores",
-					},
-				},
-			},
-			{
-				Name: "cpuLimit",
-				Results: result{
-					Aggregation_info: aggregation_info{
-						Sum:    convertMetricToString(c["cpu_limit_container_sum_SUM"]),
-						Avg:    convertMetricToString(c["cpu_limit_container_avg_MEAN"]),
-						Format: "cores",
-					},
-				},
-			},
-			{
-				Name: "cpuUsage",
-				Results: result{
-					Aggregation_info: aggregation_info{
-						Min:    convertMetricToString(c["cpu_usage_container_min_MIN"]),
-						Max:    convertMetricToString(c["cpu_usage_container_max_MAX"]),
-						Sum:    convertMetricToString(c["cpu_usage_container_sum_SUM"]),
-						Avg:    convertMetricToString(c["cpu_usage_container_avg_MEAN"]),
-						Format: "cores",
-					},
-				},
-			},
-			{
-				Name: "cpuThrottle",
-				Results: result{
-					Aggregation_info: aggregation_info{
-						Max:    convertMetricToString(c["cpu_throttle_container_max_MAX"]),
-						Sum:    convertMetricToString(c["cpu_throttle_container_sum_SUM"]),
-						Avg:    convertMetricToString(c["cpu_throttle_container_avg_MEAN"]),
-						Format: "cores",
-					},
-				},
-			},
-			{
-				Name: "memoryRequest",
-				Results: result{
-					Aggregation_info: aggregation_info{
-						Sum:    convertMetricToString(c["memory_request_container_sum_SUM"]),
-						Avg:    convertMetricToString(c["memory_request_container_avg_MEAN"]),
-						Format: "MiB",
-					},
-				},
-			},
-			{
-				Name: "memoryLimit",
-				Results: result{
-					Aggregation_info: aggregation_info{
-						Sum:    convertMetricToString(c["memory_limit_container_sum_SUM"]),
-						Avg:    convertMetricToString(c["memory_limit_container_avg_MEAN"]),
-						Format: "MiB",
-					},
-				},
-			},
-			{
-				Name: "memoryUsage",
-				Results: result{
-					Aggregation_info: aggregation_info{
-						Min:    convertMetricToString(c["memory_usage_container_min_MIN"]),
-						Max:    convertMetricToString(c["memory_usage_container_max_MAX"]),
-						Sum:    convertMetricToString(c["memory_usage_container_sum_SUM"]),
-						Avg:    convertMetricToString(c["memory_usage_container_avg_MEAN"]),
-						Format: "MiB",
-					},
-				},
-			},
-			{
-				Name: "memoryRSS",
-				Results: result{
-					Aggregation_info: aggregation_info{
-						Min:    convertMetricToString(c["memory_rss_usage_container_min_MIN"]),
-						Max:    convertMetricToString(c["memory_rss_usage_container_max_MAX"]),
-						Sum:    convertMetricToString(c["memory_rss_usage_container_sum_SUM"]),
-						Avg:    convertMetricToString(c["memory_rss_usage_container_avg_MEAN"]),
-						Format: "MiB",
-					},
-				},
-			},
-		},
+		Metrics:              metrics,
 	}
 
 	return container_data
