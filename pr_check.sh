@@ -10,10 +10,9 @@ export IMAGE="quay.io/cloudservices/ros-ocp-backend"
 export DOCKERFILE="Dockerfile"
 
 export IQE_PLUGINS="ros_ocp"
-export IQE_MARKER_EXPRESSION="core and api"
+export IQE_MARKER_EXPRESSION="smoke"
 export IQE_FILTER_EXPRESSION=""
 export IQE_CJI_TIMEOUT="30m"
-
 
 # Install bonfire repo/initialize
 CICD_URL=https://raw.githubusercontent.com/RedHatInsights/bonfire/master/cicd
@@ -27,9 +26,6 @@ source $CICD_ROOT/deploy_ephemeral_env.sh
 # Run iqe-ros-ocp smoke tests with ClowdJobInvocation
 source $CICD_ROOT/cji_smoke_test.sh
 
-#mkdir -p $WORKSPACE/artifacts
-#cat << EOF > ${WORKSPACE}/artifacts/junit-dummy.xml
-#<testsuite tests="1">
-#    <testcase classname="dummy" name="dummytest"/>
-#</testsuite>
-#EOF
+# This will add the Ibutsu URL and test run IDs as a git check on PRs.
+source $CICD_ROOT/post_test_results.sh
+
