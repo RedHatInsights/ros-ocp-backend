@@ -99,146 +99,140 @@ func make_container_data(c map[string]interface{}) container {
 
 	metrics := []metric{}
 
-	// cpuRequest
-	sum := convertMetricToString(c["cpu_request_container_sum_SUM"])
-	avg := convertMetricToString(c["cpu_request_container_avg_MEAN"])
-	if sum != "" && avg != "" {
-		metrics = append(metrics, metric{
-			Name: "cpuRequest",
-			Results: result{
-				Aggregation_info: aggregation_info{
-					Sum:    sum,
-					Avg:    avg,
-					Format: "cores",
-				},
-			},
-		})
+	// Initialising a map with name Metrics Map
+	// It holds the keys to get the required data to create a metrics instance
+	metricsMap := map[string]map[string]string{
+		// CPU Request
+		"cpuRequest": {
+			"sum":    "cpu_request_container_sum_SUM",
+			"avg":    "cpu_request_container_sum_MEAN",
+			"format": "cores",
+		},
+		// CPU Limit
+		"cpuLimit": {
+			"sum":    "cpu_limit_container_sum_SUM",
+			"avg":    "cpu_limit_container_sum_MEAN",
+			"format": "cores",
+		},
+		// CPU Usage
+		"cpuUsage": {
+			"sum":    "cpu_usage_container_sum_SUM",
+			"avg":    "cpu_usage_container_avg_MEAN",
+			"min":    "cpu_usage_container_min_MIN",
+			"max":    "cpu_usage_container_max_MAX",
+			"format": "cores",
+		},
+		// CPU Throttle
+		"cpuThrottle": {
+			"sum":    "cpu_throttle_container_sum_SUM",
+			"avg":    "cpu_throttle_container_avg_MEAN",
+			"max":    "cpu_throttle_container_max_MAX",
+			"format": "cores",
+		},
+		// Memory Request
+		"memoryRequest": {
+			"sum":    "memory_request_container_sum_SUM",
+			"avg":    "memory_request_container_avg_MEAN",
+			"format": "MiB",
+		},
+		// Memory Limit
+		"memoryLimit": {
+			"sum":    "memory_limit_container_sum_SUM",
+			"avg":    "memory_limit_container_avg_MEAN",
+			"format": "MiB",
+		},
+		// Memory Usage
+		"memoryUsage": {
+			"sum":    "memory_usage_container_sum_SUM",
+			"avg":    "memory_usage_container_avg_MEAN",
+			"min":    "memory_usage_container_min_MIN",
+			"max":    "memory_usage_container_max_MAX",
+			"format": "MiB",
+		},
+		// Memory RSS
+		"memoryRSS": {
+			"sum":    "memory_rss_usage_container_sum_SUM",
+			"avg":    "memory_rss_usage_container_avg_MEAN",
+			"min":    "memory_rss_usage_container_min_MIN",
+			"max":    "memory_rss_usage_container_max_MAX",
+			"format": "MiB",
+		},
 	}
 
-	// cpuLimit
-	sum = convertMetricToString(c["cpu_limit_container_sum_SUM"])
-	avg = convertMetricToString(c["cpu_limit_container_avg_MEAN"])
-	if sum != "" && avg != "" {
-		metrics = append(metrics, metric{
-			Name: "cpuLimit",
-			Results: result{
-				Aggregation_info: aggregation_info{
-					Sum:    sum,
-					Avg:    avg,
-					Format: "cores",
-				},
-			},
-		})
-	}
+	// Initialising variable to hold the result of SUM
+	sum := ""
+	// Initailising variable to hold the result of MEAN
+	avg := ""
+	// Initialising variable to hold the result of MIN value
+	min := ""
+	// Initailising variable to hold the result of MAX value
+	max := ""
+	// Initialising variable to hold the result of FORMAT
+	format := ""
 
-	// cpuUsage
-	sum = convertMetricToString(c["cpu_usage_container_sum_SUM"])
-	avg = convertMetricToString(c["cpu_usage_container_avg_MEAN"])
-	max := convertMetricToString(c["cpu_usage_container_max_MAX"])
-	min := convertMetricToString(c["cpu_usage_container_min_MIN"])
-	if sum != "" && avg != "" {
-		metrics = append(metrics, metric{
-			Name: "cpuUsage",
-			Results: result{
-				Aggregation_info: aggregation_info{
-					Min:    min,
-					Max:    max,
-					Sum:    sum,
-					Avg:    avg,
-					Format: "cores",
-				},
-			},
-		})
-	}
+	// Iterate over the map to create metric instances
+	for metricName, metricFields := range metricsMap {
 
-	// cpuThrottle
-	sum = convertMetricToString(c["cpu_throttle_container_sum_SUM"])
-	avg = convertMetricToString(c["cpu_throttle_container_avg_MEAN"])
-	max = convertMetricToString(c["cpu_throttle_container_max_MAX"])
-	if sum != "" && avg != "" {
-		metrics = append(metrics, metric{
-			Name: "cpuThrottle",
-			Results: result{
-				Aggregation_info: aggregation_info{
-					Max:    max,
-					Sum:    sum,
-					Avg:    avg,
-					Format: "cores",
-				},
-			},
-		})
-	}
+		// Check if "sum" key exists in map
+		if sum_field, ok := metricFields["sum"]; ok {
+			// Assign the sum value returned
+			sum = convertMetricToString(c[sum_field])
+		} else {
+			// Set "sum" to empty string (to get it skipped in json)
+			sum = ""
+		}
 
-	// memoryRequest
-	sum = convertMetricToString(c["memory_request_container_sum_SUM"])
-	avg = convertMetricToString(c["memory_request_container_avg_MEAN"])
-	if sum != "" && avg != "" {
-		metrics = append(metrics, metric{
-			Name: "memoryRequest",
-			Results: result{
-				Aggregation_info: aggregation_info{
-					Sum:    sum,
-					Avg:    avg,
-					Format: "MiB",
-				},
-			},
-		})
-	}
+		// Check if "avg" key exists in map
+		if avg_field, ok := metricFields["avg"]; ok {
+			// Assign the avg value returned
+			avg = convertMetricToString(c[avg_field])
+		} else {
+			// Set "avg" to empty string (to get it skipped in json)
+			avg = ""
+		}
 
-	// memoryLimit
-	sum = convertMetricToString(c["memory_limit_container_sum_SUM"])
-	avg = convertMetricToString(c["memory_limit_container_avg_MEAN"])
-	if sum != "" && avg != "" {
-		metrics = append(metrics, metric{
-			Name: "memoryLimit",
-			Results: result{
-				Aggregation_info: aggregation_info{
-					Sum:    sum,
-					Avg:    avg,
-					Format: "MiB",
-				},
-			},
-		})
-	}
+		// Check if "min" key exists in map
+		if min_field, ok := metricFields["min"]; ok {
+			// Assign the min value returned
+			min = convertMetricToString(c[min_field])
+		} else {
+			// Set "min" to empty string (to get it skipped in json)
+			min = ""
+		}
 
-	// memoryUsage
-	sum = convertMetricToString(c["memory_usage_container_sum_SUM"])
-	avg = convertMetricToString(c["memory_usage_container_avg_MEAN"])
-	min = convertMetricToString(c["memory_usage_container_min_MIN"])
-	max = convertMetricToString(c["memory_usage_container_max_MAX"])
-	if sum != "" && avg != "" {
-		metrics = append(metrics, metric{
-			Name: "memoryUsage",
-			Results: result{
-				Aggregation_info: aggregation_info{
-					Min:    min,
-					Max:    max,
-					Sum:    sum,
-					Avg:    avg,
-					Format: "MiB",
-				},
-			},
-		})
-	}
+		// Check if "max" key exists in map
+		if max_field, ok := metricFields["max"]; ok {
+			// Assign the max value returned
+			max = convertMetricToString(c[max_field])
+		} else {
+			// Set "max" to empty string (to get it skipped in json)
+			max = ""
+		}
 
-	// memoryRSS
-	sum = convertMetricToString(c["memory_rss_usage_container_sum_SUM"])
-	avg = convertMetricToString(c["memory_rss_usage_container_avg_MEAN"])
-	max = convertMetricToString(c["memory_rss_usage_container_max_MAX"])
-	min = convertMetricToString(c["memory_rss_usage_container_min_MIN"])
-	if sum != "" && avg != "" {
-		metrics = append(metrics, metric{
-			Name: "memoryRSS",
-			Results: result{
-				Aggregation_info: aggregation_info{
-					Min:    min,
-					Max:    max,
-					Sum:    sum,
-					Avg:    avg,
-					Format: "MiB",
+		// Check if "format" key exists in map
+		if format_field, ok := metricFields["format"]; ok {
+			// Assign the format value returned
+			format = format_field
+		} else {
+			// Set "format" to empty string (to get it skipped in json)
+			format = ""
+		}
+
+		// Check if "sum" & "avg" are not empty to proceed for metric creation
+		if sum != "" && avg != "" {
+			metrics = append(metrics, metric{
+				Name: metricName,
+				Results: result{
+					Aggregation_info: aggregation_info{
+						Sum:    sum,
+						Avg:    avg,
+						Min:    min,
+						Max:    max,
+						Format: format,
+					},
 				},
-			},
-		})
+			})
+		}
 	}
 
 	container_data := container{
