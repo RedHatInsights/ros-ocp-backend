@@ -54,7 +54,15 @@ func ProcessEvent(msg *kafka.Message) {
 		containers := data[0].Kubernetes_objects[0].Containers
 		for _, container := range containers {
 			for _, v := range container.Recommendations.Data {
-				if len(v.Duration_based.Short_term.Notifications) == 0 {
+
+				notifications := v.Duration_based.Short_term.Notifications
+
+				// Note - added patch here to handle kruize side issue
+				// Kruize issue: https://github.com/kruize/autotune/issues/770
+				// ROS issue - RHIROS-1123
+				// TODO: Should be removed once fixed in kruize
+				KRUIZE_NO_SUFFICIENT_DATA := "There is not enough data available to generate a recommendation."
+				if !(len(notifications) > 0 && notifications[0].Notificationtype == "info" && notifications[0].Message == KRUIZE_NO_SUFFICIENT_DATA) {
 					marshalData, err := json.Marshal(v)
 					if err != nil {
 						log.Errorf("Unable to list recommendation for: %v", err)
