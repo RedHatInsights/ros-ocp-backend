@@ -184,6 +184,8 @@ objects:
         partitions: 1
       - topicName: rosocp.kruize.experiments
         partitions: 1
+    testing:
+      iqePlugin: ros-ocp
 
 parameters:
 - description : ClowdEnvironment name
