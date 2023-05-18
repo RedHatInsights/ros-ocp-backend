@@ -6,6 +6,7 @@ services:
       - ZOOKEEPER_CLIENT_PORT=32181
       - ZOOKEEPER_SERVER_ID=1
   kafka:
+    restart: always
     image: confluentinc/cp-kafka
     ports:
       - 29092:29092

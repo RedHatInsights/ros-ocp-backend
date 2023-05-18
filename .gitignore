@@ -6,3 +6,4 @@ tmp
 coverage.txt
 output.csv
 .idea/
+.DS_Store
