@@ -55,6 +55,7 @@ type Config struct {
 	CwRegion    string
 	CwAccessKey string
 	CwSecretKey string
+	CwLogStream string `mapstructure:"CW_LOG_STREAM_NAME"`
 }
 
 var cfg *Config = nil
@@ -110,6 +111,7 @@ func initConfig() {
 		viper.SetDefault("CwRegion", c.Logging.Cloudwatch.Region)
 		viper.SetDefault("CwAccessKey", c.Logging.Cloudwatch.AccessKeyId)
 		viper.SetDefault("CwSecretKey", c.Logging.Cloudwatch.SecretAccessKey)
+		viper.SetDefault("CW_LOG_STREAM_NAME", "rosocp")
 
 	} else {
 		viper.SetDefault("LogFormater", "text")

@@ -43,7 +43,7 @@ func initLogger() {
 	if cfg.CwAccessKey != "" {
 		cred := credentials.NewStaticCredentials(cfg.CwAccessKey, cfg.CwSecretKey, "")
 		awsconf := aws.NewConfig().WithRegion(cfg.CwRegion).WithCredentials(cred)
-		hook, err := lc.NewBatchingHook(cfg.CwLogGroup, "rosocp", awsconf, 10*time.Second)
+		hook, err := lc.NewBatchingHook(cfg.CwLogGroup, cfg.CwLogStream, awsconf, 10*time.Second)
 		if err != nil {
 			logger.Info(err)
 		}
