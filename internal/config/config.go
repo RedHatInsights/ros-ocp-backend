@@ -13,9 +13,9 @@ import (
 
 type Config struct {
 	//Application config
-	ServiceName string `mapstructure:"ServiceName"`
-	LogLevel    string `mapstructure:"LogLevel"`
+	ServiceName string `mapstructure:"SERVICE_NAME"`
 	LogFormater string `mapstructure:"LogFormater"`
+	LogLevel    string `mapstructure:"LOG_LEVEL"`
 
 	//Kafka configs
 	KafkaBootstrapServers string `mapstructure:"KAFKA_BOOTSTRAP_SERVERS"`
@@ -145,12 +145,12 @@ func initConfig() {
 		viper.SetDefault("PROMETHEUS_PORT", "5005")
 
 	}
-	viper.SetDefault("ServiceName", "rosocp")
+	viper.SetDefault("SERVICE_NAME", "rosocp")
 	viper.SetDefault("API_PORT", "8000")
 	viper.SetDefault("KRUIZE_WAIT_TIME", "30")
 	viper.SetDefault("KAFKA_CONSUMER_GROUP_ID", "ros-ocp")
 	viper.SetDefault("KAFKA_AUTO_COMMIT", false)
-	viper.SetDefault("LogLevel", "INFO")
+	viper.SetDefault("LOG_LEVEL", "INFO")
 	viper.SetDefault("KRUIZE_HOST", "localhost")
 	viper.SetDefault("KRUIZE_PORT", "8080")
 	viper.SetDefault("KRUIZE_URL", fmt.Sprintf("http://%s:%s", viper.GetString("KRUIZE_HOST"), viper.GetString("KRUIZE_PORT")))

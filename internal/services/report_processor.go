@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"reflect"
 	"sort"
 	"strconv"
 	"time"
@@ -112,6 +113,14 @@ func ProcessReport(msg *kafka.Message) {
 				k8s_object_type,
 				k8s_object_name,
 			)
+
+			if workload_metrics, err := model.GetWorkloadMetricsForTimestamp(experiment_name, interval_end); err != nil {
+				log.Errorf("Error while checking for workload_metrics record: %s", err)
+				continue
+			} else if !reflect.ValueOf(workload_metrics).IsZero() {
+				log.Debugf("worload_metrics table already has data for interval_end time: %v.", interval_end)
+				continue
+			}
 
 			container_names, err := kruize.Create_kruize_experiments(experiment_name, k8s_object)
 			if err != nil {
