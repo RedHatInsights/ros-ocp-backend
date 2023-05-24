@@ -2,15 +2,22 @@ package logging
 
 import (
 	"os"
+	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	lc "github.com/redhatinsights/platform-go-middlewares/logging/cloudwatch"
+	"github.com/sirupsen/logrus"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
-	"github.com/sirupsen/logrus"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 )
 
-var log *logrus.Logger = nil
+var logger *logrus.Logger = nil
+var log *logrus.Entry = nil
 
 func initLogger() {
-	log = logrus.New()
+	logger = logrus.New()
 	cfg := config.GetConfig()
 	var logLevel logrus.Level
 
@@ -23,16 +30,44 @@ func initLogger() {
 		logLevel = logrus.InfoLevel
 	}
 
-	log.Level = logLevel
-	log.Out = os.Stdout
-	log.ReportCaller = true
+	if cfg.LogFormater == "text" {
+		logger.Formatter = &logrus.TextFormatter{}
+	} else {
+		logger.Formatter = &logrus.JSONFormatter{}
+	}
+
+	logger.Level = logLevel
+	logger.Out = os.Stdout
+	logger.ReportCaller = true
+
+	if cfg.CwAccessKey != "" {
+		cred := credentials.NewStaticCredentials(cfg.CwAccessKey, cfg.CwSecretKey, "")
+		awsconf := aws.NewConfig().WithRegion(cfg.CwRegion).WithCredentials(cred)
+		hook, err := lc.NewBatchingHook(cfg.CwLogGroup, cfg.CwLogStream, awsconf, 10*time.Second)
+		if err != nil {
+			logger.Info(err)
+		}
+		logger.Hooks.Add(hook)
+	}
+	log = logger.WithField("service", cfg.ServiceName)
 }
 
-func GetLogger() *logrus.Logger {
+func GetLogger() *logrus.Entry {
 	if log == nil {
 		initLogger()
 		log.Info("Logging initialized")
 		return log
 	}
 	return log
+}
+
+func Set_request_details(data types.KafkaMsg) {
+	log = log.WithFields(logrus.Fields{
+		"request_id":    data.Request_id,
+		"account":       data.Metadata.Account,
+		"org_id":        data.Metadata.Org_id,
+		"source_id":     data.Metadata.Source_id,
+		"cluster_uuid":  data.Metadata.Cluster_uuid,
+		"cluster_alias": data.Metadata.Cluster_alias,
+	})
 }

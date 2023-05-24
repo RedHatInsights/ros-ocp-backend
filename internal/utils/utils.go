@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log *logrus.Logger = logging.GetLogger()
+var log *logrus.Entry = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
 
 func Setup_kruize_performance_profile() {

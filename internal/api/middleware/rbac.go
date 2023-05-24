@@ -16,7 +16,7 @@ import (
 )
 
 var cfg *config.Config = config.GetConfig()
-var log *logrus.Logger = logging.GetLogger()
+var log *logrus.Entry = logging.GetLogger()
 
 func Rbac(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {

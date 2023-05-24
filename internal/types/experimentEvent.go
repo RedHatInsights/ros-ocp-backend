@@ -12,4 +12,5 @@ type ExperimentEvent struct {
 	Monitoring_end_time string                   `validate:"required"`
 	Attempt             int                      `validate:"required"`
 	K8s_object          []map[string]interface{} `validate:"required"`
+	Kafka_request_msg   KafkaMsg
 }
