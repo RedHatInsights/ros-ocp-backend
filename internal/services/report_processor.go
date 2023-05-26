@@ -187,6 +187,6 @@ func ProcessReport(msg *kafka.Message) {
 		}
 
 	}
-	log.Infof("Total records upload to rosocp.kruize.experiments = %v", record_counter)
+	log.Infof("Total workloads uploaded to rosocp.kruize.experiments = %v", record_counter)
 
 }
