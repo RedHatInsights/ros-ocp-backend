@@ -131,7 +131,7 @@ func ProcessReport(msg *kafka.Message) {
 			}
 			if err := workload.CreateWorkload(); err != nil {
 				log.Errorf("unable to get or add record to workloads table: %v. Error: %v", workload, err)
-				return
+				continue
 			}
 
 			usage_data_byte, err := kruize.Update_results(experiment_name, k8s_object)
@@ -154,7 +154,7 @@ func ProcessReport(msg *kafka.Message) {
 				}
 				if err := workload_metric.CreateWorkloadMetrics(); err != nil {
 					log.Errorf("unable to add record to workload_metrics table: %v. Error: %v", workload_metric, err)
-					return
+					continue
 				}
 			}
 
@@ -187,6 +187,6 @@ func ProcessReport(msg *kafka.Message) {
 		}
 
 	}
-	log.Infof("Total records upload to rosocp.kruize.experiments = %v", record_counter)
+	log.Infof("Total workloads uploaded to rosocp.kruize.experiments = %v", record_counter)
 
 }
