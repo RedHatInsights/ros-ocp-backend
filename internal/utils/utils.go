@@ -153,6 +153,6 @@ func Start_prometheus_server() {
 	if cfg.PrometheusPort != "" {
 		log.Info("Starting prometheus http server")
 		http.Handle("/metrics", promhttp.Handler())
-		http.ListenAndServe(fmt.Sprintf(":%s", cfg.PrometheusPort), nil)
+		_ = http.ListenAndServe(fmt.Sprintf(":%s", cfg.PrometheusPort), nil)
 	}
 }
