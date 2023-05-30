@@ -56,6 +56,9 @@ type Config struct {
 	CwAccessKey string
 	CwSecretKey string
 	CwLogStream string `mapstructure:"CW_LOG_STREAM_NAME"`
+
+	// Prometheus config
+	PrometheusPort string `mapstructure:"PROMETHEUS_PORT"`
 }
 
 var cfg *Config = nil
@@ -113,6 +116,9 @@ func initConfig() {
 		viper.SetDefault("CwSecretKey", c.Logging.Cloudwatch.SecretAccessKey)
 		viper.SetDefault("CW_LOG_STREAM_NAME", "rosocp")
 
+		// prometheus config
+		viper.SetDefault("PROMETHEUS_PORT", c.MetricsPort)
+
 	} else {
 		viper.SetDefault("LogFormater", "text")
 
@@ -134,6 +140,9 @@ func initConfig() {
 		viper.SetDefault("RBACPort", "9080")
 		viper.SetDefault("RBACProtocol", "http")
 		viper.SetDefault("RBAC_ENABLE", false)
+
+		// prometheus config
+		viper.SetDefault("PROMETHEUS_PORT", "5005")
 
 	}
 	viper.SetDefault("ServiceName", "rosocp")

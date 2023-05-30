@@ -46,6 +46,7 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 	}
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
+		kruizeAPIException.WithLabelValues("/createExperiment").Inc()
 		return nil, fmt.Errorf("error Occured while creating experiment: %v", err)
 	}
 	if res.StatusCode != 201 {
@@ -106,6 +107,7 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
+		kruizeAPIException.WithLabelValues("/updateResults").Inc()
 		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
 	}
 	defer res.Body.Close()
@@ -152,6 +154,7 @@ func List_recommendations(experiment types.ExperimentEvent) ([]kruizePayload.Lis
 	req.URL.RawQuery = q.Encode()
 	res, err := client.Do(req)
 	if err != nil {
+		kruizeAPIException.WithLabelValues("/listRecommendations").Inc()
 		return nil, fmt.Errorf("error Occured while calling /listRecommendations API %v", err)
 	}
 	defer res.Body.Close()

@@ -66,6 +66,7 @@ func ProcessReport(msg *kafka.Message) {
 	for _, file := range kafkaMsg.Files {
 		data, err := utils.ReadCSVFromUrl(file)
 		if err != nil {
+			invalidCSV.Inc()
 			log.Errorf("Unable to read CSV from URL. Error: %s", err)
 			return
 		}

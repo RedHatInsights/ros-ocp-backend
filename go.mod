@@ -14,6 +14,7 @@ require (
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/lib/pq v1.10.7
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/prometheus/client_golang v1.14.0
 	github.com/redhatinsights/app-common-go v1.6.5
 	github.com/redhatinsights/platform-go-middlewares v0.20.0
 	github.com/sirupsen/logrus v1.9.0

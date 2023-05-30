@@ -37,6 +37,7 @@ func (w *Workload) CreateWorkload() error {
 	}).Create(w)
 
 	if result.Error != nil {
+		dbError.Inc()
 		return result.Error
 	}
 

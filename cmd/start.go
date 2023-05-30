@@ -20,6 +20,7 @@ var processorCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("starting ros-ocp processor")
 		cfg := config.GetConfig()
+		go utils.Start_prometheus_server()
 		utils.Setup_kruize_performance_profile()
 		kafka.StartConsumer(cfg.UploadTopic, services.ProcessReport)
 	},
@@ -31,6 +32,7 @@ var recommenderCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("starting ros-ocp recommender service")
 		cfg := config.GetConfig()
+		go utils.Start_prometheus_server()
 		utils.Setup_kruize_performance_profile()
 		kafka.StartConsumer(cfg.ExperimentsTopic, services.ProcessEvent)
 	},

@@ -14,7 +14,11 @@ func (r *RHAccount) CreateRHAccount() error {
 	db := database.GetDB()
 	result := db.Where("org_id = ?", r.OrgId).FirstOrCreate(r)
 	if result.Error != nil {
+		dbError.Inc()
 		return result.Error
+	}
+	if result.RowsAffected > 0 {
+		rhAccountCreated.Inc()
 	}
 	return nil
 }

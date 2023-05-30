@@ -26,6 +26,7 @@ func (w *WorkloadMetrics) CreateWorkloadMetrics() error {
 	}).Create(w)
 
 	if result.Error != nil {
+		dbError.Inc()
 		return result.Error
 	}
 

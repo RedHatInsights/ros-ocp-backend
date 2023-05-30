@@ -84,10 +84,13 @@ func ProcessEvent(msg *kafka.Message) {
 					} else {
 						log.Infof("Recommendation saved for experiment - %s and end_interval - %s", kafkaMsg.Experiment_name, recommendationSet.MonitoringEndTime)
 					}
+				} else {
+					invalidRecommendation.Inc()
 				}
 			}
 		}
 	} else {
+		invalidRecommendation.Inc()
 		if kafkaMsg.Attempt > 5 {
 			log.Infof("Invalid recommendation provided by kruize - \n %+v\n", data)
 			return

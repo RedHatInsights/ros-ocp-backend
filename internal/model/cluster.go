@@ -32,6 +32,7 @@ func (c *Cluster) CreateCluster() error {
 	}).Create(c)
 
 	if result.Error != nil {
+		dbError.Inc()
 		return result.Error
 	}
 	return nil

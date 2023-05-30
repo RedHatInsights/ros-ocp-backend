@@ -94,6 +94,7 @@ func (r *RecommendationSet) CreateRecommendationSet() error {
 	}).Create(r)
 
 	if result.Error != nil {
+		dbError.Inc()
 		return result.Error
 	}
 

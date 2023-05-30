@@ -1,8 +1,11 @@
 package api
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
+	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/sirupsen/logrus"
@@ -17,6 +20,22 @@ var cfg *config.Config = config.GetConfig()
 
 func StartAPIServer() {
 	app := echo.New()
+	app.Use(echoprometheus.NewMiddlewareWithConfig(echoprometheus.MiddlewareConfig{
+		Subsystem: "rosocp",
+		LabelFuncs: map[string]echoprometheus.LabelValueFunc{
+			"url": func(c echo.Context, err error) string {
+				return c.Path()
+			},
+		},
+	}))
+
+	go func() {
+		metrics := echo.New()
+		metrics.GET("/metrics", echoprometheus.NewHandler())
+		if err := metrics.Start(fmt.Sprintf(":%s", cfg.PrometheusPort)); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+	}()
 	app.Use(middleware.Logger())
 	app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowMethods: []string{http.MethodGet},
