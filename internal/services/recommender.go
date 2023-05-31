@@ -34,7 +34,7 @@ func ProcessEvent(msg *kafka.Message) {
 		log.Errorf("Invalid kafka message: %s", err)
 		return
 	}
-	logging.Set_request_details(kafkaMsg.Kafka_request_msg)
+	log = logging.Set_request_details(kafkaMsg.Kafka_request_msg)
 	currentTime := time.Now().UTC()
 	if currentTime.Before(kafkaMsg.Fetch_time) {
 		t := kafkaMsg.Fetch_time.Sub(currentTime)
