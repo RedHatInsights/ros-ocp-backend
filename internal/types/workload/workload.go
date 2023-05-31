@@ -5,12 +5,12 @@ import "database/sql/driver"
 type WorkloadType string
 
 const (
+	Daemonset             WorkloadType = "daemonset"
 	Deployment            WorkloadType = "deployment"
 	Deploymentconfig      WorkloadType = "deploymentconfig"
 	Replicaset            WorkloadType = "replicaset"
 	Replicationcontroller WorkloadType = "replicationcontroller"
 	Statefulset           WorkloadType = "statefulset"
-	Daemonset             WorkloadType = "daemonset"
 )
 
 func (p *WorkloadType) Scan(value interface{}) error {
