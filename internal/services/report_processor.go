@@ -38,7 +38,7 @@ func ProcessReport(msg *kafka.Message) {
 		return
 	}
 
-	logging.Set_request_details(kafkaMsg)
+	log = logging.Set_request_details(kafkaMsg)
 
 	// Create user account(if not present) for incoming archive.
 	rh_account := model.RHAccount{
@@ -63,7 +63,6 @@ func ProcessReport(msg *kafka.Message) {
 		return
 	}
 
-	record_counter := 0
 	for _, file := range kafkaMsg.Files {
 		data, err := utils.ReadCSVFromUrl(file)
 		if err != nil {
@@ -181,12 +180,11 @@ func ProcessReport(msg *kafka.Message) {
 				log.Errorf("Unable convert list_of_experiments to json: %s", err)
 			}
 			if err := p.SendMessage(msgBytes, &cfg.ExperimentsTopic); err == nil {
-				record_counter++
+				log.Infof("Experiment event send to kafka topic rosocp.kruize.experiments. Experiment name: %s, interval_end: %s", experiment_name, interval_end.String())
 			}
 
 		}
 
 	}
-	log.Infof("Total workloads uploaded to rosocp.kruize.experiments = %v", record_counter)
 
 }

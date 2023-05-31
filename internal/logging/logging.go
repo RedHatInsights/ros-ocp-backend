@@ -61,8 +61,8 @@ func GetLogger() *logrus.Entry {
 	return log
 }
 
-func Set_request_details(data types.KafkaMsg) {
-	log = log.WithFields(logrus.Fields{
+func Set_request_details(data types.KafkaMsg) *logrus.Entry {
+	return log.WithFields(logrus.Fields{
 		"request_id":    data.Request_id,
 		"account":       data.Metadata.Account,
 		"org_id":        data.Metadata.Org_id,
