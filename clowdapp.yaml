@@ -112,8 +112,8 @@ objects:
             value: /api
           - name: CLOWDER_ENABLED
             value: ${CLOWDER_ENABLED}
-          - name: ENABLE_RBAC
-            value: "${ENABLE_RBAC}"
+          - name: RBAC_ENABLE
+            value: "${RBAC_ENABLE}"
           - name: DB_POOL_SIZE
             value: ${DB_POOL_SIZE}
           - name: DB_MAX_OVERFLOW
@@ -290,3 +290,6 @@ parameters:
   value: "1"
 - name: MACHINE_POOL_OPTION
   value: ''
+- description: Enable the RBAC
+  name: RBAC_ENABLE
+  value: "true"
