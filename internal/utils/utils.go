@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/sirupsen/logrus"
@@ -146,4 +147,12 @@ func StringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func Start_prometheus_server() {
+	if cfg.PrometheusPort != "" {
+		log.Info("Starting prometheus http server")
+		http.Handle("/metrics", promhttp.Handler())
+		_ = http.ListenAndServe(fmt.Sprintf(":%s", cfg.PrometheusPort), nil)
+	}
 }
