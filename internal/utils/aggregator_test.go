@@ -63,7 +63,7 @@ func TestAggregateCleaningData(t *testing.T) {
 	result := Aggregate_data(df)
 
 	if result.Nrow() > 0 {
-		t.Errorf("Aggregator function hasn't clean the data properly. (case - owner_name) Expected - 0 but got %v", result.Nrow())
+		t.Errorf("Aggregator function hasn't cleaned the data properly. (case - owner_name) Expected - 0 but got %v", result.Nrow())
 	}
 
 	// Case if owner_kind is absent
