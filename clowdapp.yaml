@@ -38,10 +38,12 @@ objects:
             value: ${KRUIZE_WAIT_TIME}
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
-          - name: ServiceName
+          - name: SERVICE_NAME
             value: "rosocp-processor"
           - name: CW_LOG_STREAM_NAME
             value: "rosocp-backend"
+          - name: LOG_LEVEL
+            value: ${LOG_LEVEL}
     - name: recommender
       replicas: ${{RECOMMENDER_REPLICA_COUNT}}
       podSpec:
@@ -66,10 +68,12 @@ objects:
             value: ${KRUIZE_WAIT_TIME}
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
-          - name: ServiceName
+          - name: SERVICE_NAME
             value: "rosocp-recommender"
           - name: CW_LOG_STREAM_NAME
             value: "rosocp-backend"
+          - name: LOG_LEVEL
+            value: ${LOG_LEVEL}
     - name: api
       replicas: ${{API_REPLICA_COUNT}}
       webServices:
@@ -120,10 +124,12 @@ objects:
             value: ${DB_MAX_OVERFLOW}
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
-          - name: ServiceName
+          - name: SERVICE_NAME
             value: "rosocp-api"
           - name: CW_LOG_STREAM_NAME
             value: "rosocp-api"
+          - name: LOG_LEVEL
+            value: ${LOG_LEVEL}
     - name: kruize
       replicas: ${{KRUIZE_REPLICA_COUNT}}
       webServices:
@@ -293,3 +299,5 @@ parameters:
 - description: Enable the RBAC
   name: RBAC_ENABLE
   value: "true"
+- name: LOG_LEVEL
+  value: 'INFO'
