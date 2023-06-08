@@ -130,7 +130,7 @@ objects:
         private:
           enabled: true
       podSpec:
-        image: ${KRUIZE_IMAGE}:${KRUIZE_IMAGE_TAG}
+        image: ${KRUIZE_IMAGE}:f7a5f77
         command: ["sh"]
         args: ["-c", "export DB_CONFIG_FILE=${ACG_CONFIG} && bash target/bin/Autotune"]
         machinePool: ${MACHINE_POOL_OPTION}
