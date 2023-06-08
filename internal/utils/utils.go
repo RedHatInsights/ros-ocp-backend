@@ -179,8 +179,9 @@ func ConvertMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{}
 	convertMemory := func(memory map[string]interface{}) error {
 		amount, ok := memory["amount"].(float64)
 		if ok {
-			formatted_memory := fmt.Sprintf("%.3f", amount/1024/1024)
+			formatted_memory := fmt.Sprintf("%.2f", amount/1024/1024)
 			memory["amount"], err = strconv.ParseFloat(formatted_memory, 64)
+			memory["format"] = "MiB"
 		}
 		return nil
 	}
