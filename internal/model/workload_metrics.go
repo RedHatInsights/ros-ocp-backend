@@ -36,6 +36,6 @@ func (w *WorkloadMetrics) CreateWorkloadMetrics() error {
 func GetWorkloadMetricsForTimestamp(experiment_name string, interval_end time.Time) (WorkloadMetrics, error) {
 	db := database.GetDB()
 	var workload_metrics WorkloadMetrics
-	err := db.Table("workload_metrics").Joins("JOIN workloads ON workloads.experiment_name = ? AND workload_metrics.interval_end = ?", experiment_name, interval_end).Scan(&workload_metrics).Error
+	err := db.Table("workload_metrics").Joins("JOIN workloads ON workloads.id = workload_metrics.workload_id AND workloads.experiment_name = ? AND workload_metrics.interval_end = ?", experiment_name, interval_end).Scan(&workload_metrics).Error
 	return workload_metrics, err
 }
