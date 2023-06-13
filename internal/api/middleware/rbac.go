@@ -24,7 +24,7 @@ func Rbac(next echo.HandlerFunc) echo.HandlerFunc {
 		if permissions != nil {
 			c.Set("user.permissions", permissions)
 		} else {
-			return echo.NewHTTPError(http.StatusUnauthorized, "User is not authorized")
+			return echo.NewHTTPError(http.StatusForbidden, "User is not authorized")
 		}
 		return next(c)
 	}
