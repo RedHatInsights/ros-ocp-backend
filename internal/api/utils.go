@@ -7,6 +7,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"encoding/json"
+
+	"gorm.io/datatypes"
 
 	"github.com/labstack/echo/v4"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
@@ -204,4 +207,66 @@ func get_user_permissions(c echo.Context) map[string][]string {
 		user_permissions = map[string][]string{}
 	}
 	return user_permissions
+}
+
+func UpdateMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{} {
+
+	/*PATCH
+	Since the format key in Kruize recommendations mention MiB
+	The values should be in the same unit
+	*/
+	var data map[string]interface{}
+	err := json.Unmarshal([]byte(jsonData), &data)
+	if err != nil {
+		fmt.Printf("unable to unmarshall recommendation json")
+		return nil
+	}
+
+	durationBased, ok := data["duration_based"].(map[string]interface{})
+	if !ok {
+		fmt.Printf("duration_based not found in JSON")
+	}
+
+	convertMemory := func(memory map[string]interface{}) error {
+		amount, ok := memory["amount"].(float64)
+		if ok {
+			formatted_memory := fmt.Sprintf("%.2f", amount/1024/1024)
+			memory["amount"], err = strconv.ParseFloat(formatted_memory, 64)
+			memory["format"] = "MiB"
+		}
+		return nil
+	}
+
+	for _, period := range []string{"long_term", "medium_term", "short_term"} {
+		config, ok := durationBased[period].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		limits, ok := config["config"].(map[string]interface{})["limits"].(map[string]interface{})
+		if ok {
+			memory, ok := limits["memory"].(map[string]interface{})
+			if ok {
+				err := convertMemory(memory)
+				if err != nil {
+					fmt.Printf("error converting memory in %s: %v\n", period, err)
+					continue
+				}
+			}
+		}
+
+		requests, ok := config["config"].(map[string]interface{})["requests"].(map[string]interface{})
+		if ok {
+			memory, ok := requests["memory"].(map[string]interface{})
+			if ok {
+				err := convertMemory(memory)
+				if err != nil {
+					fmt.Printf("Error converting memory in %s: %v\n", period, err)
+					continue
+				}
+			}
+		}
+	}
+
+	return data
 }

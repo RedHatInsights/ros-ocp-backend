@@ -10,8 +10,6 @@ import (
 
 	"github.com/redhatinsights/platform-go-middlewares/identity"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
-	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
-
 )
 
 func GetRecommendationSetList(c echo.Context) error {
@@ -91,7 +89,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		recommendationData["workload"] = recommendation.Workload.WorkloadName
 		recommendationData["container"] = recommendation.ContainerName
 		recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
-		recommendationData["recommendations"] = utils.ConvertMemoryFromBytesToMiB(recommendation.Recommendations)
+		recommendationData["recommendations"] = UpdateMemoryFromBytesToMiB(recommendation.Recommendations)
 		allRecommendations = append(allRecommendations, recommendationData)
 
 	}
@@ -135,7 +133,7 @@ func GetRecommendationSet(c echo.Context) error {
 		recommendationSlice["workload"] = recommendationSet.Workload.WorkloadName
 		recommendationSlice["container"] = recommendationSet.ContainerName
 		recommendationSlice["last_reported"] = recommendationSet.Workload.Cluster.LastReportedAtStr
-		recommendationSlice["recommendations"] = utils.ConvertMemoryFromBytesToMiB(recommendationSet.Recommendations)
+		recommendationSlice["recommendations"] = UpdateMemoryFromBytesToMiB(recommendationSet.Recommendations)
 	}
 
 	return c.JSON(http.StatusOK, recommendationSlice)
