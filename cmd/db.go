@@ -183,7 +183,7 @@ var seedCmd = &cobra.Command{
 							},
 							"memory": map[string]interface{}{
 								"amount": 513900544,
-								"format": "MiB",
+								"format": "bytes",
 							},
 						},
 						"requests": map[string]interface{}{
@@ -193,7 +193,7 @@ var seedCmd = &cobra.Command{
 							},
 							"memory": map[string]interface{}{
 								"amount": 493311537.55,
-								"format": "MiB",
+								"format": "bytes",
 							},
 						},
 					},
@@ -249,6 +249,28 @@ var seedCmd = &cobra.Command{
 					"monitoring_start_time": "0001-01-01T00:00:00Z",
 				},
 				"short_term": map[string]interface{}{
+					"variation": map[string]interface{}{
+						"limits": map[string]interface{}{
+							"cpu": map[string]interface{}{
+								"amount": 0.06,
+								"format": "cores",
+							},
+							"memory": map[string]interface{}{
+								"amount": 513900544,
+								"format": "bytes",
+							},
+						},
+						"requests": map[string]interface{}{
+							"cpu": map[string]interface{}{
+								"amount": 0.05,
+								"format": "cores",
+							},
+							"memory": map[string]interface{}{
+								"amount": 493311537868,
+								"format": "bytes",
+							},
+						},
+					},
 					"config": map[string]interface{}{
 						"limits": map[string]interface{}{
 							"cpu": map[string]interface{}{
@@ -257,7 +279,7 @@ var seedCmd = &cobra.Command{
 							},
 							"memory": map[string]interface{}{
 								"amount": 513900544,
-								"format": "MiB",
+								"format": "bytes",
 							},
 						},
 						"requests": map[string]interface{}{
@@ -267,7 +289,7 @@ var seedCmd = &cobra.Command{
 							},
 							"memory": map[string]interface{}{
 								"amount": 493311537.55,
-								"format": "MiB",
+								"format": "bytes",
 							},
 						},
 					},

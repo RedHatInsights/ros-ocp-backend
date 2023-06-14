@@ -133,13 +133,13 @@ func make_container_data(c map[string]interface{}) container {
 		"memoryRequest": {
 			"sum":    "memory_request_container_sum_SUM",
 			"avg":    "memory_request_container_avg_MEAN",
-			"format": "MiB",
+			"format": "bytes",
 		},
 		// Memory Limit
 		"memoryLimit": {
 			"sum":    "memory_limit_container_sum_SUM",
 			"avg":    "memory_limit_container_avg_MEAN",
-			"format": "MiB",
+			"format": "bytes",
 		},
 		// Memory Usage
 		"memoryUsage": {
@@ -147,7 +147,7 @@ func make_container_data(c map[string]interface{}) container {
 			"avg":    "memory_usage_container_avg_MEAN",
 			"min":    "memory_usage_container_min_MIN",
 			"max":    "memory_usage_container_max_MAX",
-			"format": "MiB",
+			"format": "bytes",
 		},
 		// Memory RSS
 		"memoryRSS": {
@@ -155,7 +155,7 @@ func make_container_data(c map[string]interface{}) container {
 			"avg":    "memory_rss_usage_container_avg_MEAN",
 			"min":    "memory_rss_usage_container_min_MIN",
 			"max":    "memory_rss_usage_container_max_MAX",
-			"format": "MiB",
+			"format": "bytes",
 		},
 	}
 
