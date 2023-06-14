@@ -105,7 +105,7 @@ func ProcessEvent(msg *kafka.Message) {
 		if err != nil {
 			log.Errorf("Unable convert list_of_experiments to json: %s", err)
 		}
-		_ = p.SendMessage(msgBytes, &cfg.ExperimentsTopic)
+		_ = p.SendMessage(msgBytes, &cfg.ExperimentsTopic, kafkaMsg.Kafka_request_msg.Metadata.Org_id)
 	}
 
 }
