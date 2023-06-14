@@ -189,7 +189,7 @@ func ProcessReport(msg *kafka.Message) {
 			if err != nil {
 				log.Errorf("Unable convert list_of_experiments to json: %s", err)
 			}
-			if err := p.SendMessage(msgBytes, &cfg.ExperimentsTopic); err == nil {
+			if err := p.SendMessage(msgBytes, &cfg.ExperimentsTopic, kafkaMsg.Metadata.Org_id); err == nil {
 				log.Infof("Experiment event send to kafka topic rosocp.kruize.experiments. Experiment name: %s, interval_end: %s", experiment_name, interval_end.String())
 			}
 
