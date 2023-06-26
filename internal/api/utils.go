@@ -210,11 +210,11 @@ func get_user_permissions(c echo.Context) map[string][]string {
 	return user_permissions
 }
 
-func UpdateMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{} {
-
-	/*PATCH
-	Since the format key in Kruize recommendations mention MiB
-	The values should be in the same unit
+func UpdateRecommendationUnits(jsonData datatypes.JSON) map[string]interface{} {
+	/*
+	Converts units for Memory and CPU
+	bytes -> MiB -> GiB
+	cores -> millicores
 	*/
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(jsonData), &data)
@@ -243,6 +243,39 @@ func UpdateMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{} 
 		return nil
 	}
 
+	hasMoreThanThreeDecimals := func(value float64) bool {
+		precision := 0.001
+		str := strconv.FormatFloat(value, 'f', -1, 64)
+		decimalPart := strings.Split(str, ".")
+		if len(decimalPart) > 1 {
+			return len(decimalPart[1]) > int(math.Log10(1/precision)+1)
+		}
+		return false
+	}
+	
+	truncateToThreeDecimalPlaces := func(value float64) float64 {
+		if hasMoreThanThreeDecimals(value) {
+			truncated := math.Trunc(value * 1000) // Pushes decimal by 3 places
+			return truncated / 1000
+		}
+		return value
+	}
+	
+	convertCPU := func(cpu map[string]interface{}) error {
+		cpuInCores, ok := cpu["amount"].(float64)
+		if ok {
+			if cpuInCores < 1 {
+				cpuInMillicores := cpuInCores * 1000
+				cpu["amount"] = truncateToThreeDecimalPlaces(cpuInMillicores)
+				cpu["format"] = "millicores"
+			} else {
+				cpu["amount"] = truncateToThreeDecimalPlaces(cpuInCores)
+				cpu["format"] = "cores"
+			}
+		}
+		return nil
+	}
+	
 	for _, period := range []string{"long_term", "medium_term", "short_term"} {
 		intervalData, ok := durationBased[period].(map[string]interface{})
 		if !ok {
@@ -265,6 +298,14 @@ func UpdateMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{} 
 						continue
 					}
 				}
+				cpu, ok := limits["cpu"].(map[string]interface{})
+				if ok {
+					err := convertCPU(cpu)
+					if err != nil {
+						fmt.Printf("error converting cpu in %s: %v\n", period, err)
+						continue
+					}
+				}
 			}
 
 			requests, ok := recommendationSection["requests"].(map[string]interface{})
@@ -277,7 +318,15 @@ func UpdateMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{} 
 						continue
 					}
 				}
-			}
+				cpu, ok := requests["cpu"].(map[string]interface{})
+				if ok {
+					err := convertCPU(cpu)
+					if err != nil {
+						fmt.Printf("error converting cpu in %s: %v\n", period, err)
+						continue
+					}
+				}
+			}	
 		}
 	}
 
