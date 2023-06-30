@@ -38,12 +38,13 @@ type aggregation_info struct {
 
 type recommendation struct {
 	Data          map[string]recommendationType `json:"data,omitempty"`
-	Notifications []notification                `json:"notifications,omitempty"`
+	Notifications map[string]notification       `json:"notifications,omitempty"`
 }
 
 type notification struct {
 	NotifyType string `json:"type,omitempty"`
 	Message    string `json:"message,omitempty"`
+	Code       int    `json:"code,omitempty"`
 }
 
 type recommendationType struct {
@@ -57,14 +58,14 @@ type termbased struct {
 }
 
 type recommendationObject struct {
-	Monitoring_start_time time.Time       `json:"monitoring_start_time,omitempty"`
-	Monitoring_end_time   time.Time       `json:"monitoring_end_time,omitempty"`
-	Duration_in_hours     float64         `json:"duration_in_hours,omitempty"`
-	Pods_count            int             `json:"pods_count,omitempty"`
-	Confidence_level      float64         `json:"confidence_level,omitempty"`
-	Config                ConfigObject    `json:"config,omitempty"`
-	Variation             ConfigObject    `json:"variation,omitempty"`
-	Notifications         []notifications `json:"notifications,omitempty"`
+	Monitoring_start_time time.Time               `json:"monitoring_start_time,omitempty"`
+	Monitoring_end_time   time.Time               `json:"monitoring_end_time,omitempty"`
+	Duration_in_hours     float64                 `json:"duration_in_hours,omitempty"`
+	Pods_count            int                     `json:"pods_count,omitempty"`
+	Confidence_level      float64                 `json:"confidence_level,omitempty"`
+	Config                ConfigObject            `json:"config,omitempty"`
+	Variation             ConfigObject            `json:"variation,omitempty"`
+	Notifications         map[string]notification `json:"notifications,omitempty"`
 }
 
 type ConfigObject struct {
@@ -80,11 +81,6 @@ type recommendedConfig struct {
 type recommendedValues struct {
 	Amount float64 `json:"amount,omitempty"`
 	Format string  `json:"format,omitempty"`
-}
-
-type notifications struct {
-	Notificationtype string `json:"type,omitempty"`
-	Message          string `json:"message,omitempty"`
 }
 
 func convertMetricToString(data interface{}) string {

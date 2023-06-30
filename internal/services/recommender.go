@@ -56,36 +56,24 @@ func ProcessEvent(msg *kafka.Message) {
 		containers := data[0].Kubernetes_objects[0].Containers
 		for _, container := range containers {
 			for _, v := range container.Recommendations.Data {
+				marshalData, err := json.Marshal(v)
+				if err != nil {
+					log.Errorf("Unable to list recommendation for: %v", err)
+				}
 
-				notifications := v.Duration_based.Short_term.Notifications
-
-				// Note - added patch here to handle kruize side issue
-				// Kruize issue: https://github.com/kruize/autotune/issues/770
-				// ROS issue - RHIROS-1123
-				// TODO: Should be removed once fixed in kruize
-				KRUIZE_NO_SUFFICIENT_DATA := "There is not enough data available to generate a recommendation."
-				if !(len(notifications) > 0 && notifications[0].Notificationtype == "info" && notifications[0].Message == KRUIZE_NO_SUFFICIENT_DATA) {
-					marshalData, err := json.Marshal(v)
-					if err != nil {
-						log.Errorf("Unable to list recommendation for: %v", err)
-					}
-
-					// Create RecommendationSet entry into the table.
-					recommendationSet := model.RecommendationSet{
-						WorkloadID:          kafkaMsg.WorkloadID,
-						ContainerName:       container.Container_name,
-						MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
-						MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
-						Recommendations:     marshalData,
-					}
-					if err := recommendationSet.CreateRecommendationSet(); err != nil {
-						log.Errorf("unable to get or add record to recommendation set table: %v. Error: %v", recommendationSet, err)
-						return
-					} else {
-						log.Infof("Recommendation saved for experiment - %s and end_interval - %s", kafkaMsg.Experiment_name, recommendationSet.MonitoringEndTime)
-					}
+				// Create RecommendationSet entry into the table.
+				recommendationSet := model.RecommendationSet{
+					WorkloadID:          kafkaMsg.WorkloadID,
+					ContainerName:       container.Container_name,
+					MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
+					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
+					Recommendations:     marshalData,
+				}
+				if err := recommendationSet.CreateRecommendationSet(); err != nil {
+					log.Errorf("unable to get or add record to recommendation set table: %v. Error: %v", recommendationSet, err)
+					return
 				} else {
-					invalidRecommendation.Inc()
+					log.Infof("Recommendation saved for experiment - %s and end_interval - %s", kafkaMsg.Experiment_name, recommendationSet.MonitoringEndTime)
 				}
 			}
 		}
@@ -113,7 +101,8 @@ func ProcessEvent(msg *kafka.Message) {
 func is_valid_recommendation(d []kruizePayload.ListRecommendations) bool {
 	if len(d) > 0 {
 		notifications := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
-		if len(notifications) > 0 && notifications[0].Message == "Duration Based Recommendations Available" {
+		// 112101 is notification code for "Duration Based Recommendations Available".
+		if _, ok := notifications["112101"]; ok {
 			return true
 		} else {
 			return false
