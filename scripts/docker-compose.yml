@@ -27,32 +27,6 @@ services:
     depends_on:
       - kafka
 
-  minio:
-    image: minio/minio
-    command: server /data
-    volumes:
-      # Ensure the directories exist prior to running this file
-      - ./_minio-conf/:/root/.minio:Z
-      - ./_minio-data/:/data:Z
-    ports:
-      - 9000:9000
-    environment:
-      - MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY
-      - MINIO_SECRET_KEY=$MINIO_SECRET_KEY
-
-  createbuckets:
-    image: minio/mc
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc config host add myminio http://minio:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY;
-      /usr/bin/mc mb myminio/insights-upload-perma;
-      /usr/bin/mc mb myminio/insights-upload-rejected;
-      /usr/bin/mc policy download myminio/insights-upload-perma;
-      /usr/bin/mc policy download myminio/insights-upload-rejected;
-      exit 0;
-      "
   db-ros:
     image: postgres
     restart: always
@@ -107,3 +81,9 @@ services:
       - hibernate_timezone=UTC
     depends_on:
         - db-ros
+  nginx:
+    image: nginx
+    volumes:
+      - ./samples:/usr/share/nginx/html
+    ports:
+      - 8888:80

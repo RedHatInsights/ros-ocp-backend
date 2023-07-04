@@ -2,7 +2,7 @@ include scripts/.env
 
 identity={"identity": {"org_id": "3340851", "type": "System", "auth_type": "cert-auth", "system": {"cn": "1b36b20f-7fa0-4454-a6d2-008294e06378", "cert_type": "system"}, "internal": {"org_id": "3340851", "auth_time": 6300}}}
 b64_identity=$(shell echo '${identity}' | base64 -w 0 -)
-ros_ocp_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"account": "2234", "org_id": "3340851", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://dhcp131-80.gsslab.pnq2.redhat.com/rosocp/ros-usage.csv"]}'
+ros_ocp_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"account": "2234", "org_id": "3340851", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros-ocp-usage.csv"]}'
 
 file=./scripts/samples/cost-mgmt.tar.gz
 CSVfile=./scripts/samples/ros-ocp-usage.csv
