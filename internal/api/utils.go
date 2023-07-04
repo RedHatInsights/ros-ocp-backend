@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"encoding/json"
+	"math"
 
 	"gorm.io/datatypes"
 
@@ -230,16 +231,13 @@ func UpdateMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{} 
 	convertMemory := func(memory map[string]interface{}) error {
 		amount, ok := memory["amount"].(float64)
 		if ok {
-			memoryInMiB := amount/1024/1024
+			memoryInMiB := amount / 1024 / 1024
+			memory["amount"] = math.Trunc(memoryInMiB*100) / 100
+			memory["format"] = "MiB"
 			if memoryInMiB >= 1024 {
-				memoryInGiB := fmt.Sprintf("%.2f", memoryInMiB/1024)
-				memory["amount"], _ = strconv.ParseFloat(memoryInGiB, 64)
+				memoryInGiB := memoryInMiB / 1024
+				memory["amount"] = math.Trunc(memoryInGiB*100) / 100
 				memory["format"] = "GiB"
-			} else {
-				memoryInMiBwithPrecision := fmt.Sprintf("%.2f", memoryInMiB)
-				memory["amount"], _ = strconv.ParseFloat(memoryInMiBwithPrecision, 64)
-				memory["format"] = "MiB"
-
 			}
 		}
 		return nil
