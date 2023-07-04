@@ -1,7 +1,14 @@
 include scripts/.env
 
+UNAME_S := $(shell uname -s)
+
 identity={"identity": {"org_id": "3340851", "type": "System", "auth_type": "cert-auth", "system": {"cn": "1b36b20f-7fa0-4454-a6d2-008294e06378", "cert_type": "system"}, "internal": {"org_id": "3340851", "auth_time": 6300}}}
-b64_identity=$(shell echo '${identity}' | base64 -w 0 -)
+ifeq ($(UNAME_S),Darwin)
+    b64_identity=$(shell echo '${identity}' | base64)
+else
+    b64_identity=$(shell echo '${identity}' | base64 -w 0 -)
+endif
+
 ros_ocp_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"account": "2234", "org_id": "3340851", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros-ocp-usage.csv"]}'
 
 file=./scripts/samples/cost-mgmt.tar.gz
@@ -79,7 +86,11 @@ ifdef env
 	-oc expose svc env-${env}-minio -n ${env}
 ifeq (,$(wildcard $(MCCILINT)))
 	@ echo "📥 Downloading minio client"
-	curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o $(MCCILINT)
+    ifeq ($(UNAME_S),Darwin)
+		curl https://dl.min.io/client/mc/release/darwin-amd64/mc --create-dirs -o $(MCCILINT)
+    else
+		curl https://dl.min.io/client/mc/release/linux-amd64/mc --create-dirs -o $(MCCILINT)
+    endif
 	chmod +x $(MCCILINT)
 	@ echo "✅ Done"
 endif
@@ -107,9 +118,9 @@ upload-msg-to-rosocp:
 get-recommendations:
 ifdef env
 	$(eval APIPOD=$(shell oc get pods -o custom-columns=POD:.metadata.name --no-headers -n ${env} | grep ros-ocp-backend-api))
-	oc exec ${APIPOD} -c ros-ocp-backend-api -n ${env} -- /bin/bash -c 'curl -H "X-Rh-Identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/recommendations/openshift'
+	oc exec ${APIPOD} -c ros-ocp-backend-api -n ${env} -- /bin/bash -c 'curl -s -H "X-Rh-Identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/recommendations/openshift' | python -m json.tool
 else
-	curl -H "x-rh-identity: ${b64_identity}" \
+	curl -s -H "x-rh-identity: ${b64_identity}" \
 		 -H "x-rh-request_id: testtesttest" \
 		 http://localhost:8000/api/cost-management/v1/recommendations/openshift | python -m json.tool
 endif
