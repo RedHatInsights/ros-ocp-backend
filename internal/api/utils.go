@@ -249,7 +249,7 @@ func UpdateMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{} 
 			continue
 		}
 
-		for _, dataBlock := range []string{"config", "variation"} {
+		for _, dataBlock := range []string{"current", "config", "variation"} {
 			recommendationSection, ok := intervalData[dataBlock].(map[string]interface{})
 			if !ok {
 				continue

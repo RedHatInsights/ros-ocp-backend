@@ -63,6 +63,7 @@ type recommendationObject struct {
 	Duration_in_hours     float64                 `json:"duration_in_hours,omitempty"`
 	Pods_count            int                     `json:"pods_count,omitempty"`
 	Confidence_level      float64                 `json:"confidence_level,omitempty"`
+	Current               ConfigObject            `json:"current,omitempty"`
 	Config                ConfigObject            `json:"config,omitempty"`
 	Variation             ConfigObject            `json:"variation,omitempty"`
 	Notifications         map[string]notification `json:"notifications,omitempty"`
