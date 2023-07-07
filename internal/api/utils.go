@@ -264,7 +264,7 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 		if ok {
 			if math.Abs(cpuInCores) < 1 {
 				cpuInMillicores := cpuInCores * 1000
-				cpu["amount"] = truncateToThreeDecimalPlaces(cpuInMillicores)
+				cpu["amount"] = math.Round(cpuInMillicores) // millicore values are rounded & don't require decimal precision
 				cpu["format"] = "millicores"
 			} else {
 				cpu["amount"] = truncateToThreeDecimalPlaces(cpuInCores)
