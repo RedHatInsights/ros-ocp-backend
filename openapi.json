@@ -242,10 +242,9 @@
             "type": {
               "type": "string",
               "enum": [
-                "info",
-                "warning",
-                "error",
-                "success"
+                "NOTICE",
+                "WARNING",
+                "CRITICAL"
               ]
             },
             "message": {
