@@ -234,6 +234,29 @@
           }
         }
       },
+      "Notifications": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "NOTICE",
+                "WARNING",
+                "CRITICAL"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "example": "There is not enough data available to generate a recommendation."
+            },
+            "code": {
+              "type": "number"
+            }
+          }
+        }
+      },
       "Recommendation": {
         "type": "object",
         "properties": {
@@ -406,26 +429,7 @@
                         }
                       },
                       "notifications": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "message": {
-                              "type": "string",
-                              "example": "There is not enough data available to generate a recommendation."
-                            },
-                            "type": {
-                              "type": "string",
-                              "enum": [
-                                "info",
-                                "warning",
-                                "error",
-                                "success"
-                              ]
-                            }
-                          }
-                        },
-                        "nullable": true
+                        "$ref": "#/components/schemas/Notifications"
                       },
                       "pods_count": {
                         "type": "integer",
@@ -656,26 +660,7 @@
                         }
                       },
                       "notifications": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "message": {
-                              "type": "string",
-                              "example": "There is not enough data available to generate a recommendation."
-                            },
-                            "type": {
-                              "type": "string",
-                              "enum": [
-                                "info",
-                                "warning",
-                                "error",
-                                "success"
-                              ]
-                            }
-                          },
-                          "nullable": true
-                        }
+                        "$ref": "#/components/schemas/Notifications"
                       },
                       "pods_count": {
                         "type": "integer",
@@ -906,26 +891,7 @@
                         }
                       },
                       "notifications": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "message": {
-                              "type": "string",
-                              "example": "There is not enough data available to generate a recommendation."
-                            },
-                            "type": {
-                              "type": "string",
-                              "enum": [
-                                "info",
-                                "warning",
-                                "error",
-                                "success"
-                              ]
-                            }
-                          },
-                          "nullable": true
-                        }
+                        "$ref": "#/components/schemas/Notifications"
                       },
                       "pods_count": {
                         "type": "integer",
