@@ -130,70 +130,6 @@ objects:
             value: "rosocp-api"
           - name: LOG_LEVEL
             value: ${LOG_LEVEL}
-    - name: kruize
-      replicas: ${{KRUIZE_REPLICA_COUNT}}
-      webServices:
-        private:
-          enabled: true
-      podSpec:
-        image: ${KRUIZE_IMAGE}:${KRUIZE_IMAGE_TAG}
-        command: ["sh"]
-        args: ["-c", "export DB_CONFIG_FILE=${ACG_CONFIG} && bash target/bin/Autotune"]
-        machinePool: ${MACHINE_POOL_OPTION}
-        resources:
-          requests:
-            cpu: ${KRUIZE_CPU_REQUEST}
-            memory: ${KRUIZE_MEMORY_REQUEST}
-          limits:
-            cpu: ${KRUIZE_CPU_LIMIT}
-            memory: ${KRUIZE_MEMORY_LIMIT}
-        env:
-          - name: AUTOTUNE_SERVER_PORT
-            value: ${KRUIZE_PORT}
-          - name: AUTH_TOKEN
-            value: ""
-          - name: LOGGING_LEVEL
-            value: "info"
-          - name: ROOT_LOGGING_LEVEL
-            value: "info"
-          - name: dbdriver
-            value: "jdbc:postgresql://"
-          - name: database_name
-            value: ${KRUIZE_DB_NAME}
-          - name: clustertype
-            value: "kubernetes"
-          - name: k8stype
-            value: "openshift"
-          - name: authtype
-            value: "openshift"
-          - name: monitoringagent
-            value: "prometheus"
-          - name: monitoringservice
-            value: "prometheus-k8s"
-          - name: monitoringendpoint
-            value: "prometheus-k8s"
-          - name: savetodb
-            value: "true"
-          - name: hibernate_dialect
-            value: "org.hibernate.dialect.PostgreSQLDialect"
-          - name: hibernate_driver
-            value: "org.postgresql.Driver"
-          - name: hibernate_c3p0minsize
-            value: "2"
-          - name: hibernate_c3p0maxsize
-            value: "5"
-          - name: hibernate_c3p0timeout
-            value: "300"
-          - name: hibernate_c3p0maxstatements
-            value: "50"
-          - name: hibernate_hbm2ddlauto
-            value: "update"
-          - name: hibernate_showsql
-            value: "false"
-          - name: hibernate_timezone
-            value: "UTC"
-          - name: SSL_CERT_DIR
-            value: ${SSL_CERT_DIR}
     database:
       name: rosocp
       version: 13
@@ -219,45 +155,10 @@ parameters:
 - description: Image tag
   name: IMAGE_TAG
   required: true
-- description: Kruize database name
-  name: KRUIZE_DB_NAME
-  required: true
-- description: Kruize image name
-  name: KRUIZE_IMAGE
-  required: true
-  value: quay.io/cloudservices/autotune
-- description: Kruize image tag
-  name: KRUIZE_IMAGE_TAG
-  required: true
-  value: "190a6cc"
 - description: Kruize server host
   name: KRUIZE_HOST
   required: true
   value: "ros-ocp-backend-kruize"
-- description: Kruize server port
-  name: KRUIZE_PORT
-  required: true
-  value: "10000"
-- description: Initial kruize cpu request.
-  displayName: KRUIZE CPU Request
-  name: KRUIZE_CPU_REQUEST
-  required: true
-  value: 500m
-- description: Initial amount of memory kruize container will request.
-  displayName: KRUIZE Memory Request
-  name: KRUIZE_MEMORY_REQUEST
-  required: true
-  value: 1Gi
-- description: Maximum amount of memory kruize container can use.
-  displayName: KRUIZE Memory Limit
-  name: KRUIZE_MEMORY_LIMIT
-  required: true
-  value: 1Gi
-- description: Maximum amount of CPU kruize container can use.
-  displayName: KRUIZE CPU Limit
-  name: KRUIZE_CPU_LIMIT
-  required: true
-  value: '1'
 - description: Initial cpu request.
   displayName: CPU Request
   name: CPU_REQUEST
@@ -292,9 +193,6 @@ parameters:
 - description: Time to wait before hitting listRecommendation API
   name: KRUIZE_WAIT_TIME
   value: "120"
-- description: Replica count for kruize pod
-  name: KRUIZE_REPLICA_COUNT
-  value: "1"
 - name: MACHINE_POOL_OPTION
   value: ''
 - description: Enable the RBAC
