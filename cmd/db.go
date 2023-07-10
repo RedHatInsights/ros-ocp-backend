@@ -262,7 +262,7 @@ var seedCmd = &cobra.Command{
 						},
 						"requests": map[string]interface{}{
 							"cpu": map[string]interface{}{
-								"amount": 0.05,
+								"amount": 0.578933223234234234,
 								"format": "cores",
 							},
 							"memory": map[string]interface{}{
@@ -274,7 +274,7 @@ var seedCmd = &cobra.Command{
 					"config": map[string]interface{}{
 						"limits": map[string]interface{}{
 							"cpu": map[string]interface{}{
-								"amount": 0.06,
+								"amount": 5.3678942352345234523424,
 								"format": "cores",
 							},
 							"memory": map[string]interface{}{
@@ -284,7 +284,7 @@ var seedCmd = &cobra.Command{
 						},
 						"requests": map[string]interface{}{
 							"cpu": map[string]interface{}{
-								"amount": 0.05,
+								"amount": 4.70,
 								"format": "cores",
 							},
 							"memory": map[string]interface{}{

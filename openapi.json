@@ -305,7 +305,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 2.09
+                                    "example": 2
                                   },
                                   "format": {
                                     "type": "string",
@@ -464,7 +464,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.02
+                                    "example": 3
                                   },
                                   "format": {
                                     "type": "string",
@@ -477,7 +477,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.959
+                                    "example": 344
                                   },
                                   "format": {
                                     "type": "string",
@@ -495,7 +495,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.01
+                                    "example": 4
                                   },
                                   "format": {
                                     "type": "string",
@@ -508,7 +508,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.005
+                                    "example": 500
                                   },
                                   "format": {
                                     "type": "string",
@@ -603,11 +603,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 2.11
+                                    "example": 622
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "cores"
+                                    "example": "millicores"
                                   }
                                 }
                               },
@@ -620,7 +620,7 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "MiB"
+                                    "example": "GiB"
                                   }
                                 }
                               }
@@ -695,7 +695,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.02
+                                    "example": 2
                                   },
                                   "format": {
                                     "type": "string",
@@ -708,7 +708,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.959
+                                    "example": 959.4
                                   },
                                   "format": {
                                     "type": "string",
@@ -726,7 +726,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.01
+                                    "example": 5
                                   },
                                   "format": {
                                     "type": "string",
@@ -739,7 +739,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.005
+                                    "example": 200.333
                                   },
                                   "format": {
                                     "type": "string",
@@ -926,7 +926,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.02
+                                    "example": 5
                                   },
                                   "format": {
                                     "type": "string",
@@ -939,7 +939,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.959
+                                    "example": 929.111
                                   },
                                   "format": {
                                     "type": "string",
@@ -957,7 +957,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.01
+                                    "example": 3
                                   },
                                   "format": {
                                     "type": "string",
@@ -970,7 +970,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 0.005
+                                    "example": 500
                                   },
                                   "format": {
                                     "type": "string",

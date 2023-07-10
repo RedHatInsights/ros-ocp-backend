@@ -210,11 +210,11 @@ func get_user_permissions(c echo.Context) map[string][]string {
 	return user_permissions
 }
 
-func UpdateMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{} {
-
-	/*PATCH
-	Since the format key in Kruize recommendations mention MiB
-	The values should be in the same unit
+func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
+	/*
+		Converts units for Memory and CPU
+		bytes -> MiB -> GiB
+		cores -> millicores
 	*/
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(jsonData), &data)
@@ -232,16 +232,53 @@ func UpdateMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{} 
 		amount, ok := memory["amount"].(float64)
 		if ok {
 			memoryInMiB := amount / 1024 / 1024
-			memory["amount"] = math.Trunc(memoryInMiB*100) / 100
-			memory["format"] = "MiB"
-			if memoryInMiB >= 1024 {
+			if math.Abs(memoryInMiB) >= 1024 {
 				memoryInGiB := memoryInMiB / 1024
 				memory["amount"] = math.Trunc(memoryInGiB*100) / 100
 				memory["format"] = "GiB"
+			} else {
+				memory["amount"] = math.Trunc(memoryInMiB*100) / 100
+				memory["format"] = "MiB"
 			}
 		}
 		return nil
 	}
+
+	hasMoreThanThreeDecimals := func(value float64) bool {
+		const decimalPrecision int = 3
+		str := strconv.FormatFloat(value, 'f', -1, 64)
+		decimalPart := strings.Split(str, ".")
+		return (len(decimalPart) > 1) && (len(decimalPart[1]) > decimalPrecision)
+	}
+
+	truncateToThreeDecimalPlaces := func(value float64) float64 {
+		if hasMoreThanThreeDecimals(value) {
+			truncated := math.Trunc(value * 1000) // Pushes decimal by 3 places and then truncates
+			return truncated / 1000
+		}
+		return value
+	}
+
+	convertCPU := func(cpu map[string]interface{}) error {
+		cpuInCores, ok := cpu["amount"].(float64)
+		if ok {
+			if math.Abs(cpuInCores) < 1 {
+				cpuInMillicores := cpuInCores * 1000
+				cpu["amount"] = math.Round(cpuInMillicores) // millicore values are rounded & don't require decimal precision
+				cpu["format"] = "millicores"
+			} else {
+				cpu["amount"] = truncateToThreeDecimalPlaces(cpuInCores)
+				cpu["format"] = "cores"
+			}
+		}
+		return nil
+	}
+
+	/*
+		Recommendation data is available for three periods
+		For each of these actual values will be present in
+		below mentioned dataBlocks > request and limits
+	*/
 
 	for _, period := range []string{"long_term", "medium_term", "short_term"} {
 		intervalData, ok := durationBased[period].(map[string]interface{})
@@ -255,29 +292,29 @@ func UpdateMemoryFromBytesToMiB(jsonData datatypes.JSON) map[string]interface{} 
 				continue
 			}
 
-			limits, ok := recommendationSection["limits"].(map[string]interface{})
-			if ok {
-				memory, ok := limits["memory"].(map[string]interface{})
-				if ok {
-					err := convertMemory(memory)
-					if err != nil {
-						fmt.Printf("error converting memory in %s: %v\n", period, err)
-						continue
-					}
-				}
-			}
+			for _, section := range []string{"limits", "requests"} {
 
-			requests, ok := recommendationSection["requests"].(map[string]interface{})
-			if ok {
-				memory, ok := requests["memory"].(map[string]interface{})
+				sectionObject, ok := recommendationSection[section].(map[string]interface{})
 				if ok {
-					err := convertMemory(memory)
-					if err != nil {
-						fmt.Printf("error converting memory in %s: %v\n", period, err)
-						continue
+					memory, ok := sectionObject["memory"].(map[string]interface{})
+					if ok {
+						err := convertMemory(memory)
+						if err != nil {
+							fmt.Printf("error converting memory in %s: %v\n", period, err)
+							continue
+						}
+					}
+					cpu, ok := sectionObject["cpu"].(map[string]interface{})
+					if ok {
+						err := convertCPU(cpu)
+						if err != nil {
+							fmt.Printf("error converting cpu in %s: %v\n", period, err)
+							continue
+						}
 					}
 				}
-			}
+			}	
+			
 		}
 	}
 
