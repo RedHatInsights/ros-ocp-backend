@@ -52,7 +52,7 @@ services:
     depends_on:
        - kafka
   kruize-autotune:
-    image: quay.io/cloudservices/autotune:8dd52f3
+    image: quay.io/cloudservices/autotune:190a6cc
     volumes:
       - ./cdappconfig.json:/tmp/cdappconfig.json
     ports:
