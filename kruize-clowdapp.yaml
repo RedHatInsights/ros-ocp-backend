@@ -88,6 +88,7 @@ parameters:
 - description: Kruize database name
   name: KRUIZE_DB_NAME
   required: true
+  value: "kruize"
 - description: Kruize image name
   name: KRUIZE_IMAGE
   required: true
