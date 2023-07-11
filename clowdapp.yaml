@@ -158,7 +158,11 @@ parameters:
 - description: Kruize server host
   name: KRUIZE_HOST
   required: true
-  value: "ros-ocp-backend-kruize"
+  value: "kruize-recommendations"
+- description: Kruize server port
+  name: KRUIZE_PORT
+  required: true
+  value: "10000"
 - description: Initial cpu request.
   displayName: CPU Request
   name: CPU_REQUEST

@@ -11,7 +11,7 @@ objects:
   spec:
     envName: ${ENV_NAME}
     deployments:
-    - name: kruize
+    - name: recommendations
       replicas: ${{KRUIZE_REPLICA_COUNT}}
       webServices:
         private:
@@ -97,10 +97,6 @@ parameters:
   name: KRUIZE_IMAGE_TAG
   required: true
   value: "190a6cc"
-- description: Kruize server host
-  name: KRUIZE_HOST
-  required: true
-  value: "ros-ocp-backend-kruize"
 - description: Kruize server port
   name: KRUIZE_PORT
   required: true
