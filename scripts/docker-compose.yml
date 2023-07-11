@@ -23,6 +23,7 @@ services:
     command: "bash -c 'echo Waiting for Kafka to be ready... && \
                        cub kafka-ready -b kafka:29092 1 20 && \
                        kafka-topics --create --if-not-exists --topic hccm.ros.events --bootstrap-server kafka:29092 && \
+                       kafka-topics --create --if-not-exists --topic platform.sources.event-stream --bootstrap-server kafka:29092 && \
                        kafka-topics --create --if-not-exists --topic rosocp.kruize.experiments --bootstrap-server kafka:29092'"
     depends_on:
       - kafka
@@ -87,3 +88,60 @@ services:
       - ./samples:/usr/share/nginx/html
     ports:
       - 8888:80
+
+  db-sources:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: sources_api_development
+    ports:
+      - "15434:5432"
+
+  redis:
+    image: quay.io/cloudservices/redis-ephemeral:6
+    ports:
+      - "6379:6379"
+
+  sources-db-setup:
+    image: quay.io/cloudservices/sources-api-go
+    restart: on-failure
+    command: -setup
+    environment:
+     - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_HOST=db-sources
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sources_api_development
+      - LOG_LEVEL=DEBUG
+      - REDIS_CACHE_HOST=redis
+      - REDIS_CACHE_PORT=6379
+      - BYPASS_RBAC=true
+      - QUEUE_HOST=kafka
+      - QUEUE_PORT=29092
+    depends_on:
+      - db-sources
+      
+  sources-api-go:
+    image: quay.io/cloudservices/sources-api-go
+    command: ""
+    restart: always
+    ports:
+      - 8002:8000
+    environment:
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_HOST=db-sources
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sources_api_development
+      - LOG_LEVEL=DEBUG
+      - REDIS_CACHE_HOST=redis
+      - REDIS_CACHE_PORT=6379
+      - BYPASS_RBAC=true
+      - QUEUE_HOST=kafka
+      - QUEUE_PORT=29092
+    depends_on:
+      - db-sources
+      - kafka
+      - redis
