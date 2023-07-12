@@ -11,6 +11,7 @@ objects:
   spec:
     envName: ${ENV_NAME}
     dependencies:
+    - kruize
     - ingress
     - rbac
     deployments:

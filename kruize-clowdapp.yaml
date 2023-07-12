@@ -29,6 +29,8 @@ objects:
             cpu: ${KRUIZE_CPU_LIMIT}
             memory: ${KRUIZE_MEMORY_LIMIT}
         env:
+          - name: CLOWDER_ENABLED
+            value: ${CLOWDER_ENABLED}
           - name: AUTOTUNE_SERVER_PORT
             value: ${KRUIZE_PORT}
           - name: AUTH_TOKEN
@@ -39,8 +41,6 @@ objects:
             value: "info"
           - name: dbdriver
             value: "jdbc:postgresql://"
-          - name: database_name
-            value: ${KRUIZE_DB_NAME}
           - name: clustertype
             value: "kubernetes"
           - name: k8stype
@@ -76,19 +76,16 @@ objects:
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
     database:
-      name: kruize
+      name: postgres
       version: 13
-    testing:
-      iqePlugin: ros-ocp
 
 parameters:
 - description : ClowdEnvironment name
   name: ENV_NAME
   required: true
-- description: Kruize database name
-  name: KRUIZE_DB_NAME
-  required: true
-  value: "kruize"
+- description: Is clowder enabled
+  name: CLOWDER_ENABLED
+  value: "True"
 - description: Kruize image name
   name: KRUIZE_IMAGE
   required: true
