@@ -39,12 +39,6 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 	db := database.GetDB()
 
 	query := db.Table("recommendation_sets").Joins(`
-		JOIN (
-			SELECT workload_id, container_name, MAX(monitoring_end_time) AS latest_monitoring_end_time 
-			FROM recommendation_sets GROUP BY workload_id, container_name
-		) latest_rs ON recommendation_sets.workload_id = latest_rs.workload_id
-				AND recommendation_sets.container_name = latest_rs.container_name
-				AND recommendation_sets.monitoring_end_time = latest_rs.latest_monitoring_end_time
 			JOIN workloads ON recommendation_sets.workload_id = workloads.id
 			JOIN clusters ON workloads.cluster_id = clusters.id
 			JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
@@ -89,7 +83,7 @@ func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendatio
 func (r *RecommendationSet) CreateRecommendationSet() error {
 	db := database.GetDB()
 	result := db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "workload_id"}, {Name: "container_name"}, {Name: "monitoring_end_time"}},
+		Columns:   []clause.Column{{Name: "workload_id"}, {Name: "container_name"}},
 		DoUpdates: clause.AssignmentColumns([]string{"monitoring_start_time", "monitoring_end_time", "recommendations", "updated_at"}),
 	}).Create(r)
 

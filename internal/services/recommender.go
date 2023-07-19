@@ -75,6 +75,19 @@ func ProcessEvent(msg *kafka.Message) {
 				} else {
 					log.Infof("Recommendation saved for experiment - %s and end_interval - %s", kafkaMsg.Experiment_name, recommendationSet.MonitoringEndTime)
 				}
+
+				// Create entry into HistoricalRecommendationSet table.
+				historicalRecommendationSet := model.HistoricalRecommendationSet{
+					WorkloadID:          kafkaMsg.WorkloadID,
+					ContainerName:       container.Container_name,
+					MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
+					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
+					Recommendations:     marshalData,
+				}
+				if err := historicalRecommendationSet.CreateHistoricalRecommendationSet(); err != nil {
+					log.Errorf("unable to get or add record to historical recommendation set table: %v. Error: %v", recommendationSet, err)
+					return
+				}
 			}
 		}
 	} else {
