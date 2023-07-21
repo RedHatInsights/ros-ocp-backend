@@ -11,11 +11,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          repository: RedHatInsights/ros-ocp-backend
-          path: ros-ocp-backend 
 
-      - name: Checkout target repository
+      - name: Checkout autotune-builder repository
         uses: actions/checkout@v3
         with:
           repository: RedHatInsights/autotune-builder
@@ -24,16 +21,15 @@ jobs:
       - name: Compare commitsha
         id: compare_files
         run: |
-          ls
           # Add logic to fetch the current kruize image tag value
+          python3 ./scripts/get_kruize_image_tag.py ./kruize-clowdapp.yaml
+          cat /tmp/.commitsha
           
-          current_image_tag="180a6ff"
-          echo "$current_image_tag" > ./ros-ocp-backend/.commitsha
+          echo "changed=$(cmp --silent /tmp/.commitsha ./autotune-builder/.commitsha && echo 'false' || echo 'true')" >> $GITHUB_OUTPUT
           
-          cat ./ros-ocp-backend/.commitsha
-          #echo "::set-output name=changed::$(cmp --silent ./ros-ocp-backend/.commitsha ./autotune-builder/.commitsha && echo 'false' || echo 'true')"
-          echo "changed=$(cmp --silent ./ros-ocp-backend/.commitsha ./autotune-builder/.commitsha && echo 'false' || echo 'true')" >> $GITHUB_OUTPUT
-          
+          # Added this for testing
+          echo "changed=true" >> $GITHUB_OUTPUT          
+
       - name: Print changed variable
         run: |
          echo "changed = ${{ steps.compare_files.outputs.changed }}"
@@ -44,22 +40,22 @@ jobs:
           echo "changed = ${{ steps.compare_files.outputs.changed }}"
 
           # Update the kruize image tag
+          current_tag=$(cat /tmp/.commitsha)
           new_tag=$(cat ./autotune-builder/.commitsha)
+          echo "current_tag = $current_tag"
           echo "new_tag = $new_tag"
 
-          # Overriding just for testing purpose
+          # Added this for testing
           new_tag=180a6ff
-          sed -i "s/190a6cc/$new_tag/g" ./ros-ocp-backend/kruize-clowdapp.yaml
-          cat ./ros-ocp-backend/kruize-clowdapp.yaml
-          rm ./ros-ocp-backend/.commitsha 
-          cd ros-ocp-backend
+          sed -i "s/$current_tag/$new_tag/g" ./kruize-clowdapp.yaml
+          cat ./kruize-clowdapp.yaml
 
           # Setup the committers identity.
           git config user.email "csubrama@redhat.com"
           git config user.name "Chandrakala Subramanyam"
-                 
+
           git status
-          
+
           # Commit the changes and push the feature branch to origin
           git add kruize-clowdapp.yaml
           git commit -m "Updated Kruize image tag"
@@ -69,4 +65,3 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           title: '[Do not merge] - PR to trigger tests on EE against ROS OCP with latest Kruize RM image'
-          path: ros-ocp-backend
