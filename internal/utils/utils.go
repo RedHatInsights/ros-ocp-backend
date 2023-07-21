@@ -126,6 +126,26 @@ func ConvertStringToTime(data string) (time.Time, error) {
 
 }
 
+func MaxIntervalEndTime(slice []string) (time.Time, error) {
+	var converted_date_slice []time.Time
+	for _, v := range slice {
+		formated_date, err := ConvertStringToTime(v)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("unable to convert string to time in a slice: %s", err)
+		}
+		converted_date_slice = append(converted_date_slice, formated_date)
+
+	}
+	var max time.Time
+	max = converted_date_slice[0]
+	for _, ele := range converted_date_slice {
+		if max.Before(ele) {
+			max = ele
+		}
+	}
+	return max, nil
+}
+
 func findInStringSlice(str string, s []string) int {
 	for i, e := range s {
 		if e == str {

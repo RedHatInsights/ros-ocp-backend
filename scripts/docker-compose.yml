@@ -7,6 +7,7 @@ services:
       - ZOOKEEPER_SERVER_ID=1
   kafka:
     image: confluentinc/cp-kafka
+    restart: always
     ports:
       - 29092:29092
     depends_on:
