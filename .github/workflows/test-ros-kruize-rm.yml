@@ -51,8 +51,10 @@ jobs:
           cat ./kruize-clowdapp.yaml
 
           # Setup the committers identity.
-          git config user.email "csubrama@redhat.com"
-          git config user.name "Chandrakala Subramanyam"
+          git config user.name 'Update-a-Bot'
+          git config user.email 'insights@redhat.com'
+          #git config user.email "csubrama@redhat.com"
+          #git config user.name "Chandrakala Subramanyam"
 
           git status
 
