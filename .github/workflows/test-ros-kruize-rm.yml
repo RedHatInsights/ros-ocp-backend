@@ -1,0 +1,70 @@
+name: Test ROS OCP with latest Kruize remote monitoring
+
+on:
+  pull_request:
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Checkout autotune-builder repository
+        uses: actions/checkout@v3
+        with:
+          repository: RedHatInsights/autotune-builder
+          path: autotune-builder
+
+      - name: Compare commitsha
+        id: compare_files
+        run: |
+          # Add logic to fetch the current kruize image tag value
+          python3 ./scripts/get_kruize_image_tag.py ./kruize-clowdapp.yaml
+          cat /tmp/.commitsha
+          
+          echo "changed=$(cmp --silent /tmp/.commitsha ./autotune-builder/.commitsha && echo 'false' || echo 'true')" >> $GITHUB_OUTPUT
+          
+          # Added this for testing
+          echo "changed=true" >> $GITHUB_OUTPUT          
+
+      - name: Print changed variable
+        run: |
+         echo "changed = ${{ steps.compare_files.outputs.changed }}"
+         
+      - name: Update the kruize image tag in kruize clowdapp yaml
+        if: steps.compare_files.outputs.changed == 'true'
+        run: |
+          echo "changed = ${{ steps.compare_files.outputs.changed }}"
+
+          # Update the kruize image tag
+          current_tag=$(cat /tmp/.commitsha)
+          new_tag=$(cat ./autotune-builder/.commitsha)
+          echo "current_tag = $current_tag"
+          echo "new_tag = $new_tag"
+
+          # Added this for testing
+          new_tag=180a6ff
+          sed -i "s/$current_tag/$new_tag/g" ./kruize-clowdapp.yaml
+          cat ./kruize-clowdapp.yaml
+
+          # Setup the committers identity.
+          git config user.name 'Update-a-Bot'
+          git config user.email 'insights@redhat.com'
+          #git config user.email "csubrama@redhat.com"
+          #git config user.name "Chandrakala Subramanyam"
+
+          git status
+
+          # Commit the changes and push the feature branch to origin
+          git add kruize-clowdapp.yaml
+          git commit -m "Updated Kruize image tag"
+
+      - name: Create pull request
+        if: steps.compare_files.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: '[Do not merge] - PR to trigger tests on EE against ROS OCP with latest Kruize RM image'
+          base: main
