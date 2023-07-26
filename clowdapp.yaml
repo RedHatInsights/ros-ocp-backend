@@ -152,7 +152,7 @@ objects:
           - name: SERVICE_NAME
             value: "rosocp-housekeeper"
           - name: CW_LOG_STREAM_NAME
-            value: "rosocp-backend"
+            value: "rosocp-housekeeper"
           - name: LOG_LEVEL
             value: ${LOG_LEVEL}
     database:
