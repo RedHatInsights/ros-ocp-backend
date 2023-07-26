@@ -1,8 +1,6 @@
 name: Test ROS OCP with latest Kruize remote monitoring
 
 on:
-  pull_request:
-
   workflow_dispatch:
 
 jobs:
