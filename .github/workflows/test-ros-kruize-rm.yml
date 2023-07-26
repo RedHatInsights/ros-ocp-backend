@@ -46,15 +46,15 @@ jobs:
           echo "new_tag = $new_tag"
 
           # Added this for testing
-          new_tag=180a6ff
+          new_tag=8dd52f3
           sed -i "s/$current_tag/$new_tag/g" ./kruize-clowdapp.yaml
           cat ./kruize-clowdapp.yaml
+
+          rm -rf autotune_builder
 
           # Setup the committers identity.
           git config user.name 'Update-a-Bot'
           git config user.email 'insights@redhat.com'
-          #git config user.email "csubrama@redhat.com"
-          #git config user.name "Chandrakala Subramanyam"
 
           git status
 
