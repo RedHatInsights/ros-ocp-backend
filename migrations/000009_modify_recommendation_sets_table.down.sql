@@ -1,3 +1,3 @@
-ALTER TABLE recommendation_sets DROP CONSTRAINT IF EXISTS UQ_Recommendation;
-ALTER TABLE recommendation_sets
+ALTER TABLE recommendation_sets 
+DROP CONSTRAINT IF EXISTS UQ_Recommendation,
 ADD CONSTRAINT UQ_Recommendation UNIQUE (workload_id, container_name, monitoring_end_time);
