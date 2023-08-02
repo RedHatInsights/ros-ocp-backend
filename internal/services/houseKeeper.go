@@ -24,7 +24,7 @@ func StartHouseKeeperService() {
 	var err error
 	cost_app_id, err = sources.GetCostApplicationID()
 	if err != nil {
-		log.Error("Unable to get cost application id")
+		log.Error("Unable to get cost application id", err)
 		os.Exit(1)
 	}
 
