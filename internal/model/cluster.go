@@ -37,3 +37,13 @@ func (c *Cluster) CreateCluster() error {
 	}
 	return nil
 }
+
+func (c *Cluster) DeleteCluster() error {
+	db := database.GetDB()
+	result := db.Where("source_id = ?", c.SourceId).Delete(c)
+	if result.Error != nil {
+		dbError.Inc()
+		return result.Error
+	}
+	return nil
+}

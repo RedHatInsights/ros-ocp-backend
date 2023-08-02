@@ -23,6 +23,7 @@ type Config struct {
 	KafkaAutoCommit       bool   `mapstructure:"KAFKA_AUTO_COMMIT"`
 	UploadTopic           string `mapstructure:"UPLOAD_TOPIC"`
 	ExperimentsTopic      string `mapstructure:"EXPERIMENTS_TOPIC"`
+	SourcesEventTopic     string `mapstructure:"SOURCES_EVENT_TOPIC"`
 	KafkaUsername         string
 	KafkaPassword         string
 	KafkaSASLMechanism    string
@@ -59,6 +60,10 @@ type Config struct {
 
 	// Prometheus config
 	PrometheusPort string `mapstructure:"PROMETHEUS_PORT"`
+
+	// Sources-api-go config
+	SourceApiBaseUrl string `mapstructure:"SOURCES_API_BASE_URL"`
+	SourceApiPrefix  string `mapstructure:"SOURCES_API_PREFIX"`
 }
 
 var cfg *Config = nil
@@ -73,6 +78,7 @@ func initConfig() {
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", strings.Join(clowder.KafkaServers, ","))
 		viper.SetDefault("UPLOAD_TOPIC", clowder.KafkaTopics["hccm.ros.events"].Name)
 		viper.SetDefault("EXPERIMENTS_TOPIC", clowder.KafkaTopics["rosocp.kruize.experiments"].Name)
+		viper.SetDefault("SOURCES_EVENT_TOPIC", clowder.KafkaTopics["platform.sources.event-stream"].Name)
 
 		// Kafka SSL Config
 		if broker.Authtype != nil {
@@ -106,6 +112,8 @@ func initConfig() {
 				viper.SetDefault("RBACPort", endpoint.Port)
 				viper.SetDefault("RBACProtocol", "http")
 				viper.SetDefault("RBAC_ENABLE", true)
+			} else if endpoint.App == "sources-api" {
+				viper.SetDefault("SOURCES_API_BASE_URL", fmt.Sprintf("http://%v:%v", endpoint.Hostname, endpoint.Port))
 			}
 		}
 
@@ -125,6 +133,7 @@ func initConfig() {
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
 		viper.SetDefault("UPLOAD_TOPIC", "hccm.ros.events")
 		viper.SetDefault("EXPERIMENTS_TOPIC", "rosocp.kruize.experiments")
+		viper.SetDefault("SOURCES_EVENT_TOPIC", "platform.sources.event-stream")
 
 		// default DB Config
 		viper.SetDefault("DBName", "postgres")
@@ -144,7 +153,12 @@ func initConfig() {
 		// prometheus config
 		viper.SetDefault("PROMETHEUS_PORT", "5005")
 
+		// Sources-api-go
+		viper.SetDefault("SOURCES_API_BASE_URL", "http://127.0.0.1:8002")
+
 	}
+
+	viper.SetDefault("SOURCES_API_PREFIX", "/api/sources/v3.1")
 	viper.SetDefault("SERVICE_NAME", "rosocp")
 	viper.SetDefault("API_PORT", "8000")
 	viper.SetDefault("KRUIZE_WAIT_TIME", "30")

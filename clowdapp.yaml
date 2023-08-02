@@ -13,6 +13,7 @@ objects:
     dependencies:
     - ingress
     - rbac
+    - sources-api
     deployments:
     - name: processor
       replicas: ${{PROCESSOR_REPLICA_COUNT}}
@@ -130,6 +131,30 @@ objects:
             value: "rosocp-api"
           - name: LOG_LEVEL
             value: ${LOG_LEVEL}
+    - name: housekeeper
+      replicas: ${{HOUSEKEEPER_REPLICA_COUNT}}
+      podSpec:
+        image: ${IMAGE}:${IMAGE_TAG}
+        command: ["sh"]
+        args: ["-c", "./rosocp db migrate up && ./rosocp start housekeeper"]
+        resources:
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+        env:
+          - name: CLOWDER_ENABLED
+            value: ${CLOWDER_ENABLED}
+          - name: SSL_CERT_DIR
+            value: ${SSL_CERT_DIR}
+          - name: SERVICE_NAME
+            value: "rosocp-housekeeper"
+          - name: CW_LOG_STREAM_NAME
+            value: "rosocp-housekeeper"
+          - name: LOG_LEVEL
+            value: ${LOG_LEVEL}
     database:
       name: rosocp
       version: 13
@@ -137,6 +162,8 @@ objects:
       - topicName: hccm.ros.events
         partitions: 1
       - topicName: rosocp.kruize.experiments
+        partitions: 1
+      - topicName: platform.sources.event-stream
         partitions: 1
     testing:
       iqePlugin: ros-ocp
@@ -193,6 +220,9 @@ parameters:
   value: "1"
 - description: Replica count for recommender pod
   name: RECOMMENDER_REPLICA_COUNT
+  value: "1"
+- description: Replica count for recommender pod
+  name: HOUSEKEEPER_REPLICA_COUNT
   value: "1"
 - description: Time to wait before hitting listRecommendation API
   name: KRUIZE_WAIT_TIME

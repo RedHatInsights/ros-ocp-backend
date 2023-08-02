@@ -47,9 +47,19 @@ var apiCmd = &cobra.Command{
 	},
 }
 
+var houseKeeperCmd = &cobra.Command{
+	Use:   "housekeeper",
+	Short: "starts ros-ocp housekeeper service",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("starting ros-ocp housekeeper service")
+		services.StartHouseKeeperService()
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(startCmd)
 	startCmd.AddCommand(processorCmd)
 	startCmd.AddCommand(recommenderCmd)
 	startCmd.AddCommand(apiCmd)
+	startCmd.AddCommand(houseKeeperCmd)
 }
