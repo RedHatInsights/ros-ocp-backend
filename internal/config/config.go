@@ -158,7 +158,7 @@ func initConfig() {
 
 	}
 
-	viper.SetDefault("SOURCES_API_PREFIX", "/api/sources/v1.0")
+	viper.SetDefault("SOURCES_API_PREFIX", "/api/sources/v3.1")
 	viper.SetDefault("SERVICE_NAME", "rosocp")
 	viper.SetDefault("API_PORT", "8000")
 	viper.SetDefault("KRUIZE_WAIT_TIME", "30")
