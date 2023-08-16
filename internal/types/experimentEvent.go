@@ -3,7 +3,8 @@ package types
 import "time"
 
 type ExperimentEvent struct {
-	WorkloadID          uint                     `validate:"required"`
+	WorkloadID          string                   `validate:"required"`
+	ClusterID           uint                     `validate:"required"`
 	Experiment_name     string                   `validate:"required"`
 	K8s_object_name     string                   `validate:"required"`
 	K8s_object_type     string                   `validate:"required"`

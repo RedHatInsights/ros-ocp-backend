@@ -9,9 +9,11 @@ import (
 )
 
 type HistoricalRecommendationSet struct {
-	ID                  string `gorm:"primaryKey;not null;autoIncrement"`
-	WorkloadID          uint
+	ID                  string `gorm:"type:uuid;not null;default:uuid_generate_v4()"`
+	WorkloadID          string
 	Workload            Workload `gorm:"foreignKey:WorkloadID"`
+	ClusterID           uint
+	Cluster             Cluster `gorm:"foreignKey:ClusterID"`
 	ContainerName       string
 	MonitoringStartTime time.Time `gorm:"type:timestamp"`
 	MonitoringEndTime   time.Time `gorm:"type:timestamp"`

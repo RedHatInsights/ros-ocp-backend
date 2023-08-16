@@ -1,7 +1,7 @@
 CREATE TYPE workloadtype AS ENUM ('deployment', 'deploymentconfig', 'replicaset', 'replicationcontroller', 'statefulset', 'daemonset');
 
 CREATE TABLE IF NOT EXISTS workloads(
-   id BIGSERIAL PRIMARY KEY,
+   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
    cluster_id BIGINT NOT NULL,
    experiment_name TEXT NOT NULL,
    namespace TEXT NOT NULL,

@@ -12,7 +12,7 @@ import (
 )
 
 type Workload struct {
-	ID              uint `gorm:"primaryKey;not null;autoIncrement"`
+	ID              string `gorm:"type:uuid;not null;default:uuid_generate_v4()"`
 	ClusterID       uint
 	Cluster         Cluster               `gorm:"foreignKey:ClusterID" json:"-"`
 	ExperimentName  string                `gorm:"type:text"`

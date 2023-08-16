@@ -136,7 +136,7 @@ func ProcessReport(msg *kafka.Message) {
 				WorkloadType:    workload.WorkloadType(k8s_object_type),
 				WorkloadName:    k8s_object_name,
 				Containers:      container_names,
-				MetricsUploadAt: time.Now(),
+				MetricsUploadAt: interval_end,
 			}
 			if err := workload.CreateWorkload(); err != nil {
 				log.Errorf("unable to get or add record to workloads table: %v. Error: %v", workload, err)
@@ -156,6 +156,7 @@ func ProcessReport(msg *kafka.Message) {
 				}
 				workload_metric := model.WorkloadMetrics{
 					WorkloadID:    workload.ID,
+					ClusterID:     cluster.ID,
 					ContainerName: container.Container_name,
 					IntervalStart: interval_start,
 					IntervalEnd:   interval_end,
@@ -174,6 +175,7 @@ func ProcessReport(msg *kafka.Message) {
 			// Sending list_of_experiments to rosocp.kruize.experiments topic.
 			experimentEventMsg := types.ExperimentEvent{
 				WorkloadID:          workload.ID,
+				ClusterID:           cluster.ID,
 				Experiment_name:     experiment_name,
 				K8s_object_name:     k8s_object[0]["k8s_object_name"].(string),
 				K8s_object_type:     k8s_object[0]["k8s_object_type"].(string),

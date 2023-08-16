@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS recommendation_sets(
    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-   workload_id BIGINT,
+   workload_id uuid NOT NULL,
+   cluster_id BIGINT NOT NULL,
    container_name TEXT NOT NULL,
    monitoring_start_time TIMESTAMP WITH TIME ZONE NOT NULL,
    monitoring_end_time TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -11,3 +12,6 @@ CREATE TABLE IF NOT EXISTS recommendation_sets(
 ALTER TABLE recommendation_sets
 ADD CONSTRAINT fk_recommendation_sets_workload FOREIGN KEY (workload_id) REFERENCES workloads (id)
 ON DELETE CASCADE;
+
+ALTER TABLE recommendation_sets
+ADD CONSTRAINT UQ_Recommendation UNIQUE (workload_id, container_name);

@@ -64,6 +64,7 @@ func ProcessEvent(msg *kafka.Message) {
 				// Create RecommendationSet entry into the table.
 				recommendationSet := model.RecommendationSet{
 					WorkloadID:          kafkaMsg.WorkloadID,
+					ClusterID:           kafkaMsg.ClusterID,
 					ContainerName:       container.Container_name,
 					MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
 					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
@@ -79,6 +80,7 @@ func ProcessEvent(msg *kafka.Message) {
 				// Create entry into HistoricalRecommendationSet table.
 				historicalRecommendationSet := model.HistoricalRecommendationSet{
 					WorkloadID:          kafkaMsg.WorkloadID,
+					ClusterID:           kafkaMsg.ClusterID,
 					ContainerName:       container.Container_name,
 					MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
 					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
