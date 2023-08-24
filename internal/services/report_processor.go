@@ -128,7 +128,7 @@ func ProcessReport(msg *kafka.Message) {
 					log.Errorf("Error while checking for workload_metrics record: %s", err)
 					continue
 				} else if !reflect.ValueOf(workload_metrics).IsZero() {
-					log.Debugf("worload_metrics table already has data for interval_end time: %v.", interval_end)
+					log.Debugf("workload_metrics table already has data for interval_end time: %v.", interval_end)
 					continue
 				}
 
@@ -149,7 +149,7 @@ func ProcessReport(msg *kafka.Message) {
 					MetricsUploadAt: time.Now(),
 				}
 				if err := workload.CreateWorkload(); err != nil {
-					log.Errorf("unable to get or add record to workloads table: %v. Error: %v", workload, err)
+					log.Errorf("unable to save workload record: %v. Error: %v", workload, err)
 					continue
 				}
 
