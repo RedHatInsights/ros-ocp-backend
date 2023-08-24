@@ -64,5 +64,21 @@ Table recommendation_sets {
   Indexes {
     id [pk]
     workload_id [name: "workloads.id_fkey", type: btree]
+    (workload_id, container_name) [unique, type: btree]
+  }
+}
+
+Table historical_recommendation_sets {
+  id uuid [increment]
+  workload_id bigint [ref: > workloads.id]
+  container_name text
+  monitoring_start_time datetime
+  monitoring_end_time datetime
+  recommendations jsonb
+  updated_at datetime
+  Indexes {
+    id [pk]
+    workload_id [name: "workloads.id_fkey", type: btree]
+    (workload_id, container_name, monitoring_end_time) [unique, type: btree]
   }
 }
