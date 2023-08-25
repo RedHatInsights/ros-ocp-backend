@@ -75,122 +75,138 @@ func ProcessReport(msg *kafka.Message) {
 		df = utils.Aggregate_data(df)
 
 		// grouping container(row in csv) by there deployement.
-		k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name", "interval_end").GetGroups()
+		k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name").GetGroups()
 
-		keys := make([]string, 0, len(k8s_object_groups))
-		for key := range k8s_object_groups {
-			keys = append(keys, key)
-		}
+		for _, v := range k8s_object_groups {
 
-		sort.SliceStable(keys, func(i, j int) bool {
-			time_i, _ := utils.ConvertStringToTime(k8s_object_groups[keys[i]].Col("interval_end").Val(0).(string))
-			time_j, _ := utils.ConvertStringToTime(k8s_object_groups[keys[j]].Col("interval_end").Val(0).(string))
-			return time_i.Before(time_j)
-		})
-
-		// looping over each group in chronological order based on interval_end time.
-		for _, group_name := range keys {
-			k8s_object := k8s_object_groups[group_name].Maps()
-			namespace := k8s_object[0]["namespace"].(string)
-			k8s_object_type := k8s_object[0]["k8s_object_type"].(string)
-			k8s_object_name := k8s_object[0]["k8s_object_name"].(string)
-			interval_start, err := utils.ConvertStringToTime(k8s_object[0]["interval_start"].(string))
+			all_interval_end_time := v.Col("interval_end").Records()
+			maxEndTime, err := utils.MaxIntervalEndTime(all_interval_end_time)
 			if err != nil {
 				log.Errorf("unable to convert string to time: %s", err)
 				continue
 			}
-			interval_end, err := utils.ConvertStringToTime(k8s_object[0]["interval_end"].(string))
-			if err != nil {
-				log.Errorf("unable to convert string to time: %s", err)
-				continue
+			k8s_object_group_by_interval_end := v.GroupBy("interval_end").GetGroups()
+
+			keys := make([]string, 0, len(k8s_object_group_by_interval_end))
+			for key := range k8s_object_group_by_interval_end {
+				keys = append(keys, key)
 			}
 
-			experiment_name := utils.GenerateExperimentName(
-				kafkaMsg.Metadata.Org_id,
-				kafkaMsg.Metadata.Source_id,
-				kafkaMsg.Metadata.Cluster_uuid,
-				namespace,
-				k8s_object_type,
-				k8s_object_name,
-			)
+			sort.SliceStable(keys, func(i, j int) bool {
+				time_i, _ := utils.ConvertStringToTime(k8s_object_group_by_interval_end[keys[i]].Col("interval_end").Val(0).(string))
+				time_j, _ := utils.ConvertStringToTime(k8s_object_group_by_interval_end[keys[j]].Col("interval_end").Val(0).(string))
+				return time_i.Before(time_j)
+			})
 
-			if workload_metrics, err := model.GetWorkloadMetricsForTimestamp(experiment_name, interval_end); err != nil {
-				log.Errorf("Error while checking for workload_metrics record: %s", err)
-				continue
-			} else if !reflect.ValueOf(workload_metrics).IsZero() {
-				log.Debugf("worload_metrics table already has data for interval_end time: %v.", interval_end)
-				continue
-			}
-
-			container_names, err := kruize.Create_kruize_experiments(experiment_name, k8s_object)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-
-			// Create workload entry into the table.
-			workload := model.Workload{
-				ClusterID:       cluster.ID,
-				ExperimentName:  experiment_name,
-				Namespace:       namespace,
-				WorkloadType:    workload.WorkloadType(k8s_object_type),
-				WorkloadName:    k8s_object_name,
-				Containers:      container_names,
-				MetricsUploadAt: time.Now(),
-			}
-			if err := workload.CreateWorkload(); err != nil {
-				log.Errorf("unable to get or add record to workloads table: %v. Error: %v", workload, err)
-				continue
-			}
-
-			usage_data_byte, err := kruize.Update_results(experiment_name, k8s_object)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-
-			for _, container := range usage_data_byte[0].Kubernetes_objects[0].Containers {
-				container_usage_metrics, err := json.Marshal(container.Metrics)
+			// looping over each group in chronological order based on interval_end time.
+			for _, group_name := range keys {
+				k8s_object := k8s_object_group_by_interval_end[group_name].Maps()
+				namespace := k8s_object[0]["namespace"].(string)
+				k8s_object_type := k8s_object[0]["k8s_object_type"].(string)
+				k8s_object_name := k8s_object[0]["k8s_object_name"].(string)
+				interval_start, err := utils.ConvertStringToTime(k8s_object[0]["interval_start"].(string))
 				if err != nil {
-					log.Errorf("Unable to marshal container usage data: %v", err)
-				}
-				workload_metric := model.WorkloadMetrics{
-					WorkloadID:    workload.ID,
-					ContainerName: container.Container_name,
-					IntervalStart: interval_start,
-					IntervalEnd:   interval_end,
-					UsageMetrics:  container_usage_metrics,
-				}
-				if err := workload_metric.CreateWorkloadMetrics(); err != nil {
-					log.Errorf("unable to add record to workload_metrics table: %v. Error: %v", workload_metric, err)
+					log.Errorf("unable to convert string to time: %s", err)
 					continue
 				}
-			}
+				interval_end, err := utils.ConvertStringToTime(k8s_object[0]["interval_end"].(string))
+				if err != nil {
+					log.Errorf("unable to convert string to time: %s", err)
+					continue
+				}
 
-			waittime, err := strconv.Atoi(cfg.KruizeWaitTime)
-			if err != nil {
-				log.Error(err)
-			}
-			// Sending list_of_experiments to rosocp.kruize.experiments topic.
-			experimentEventMsg := types.ExperimentEvent{
-				WorkloadID:          workload.ID,
-				Experiment_name:     experiment_name,
-				K8s_object_name:     k8s_object[0]["k8s_object_name"].(string),
-				K8s_object_type:     k8s_object[0]["k8s_object_type"].(string),
-				Namespace:           k8s_object[0]["namespace"].(string),
-				Fetch_time:          time.Now().UTC().Add(time.Second * time.Duration(waittime)),
-				Monitoring_end_time: interval_end.String(),
-				K8s_object:          k8s_object,
-				Attempt:             1,
-				Kafka_request_msg:   kafkaMsg,
-			}
+				experiment_name := utils.GenerateExperimentName(
+					kafkaMsg.Metadata.Org_id,
+					kafkaMsg.Metadata.Source_id,
+					kafkaMsg.Metadata.Cluster_uuid,
+					namespace,
+					k8s_object_type,
+					k8s_object_name,
+				)
 
-			msgBytes, err := json.Marshal(experimentEventMsg)
-			if err != nil {
-				log.Errorf("Unable convert list_of_experiments to json: %s", err)
-			}
-			if err := p.SendMessage(msgBytes, &cfg.ExperimentsTopic, kafkaMsg.Metadata.Org_id); err == nil {
-				log.Infof("Experiment event send to kafka topic rosocp.kruize.experiments. Experiment name: %s, interval_end: %s", experiment_name, interval_end.String())
+				if workload_metrics, err := model.GetWorkloadMetricsForTimestamp(experiment_name, interval_end); err != nil {
+					log.Errorf("Error while checking for workload_metrics record: %s", err)
+					continue
+				} else if !reflect.ValueOf(workload_metrics).IsZero() {
+					log.Debugf("workload_metrics table already has data for interval_end time: %v.", interval_end)
+					continue
+				}
+
+				container_names, err := kruize.Create_kruize_experiments(experiment_name, k8s_object)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+
+				// Create workload entry into the table.
+				workload := model.Workload{
+					ClusterID:       cluster.ID,
+					ExperimentName:  experiment_name,
+					Namespace:       namespace,
+					WorkloadType:    workload.WorkloadType(k8s_object_type),
+					WorkloadName:    k8s_object_name,
+					Containers:      container_names,
+					MetricsUploadAt: time.Now(),
+				}
+				if err := workload.CreateWorkload(); err != nil {
+					log.Errorf("unable to save workload record: %v. Error: %v", workload, err)
+					continue
+				}
+
+				usage_data_byte, err := kruize.Update_results(experiment_name, k8s_object)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
+
+				for _, container := range usage_data_byte[0].Kubernetes_objects[0].Containers {
+					container_usage_metrics, err := json.Marshal(container.Metrics)
+					if err != nil {
+						log.Errorf("Unable to marshal container usage data: %v", err)
+					}
+					workload_metric := model.WorkloadMetrics{
+						WorkloadID:    workload.ID,
+						ContainerName: container.Container_name,
+						IntervalStart: interval_start,
+						IntervalEnd:   interval_end,
+						UsageMetrics:  container_usage_metrics,
+					}
+					if err := workload_metric.CreateWorkloadMetrics(); err != nil {
+						log.Errorf("unable to add record to workload_metrics table: %v. Error: %v", workload_metric, err)
+						continue
+					}
+				}
+
+				if maxEndTime == interval_end {
+					waittime, err := strconv.Atoi(cfg.KruizeWaitTime)
+					if err != nil {
+						log.Error(err)
+					}
+
+					// Sending list_of_experiments to rosocp.kruize.experiments topic.
+					experimentEventMsg := types.ExperimentEvent{
+						WorkloadID:          workload.ID,
+						Experiment_name:     experiment_name,
+						K8s_object_name:     k8s_object[0]["k8s_object_name"].(string),
+						K8s_object_type:     k8s_object[0]["k8s_object_type"].(string),
+						Namespace:           k8s_object[0]["namespace"].(string),
+						Fetch_time:          time.Now().UTC().Add(time.Second * time.Duration(waittime)),
+						Monitoring_end_time: interval_end.String(),
+						K8s_object:          k8s_object,
+						Attempt:             1,
+						Kafka_request_msg:   kafkaMsg,
+					}
+
+					msgBytes, err := json.Marshal(experimentEventMsg)
+					if err != nil {
+						log.Errorf("Unable convert list_of_experiments to json: %s", err)
+					}
+
+					if err := p.SendMessage(msgBytes, &cfg.ExperimentsTopic, kafkaMsg.Metadata.Org_id); err == nil {
+						log.Infof("Experiment event send to kafka topic rosocp.kruize.experiments. Experiment name: %s, interval_end: %s", experiment_name, interval_end.String())
+					}
+				}
+
 			}
 
 		}
