@@ -7,10 +7,10 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
-	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 	"github.com/sirupsen/logrus"
@@ -27,12 +27,17 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 		"k8s_object_type": k8s_object[0]["k8s_object_type"].(string),
 		"k8s_object_name": k8s_object[0]["k8s_object_name"].(string),
 	}
+	unique_containers := []string{}
 	containers := []map[string]string{}
 	for _, row := range k8s_object {
-		containers = append(containers, map[string]string{
-			"container_name":       row["container_name"].(string),
-			"container_image_name": row["image_name"].(string),
-		})
+		container := row["container_name"].(string)
+		if !utils.StringInSlice(container, unique_containers) {
+			unique_containers = append(unique_containers, container)
+			containers = append(containers, map[string]string{
+				"container_name":       container,
+				"container_image_name": row["image_name"].(string),
+			})
+		}
 	}
 	payload, err := kruizePayload.GetCreateExperimentPayload(experiment_name, containers, data)
 	if err != nil {
@@ -89,14 +94,7 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 }
 
 func Update_results(experiment_name string, k8s_object []map[string]interface{}) ([]kruizePayload.UpdateResult, error) {
-	data := map[string]string{
-		"namespace":       k8s_object[0]["namespace"].(string),
-		"k8s_object_type": k8s_object[0]["k8s_object_type"].(string),
-		"k8s_object_name": k8s_object[0]["k8s_object_name"].(string),
-		"interval_start":  utils.ConvertDateToISO8601(k8s_object[0]["interval_start"].(string)),
-		"interval_end":    utils.ConvertDateToISO8601(k8s_object[0]["interval_end"].(string)),
-	}
-	payload_data := kruizePayload.GetUpdateResultPayload(experiment_name, k8s_object, data)
+	payload_data := kruizePayload.GetUpdateResultPayload(experiment_name, k8s_object)
 	postBody, err := json.Marshal(payload_data)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create payload: %v", err)
@@ -141,35 +139,36 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 	return payload_data, nil
 }
 
-func List_recommendations(experiment types.ExperimentEvent) ([]kruizePayload.ListRecommendations, error) {
-	url := cfg.KruizeUrl + "/listRecommendations"
+func Update_recommendations(experiment_name string, interval_end_time time.Time) ([]kruizePayload.ListRecommendations, error) {
+	url := cfg.KruizeUrl + "/updateRecommendations"
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("an Error Occured %v", err)
 	}
 	q := req.URL.Query()
-	q.Add("experiment_name", experiment.Experiment_name)
-	q.Add("monitoring_end_time", utils.ConvertDateToISO8601(experiment.Monitoring_end_time))
+	q.Add("experiment_name", experiment_name)
+	q.Add("interval_end_time", utils.ConvertDateToISO8601(interval_end_time.String()))
 	req.URL.RawQuery = q.Encode()
 	res, err := client.Do(req)
 	if err != nil {
-		kruizeAPIException.WithLabelValues("/listRecommendations").Inc()
-		return nil, fmt.Errorf("error Occured while calling /listRecommendations API %v", err)
+		kruizeAPIException.WithLabelValues("/updateRecommendations").Inc()
+		return nil, fmt.Errorf("error Occured while calling /updateRecommendations API %v", err)
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
 	if res.StatusCode == 400 {
 		data := map[string]interface{}{}
 		if err := json.Unmarshal(body, &data); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal response of /listRecommendations API %v", err)
+			return nil, fmt.Errorf("unable to unmarshal response of /updateRecommendations API %v", err)
 		}
 		return nil, fmt.Errorf(data["message"].(string))
 	}
 	response := []kruizePayload.ListRecommendations{}
 	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal response of /listRecommendations API %v", err)
+		return nil, fmt.Errorf("unable to unmarshal response of /updateRecommendations API %v", err)
 	}
 
 	return response, nil
+
 }
