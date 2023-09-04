@@ -13,8 +13,7 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
-	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
-	"github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
+	w "github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils/kruize"
 )
@@ -97,14 +96,6 @@ func ProcessReport(msg *kafka.Message) {
 				k8s_object_name,
 			)
 
-			if workload_metrics, err := model.GetWorkloadMetricsForTimestamp(experiment_name, maxEndTime); err != nil {
-				log.Errorf("Error while checking for workload_metrics record: %s", err)
-				continue
-			} else if !reflect.ValueOf(workload_metrics).IsZero() {
-				log.Debugf("workload_metrics table already has data for interval_end time: %v.", maxEndTime)
-				continue
-			}
-
 			container_names, err := kruize.Create_kruize_experiments(experiment_name, k8s_object)
 			if err != nil {
 				log.Error(err)
@@ -116,7 +107,7 @@ func ProcessReport(msg *kafka.Message) {
 				ClusterID:       cluster.ID,
 				ExperimentName:  experiment_name,
 				Namespace:       namespace,
-				WorkloadType:    workload.WorkloadType(k8s_object_type),
+				WorkloadType:    w.WorkloadType(k8s_object_type),
 				WorkloadName:    k8s_object_name,
 				Containers:      container_names,
 				MetricsUploadAt: time.Now(),
@@ -133,13 +124,24 @@ func ProcessReport(msg *kafka.Message) {
 			}
 
 			for _, data := range usage_data_byte {
+
+				interval_start_time, _ := utils.ConvertStringToTime(data.Interval_start_time)
+				interval_end_time, _ := utils.ConvertStringToTime(data.Interval_end_time)
+
+				if workload_metrics, err := model.GetWorkloadMetricsForTimestamp(experiment_name, interval_end_time); err != nil {
+					log.Errorf("Error while checking for workload_metrics record: %s", err)
+					continue
+				} else if !reflect.ValueOf(workload_metrics).IsZero() {
+					log.Debugf("workload_metrics table already has data for interval_end time: %v.", interval_end_time)
+					continue
+				}
+
 				for _, container := range data.Kubernetes_objects[0].Containers {
 					container_usage_metrics, err := json.Marshal(container.Metrics)
 					if err != nil {
 						log.Errorf("Unable to marshal container usage data: %v", err)
 					}
-					interval_start_time, _ := utils.ConvertStringToTime(data.Interval_start_time)
-					interval_end_time, _ := utils.ConvertStringToTime(data.Interval_end_time)
+
 					workload_metric := model.WorkloadMetrics{
 						WorkloadID:    workload.ID,
 						ContainerName: container.Container_name,
@@ -155,6 +157,18 @@ func ProcessReport(msg *kafka.Message) {
 
 			}
 
+			// Below we make sure that report which is been processed is the latest(interval_endtime) report.
+			// If not then replace the maxEndTime so that we can recommendation is again calculated for the same(latest)
+			// interval_endtime
+			if recommendation_stored_in_db, err := model.GetFirstRecommendationSetsByWorkloadID(workload.ID); err != nil {
+				log.Errorf("Error while checking for recommendation_set record: %s", err)
+				continue
+			} else if !reflect.ValueOf(recommendation_stored_in_db).IsZero() {
+				if recommendation_stored_in_db.MonitoringEndTime.UTC().After(maxEndTime) {
+					maxEndTime = recommendation_stored_in_db.MonitoringEndTime.UTC()
+				}
+			}
+
 			recommendation, err := kruize.Update_recommendations(experiment_name, maxEndTime)
 			if err != nil {
 				end_interval := utils.ConvertDateToISO8601(maxEndTime.String())
@@ -166,7 +180,7 @@ func ProcessReport(msg *kafka.Message) {
 				continue
 			}
 
-			if is_valid_recommendation(recommendation) {
+			if kruize.Is_valid_recommendation(recommendation) {
 				containers := recommendation[0].Kubernetes_objects[0].Containers
 				for _, container := range containers {
 					for _, v := range container.Recommendations.Data {
@@ -209,17 +223,4 @@ func ProcessReport(msg *kafka.Message) {
 			}
 		}
 	}
-}
-
-func is_valid_recommendation(d []kruizePayload.ListRecommendations) bool {
-	if len(d) > 0 {
-		notifications := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
-		// 112101 is notification code for "Duration Based Recommendations Available".
-		if _, ok := notifications["112101"]; ok {
-			return true
-		} else {
-			return false
-		}
-	}
-	return false
 }

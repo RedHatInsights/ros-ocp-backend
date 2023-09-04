@@ -33,6 +33,16 @@ func (r *RecommendationSet) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
+func GetFirstRecommendationSetsByWorkloadID(workload_id uint) (RecommendationSet, error) {
+	recommendationSets := RecommendationSet{}
+	db := database.GetDB()
+	query := db.Where("workload_id = ?", workload_id).First(&recommendationSets)
+	if query.Error != nil && query.Error.Error() == "record not found" {
+		return recommendationSets, nil
+	}
+	return recommendationSets, query.Error
+}
+
 func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string][]string, user_permissions map[string][]string) ([]RecommendationSet, int, error) {
 
 	var recommendationSets []RecommendationSet

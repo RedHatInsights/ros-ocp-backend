@@ -13,6 +13,27 @@ type UpdateResult struct {
 	Kubernetes_objects  []kubernetesObject `json:"kubernetes_objects"`
 }
 
+type UpdateResultResponse struct {
+	Message           string               `json:"message,omitempty"`
+	Httpcode          int                  `json:"httpcode,omitempty"`
+	DocumentationLink string               `json:"documentationLink,omitempty"`
+	Status            string               `json:"status,omitempty"`
+	Data              []UpdateResponseData `json:"data,omitempty"`
+}
+
+type UpdateResponseData struct {
+	Interval_start_time string
+	Interval_end_time   string
+	Errors              []ErrorData `json:"errors,omitempty"`
+}
+
+type ErrorData struct {
+	Message           string `json:"message,omitempty"`
+	Httpcode          int    `json:"httpcode,omitempty"`
+	DocumentationLink string `json:"documentationLink,omitempty"`
+	Status            string `json:"status,omitempty"`
+}
+
 func GetUpdateResultPayload(experiment_name string, containers []map[string]interface{}) []UpdateResult {
 	payload := []UpdateResult{}
 	df := dataframe.LoadMaps(containers)

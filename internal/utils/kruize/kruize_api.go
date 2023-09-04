@@ -111,13 +111,13 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 	defer res.Body.Close()
 	if res.StatusCode != 201 {
 		body, _ := io.ReadAll(res.Body)
-		resdata := map[string]interface{}{}
+		resdata := kruizePayload.UpdateResultResponse{}
 		if err := json.Unmarshal(body, &resdata); err != nil {
 			return nil, fmt.Errorf("can not unmarshal response data: %v", err)
 		}
 
 		// Comparing string should be changed once kruize fix it some standard error message
-		if strings.Contains(resdata["message"].(string), "because \"performanceProfile\" is null") {
+		if strings.Contains(resdata.Message, "because \"performanceProfile\" is null") {
 			log.Error("Performance profile does not exist")
 			log.Info("Tring to create resource_optimization_openshift performance profile")
 			utils.Setup_kruize_performance_profile()
@@ -128,12 +128,15 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 			}
 		}
 
-		if strings.Contains(resdata["message"].(string), "already contains result for timestamp") {
-			log.Debug(resdata["message"])
-		} else {
-			return nil, fmt.Errorf("%s", resdata["message"])
+		if len(resdata.Data) > 0 {
+			for _, err := range resdata.Data {
+				if err.Errors[0].Message == "An entry for this record already exists!" {
+					continue
+				} else {
+					log.Error(err.Errors[0].Message)
+				}
+			}
 		}
-
 	}
 
 	return payload_data, nil
@@ -171,4 +174,17 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 
 	return response, nil
 
+}
+
+func Is_valid_recommendation(d []kruizePayload.ListRecommendations) bool {
+	if len(d) > 0 {
+		notifications := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
+		// 112101 is notification code for "Duration Based Recommendations Available".
+		if _, ok := notifications["112101"]; ok {
+			return true
+		} else {
+			return false
+		}
+	}
+	return false
 }
