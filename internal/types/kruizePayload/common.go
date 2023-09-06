@@ -2,6 +2,7 @@ package kruizePayload
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -87,13 +88,15 @@ type recommendedValues struct {
 func convertMetricToString(data interface{}) string {
 	if metric, ok := data.(float64); ok {
 		return fmt.Sprintf("%.2f", metric)
-	} else {
-		return ""
 	}
+	if metric, ok := data.(int); ok {
+		return strconv.Itoa(metric)
+	}
+	return ""
+
 }
 
 func make_container_data(c map[string]interface{}) container {
-
 	metrics := []metric{}
 
 	// Initialising a map with name Metrics Map
