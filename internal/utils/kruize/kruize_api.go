@@ -176,14 +176,46 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 
 }
 
-func Is_valid_recommendation(d []kruizePayload.ListRecommendations) bool {
+func Is_valid_recommendation(d []kruizePayload.ListRecommendations, experiment_name string) bool {
 	if len(d) > 0 {
+
+		// To maintain a local reference the following map has been created from 
+		// https://github.com/kruize/autotune/blob/master/design/NotificationCodes.md#detailed-codes
+		notificationCodeValidities := map[string]bool{
+			"112101": true,
+			"120001": false,
+			"221001": false,
+			"221002": false,
+			"221003": false,
+			"221004": false,
+			"223001": false,
+			"223002": false,
+			"223003": false,
+			"223004": false,
+			"224001": false,
+			"224002": false,
+			"224003": false,
+			"224004": false,
+		}
+
 		notifications := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
-		// 112101 is notification code for "Duration Based Recommendations Available".
-		if _, ok := notifications["112101"]; ok {
-			return true
-		} else {
-			return false
+
+		for key := range notifications{
+			isValid, keyExists := notificationCodeValidities[key]
+			if !keyExists {
+				return false
+			} 
+
+			if !isValid {
+				// Setting the metric counter to 1 as we expect a single metric
+				// for a combination of notification_code and experiment_name
+				kruizeInvalidRecommendation.WithLabelValues(key, experiment_name).Set(1)
+				return false
+			} else {
+				return true
+			}
+			
+
 		}
 	}
 	return false

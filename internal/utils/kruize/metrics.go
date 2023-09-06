@@ -13,3 +13,14 @@ var (
 		[]string{"path"},
 	)
 )
+
+
+var (
+    kruizeInvalidRecommendation = promauto.NewGaugeVec(
+        prometheus.GaugeOpts{
+            Name: "rosocp_kruize_invalid_recommendation_detail",
+            Help: "List of INFO/ERROR type recommendations from Kruize",
+        },
+        []string{"notification_code", "experiment_name"},
+    )
+)

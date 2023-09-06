@@ -180,7 +180,7 @@ func ProcessReport(msg *kafka.Message) {
 				continue
 			}
 
-			if kruize.Is_valid_recommendation(recommendation) {
+			if kruize.Is_valid_recommendation(recommendation, experiment_name) {
 				containers := recommendation[0].Kubernetes_objects[0].Containers
 				for _, container := range containers {
 					for _, v := range container.Recommendations.Data {
