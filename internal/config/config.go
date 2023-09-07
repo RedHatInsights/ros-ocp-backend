@@ -31,8 +31,9 @@ type Config struct {
 	KafkaCA               string
 
 	// Kruize config
-	KruizeUrl      string `mapstructure:"KRUIZE_URL"`
-	KruizeWaitTime string `mapstructure:"KRUIZE_WAIT_TIME"`
+	KruizeUrl                string `mapstructure:"KRUIZE_URL"`
+	KruizeWaitTime           string `mapstructure:"KRUIZE_WAIT_TIME"`
+	KruizeMaxBulkUpdateLimit int    `mapstructure:"KRUIZE_MAX_BULK_UPDATE_LIMIT"`
 
 	// Database config
 	DBName     string
@@ -162,6 +163,7 @@ func initConfig() {
 	viper.SetDefault("SERVICE_NAME", "rosocp")
 	viper.SetDefault("API_PORT", "8000")
 	viper.SetDefault("KRUIZE_WAIT_TIME", "30")
+	viper.SetDefault("KRUIZE_MAX_BULK_UPDATE_LIMIT", 100)
 	viper.SetDefault("KAFKA_CONSUMER_GROUP_ID", "ros-ocp")
 	viper.SetDefault("KAFKA_AUTO_COMMIT", true)
 	viper.SetDefault("LOG_LEVEL", "INFO")

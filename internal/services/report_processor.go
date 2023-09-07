@@ -10,6 +10,7 @@ import (
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-playground/validator/v10"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
@@ -20,6 +21,7 @@ import (
 
 func ProcessReport(msg *kafka.Message) {
 	log := logging.GetLogger()
+	cfg := config.GetConfig()
 	validate := validator.New()
 	var kafkaMsg types.KafkaMsg
 	if !json.Valid([]byte(msg.Value)) {
@@ -117,44 +119,48 @@ func ProcessReport(msg *kafka.Message) {
 				continue
 			}
 
-			usage_data_byte, err := kruize.Update_results(experiment_name, k8s_object)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
+			k8s_object_chunks := utils.ChunkK8sobjectSlice(k8s_object, cfg.KruizeMaxBulkUpdateLimit)
 
-			for _, data := range usage_data_byte {
-
-				interval_start_time, _ := utils.ConvertStringToTime(data.Interval_start_time)
-				interval_end_time, _ := utils.ConvertStringToTime(data.Interval_end_time)
-
-				if workload_metrics, err := model.GetWorkloadMetricsForTimestamp(experiment_name, interval_end_time); err != nil {
-					log.Errorf("Error while checking for workload_metrics record: %s", err)
-					continue
-				} else if !reflect.ValueOf(workload_metrics).IsZero() {
-					log.Debugf("workload_metrics table already has data for interval_end time: %v.", interval_end_time)
+			for _, chunk := range k8s_object_chunks {
+				usage_data_byte, err := kruize.Update_results(experiment_name, chunk)
+				if err != nil {
+					log.Error(err)
 					continue
 				}
 
-				for _, container := range data.Kubernetes_objects[0].Containers {
-					container_usage_metrics, err := json.Marshal(container.Metrics)
-					if err != nil {
-						log.Errorf("Unable to marshal container usage data: %v", err)
-					}
+				for _, data := range usage_data_byte {
 
-					workload_metric := model.WorkloadMetrics{
-						WorkloadID:    workload.ID,
-						ContainerName: container.Container_name,
-						IntervalStart: interval_start_time,
-						IntervalEnd:   interval_end_time,
-						UsageMetrics:  container_usage_metrics,
-					}
-					if err := workload_metric.CreateWorkloadMetrics(); err != nil {
-						log.Errorf("unable to add record to workload_metrics table: %v. Error: %v", workload_metric, err)
+					interval_start_time, _ := utils.ConvertISO8601StringToTime(data.Interval_start_time)
+					interval_end_time, _ := utils.ConvertISO8601StringToTime(data.Interval_end_time)
+
+					if workload_metrics, err := model.GetWorkloadMetricsForTimestamp(experiment_name, interval_end_time); err != nil {
+						log.Errorf("Error while checking for workload_metrics record: %s", err)
+						continue
+					} else if !reflect.ValueOf(workload_metrics).IsZero() {
+						log.Debugf("workload_metrics table already has data for interval_end time: %v.", interval_end_time)
 						continue
 					}
-				}
 
+					for _, container := range data.Kubernetes_objects[0].Containers {
+						container_usage_metrics, err := json.Marshal(container.Metrics)
+						if err != nil {
+							log.Errorf("Unable to marshal container usage data: %v", err)
+						}
+
+						workload_metric := model.WorkloadMetrics{
+							WorkloadID:    workload.ID,
+							ContainerName: container.Container_name,
+							IntervalStart: interval_start_time,
+							IntervalEnd:   interval_end_time,
+							UsageMetrics:  container_usage_metrics,
+						}
+						if err := workload_metric.CreateWorkloadMetrics(); err != nil {
+							log.Errorf("unable to add record to workload_metrics table: %v. Error: %v", workload_metric, err)
+							continue
+						}
+					}
+
+				}
 			}
 
 			// Below we make sure that report which is been processed is the latest(interval_endtime) report.
