@@ -27,7 +27,7 @@
           {
             "name": "workload_type",
             "in": "query",
-            "description": "Workload type",
+            "description": "Options are daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset",
             "required": false,
             "schema": {
               "type": "string"
@@ -67,7 +67,8 @@
             "required": false,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "YYYY-MM-DD"
           },
           {
             "name": "end_date",
@@ -76,7 +77,8 @@
             "required": false,
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "YYYY-MM-DD"
           },
           {
             "name": "offset",
@@ -202,12 +204,12 @@
             "properties": {
               "count": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 1
               },
               "limit": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 100
+                "maximum": 10
               },
               "offset": {
                 "type": "integer",
@@ -236,24 +238,18 @@
       },
       "Notifications": {
         "type": "object",
-        "additionalProperties": {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "enum": [
-                "NOTICE",
-                "WARNING",
-                "CRITICAL"
-              ]
-            },
-            "message": {
-              "type": "string",
-              "example": "There is not enough data available to generate a recommendation."
-            },
-            "code": {
-              "type": "number"
-            }
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "INFO"
+          },
+          "code": {
+            "type": "string",
+            "example": 112101
+          },
+          "message": {
+            "type": "string",
+            "example": "Duration Based Recommendations Available"
           }
         }
       },
@@ -336,7 +332,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 1.91
+                                    "example": 2
                                   },
                                   "format": {
                                     "type": "string",
@@ -349,7 +345,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 16.391
+                                    "example": 20.391
                                   },
                                   "format": {
                                     "type": "string",
@@ -372,7 +368,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 2.11
+                                    "example": 3.11
                                   },
                                   "format": {
                                     "type": "string",
@@ -403,7 +399,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 1.92
+                                    "example": 3
                                   },
                                   "format": {
                                     "type": "string",
@@ -417,6 +413,73 @@
                                   "amount": {
                                     "type": "number",
                                     "example": 16.396
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "variation": {
+                        "type": "object",
+                        "properties": {
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 0.959
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "requests": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 3.995
                                   },
                                   "format": {
                                     "type": "string",
@@ -452,73 +515,6 @@
                         "type": "string",
                         "format": "date-time",
                         "example": "2023-04-03T15:00:00.000Z"
-                      },
-                      "variation": {
-                        "type": "object",
-                        "properties": {
-                          "limits": {
-                            "type": "object",
-                            "properties": {
-                              "cpu": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 3
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "cores"
-                                  }
-                                }
-                              },
-                              "memory": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 344
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "MiB"
-                                  }
-                                }
-                              }
-                            }
-                          },
-                          "requests": {
-                            "type": "object",
-                            "properties": {
-                              "cpu": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 4
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "cores"
-                                  }
-                                }
-                              },
-                              "memory": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 500
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "MiB"
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
                       }
                     }
                   },
@@ -549,7 +545,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 30.715
+                                    "example": 300
                                   },
                                   "format": {
                                     "type": "string",
@@ -580,11 +576,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 16.391
+                                    "example": 5
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "MiB"
+                                    "example": "GiB"
                                   }
                                 }
                               }
@@ -616,11 +612,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 31.674
+                                    "example": 500
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "GiB"
+                                    "example": "MiB"
                                   }
                                 }
                               }
@@ -634,7 +630,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 1.92
+                                    "example": 3.92
                                   },
                                   "format": {
                                     "type": "string",
@@ -647,11 +643,78 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 16.396
+                                    "example": 6
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "GiB"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "variation": {
+                        "type": "object",
+                        "properties": {
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": -1.468
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 200
                                   },
                                   "format": {
                                     "type": "string",
                                     "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "requests": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 2
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "GiB"
                                   }
                                 }
                               }
@@ -683,73 +746,6 @@
                         "type": "string",
                         "format": "date-time",
                         "example": "2023-04-11T15:00:00.000Z"
-                      },
-                      "variation": {
-                        "type": "object",
-                        "properties": {
-                          "limits": {
-                            "type": "object",
-                            "properties": {
-                              "cpu": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 2
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "cores"
-                                  }
-                                }
-                              },
-                              "memory": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 959.4
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "MiB"
-                                  }
-                                }
-                              }
-                            }
-                          },
-                          "requests": {
-                            "type": "object",
-                            "properties": {
-                              "cpu": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 5
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "cores"
-                                  }
-                                }
-                              },
-                              "memory": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 200.333
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "MiB"
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
                       }
                     }
                   },
@@ -767,7 +763,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 2.09
+                                    "example": 3.76
                                   },
                                   "format": {
                                     "type": "string",
@@ -780,11 +776,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 30.715
+                                    "example": 5
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "MiB"
+                                    "example": "GiB"
                                   }
                                 }
                               }
@@ -811,7 +807,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 16.391
+                                    "example": 400
                                   },
                                   "format": {
                                     "type": "string",
@@ -834,7 +830,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 2.11
+                                    "example": 5
                                   },
                                   "format": {
                                     "type": "string",
@@ -847,11 +843,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 31.674
+                                    "example": 6.7
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "MiB"
+                                    "example": "GiB"
                                   }
                                 }
                               }
@@ -865,7 +861,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 1.92
+                                    "example": 3
                                   },
                                   "format": {
                                     "type": "string",
@@ -878,7 +874,74 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 16.396
+                                    "example": 700
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "MiB"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "variation": {
+                        "type": "object",
+                        "properties": {
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1.24
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1.7
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "GiB"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "requests": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 1.08
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "example": "cores"
+                                  }
+                                }
+                              },
+                              "memory": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "number",
+                                    "example": 300
                                   },
                                   "format": {
                                     "type": "string",
@@ -914,73 +977,6 @@
                         "type": "string",
                         "format": "date-time",
                         "example": "2023-04-17T15:00:00.000Z"
-                      },
-                      "variation": {
-                        "type": "object",
-                        "properties": {
-                          "limits": {
-                            "type": "object",
-                            "properties": {
-                              "cpu": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 5
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "cores"
-                                  }
-                                }
-                              },
-                              "memory": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 929.111
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "MiB"
-                                  }
-                                }
-                              }
-                            }
-                          },
-                          "requests": {
-                            "type": "object",
-                            "properties": {
-                              "cpu": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 3
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "cores"
-                                  }
-                                }
-                              },
-                              "memory": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "number",
-                                    "example": 500
-                                  },
-                                  "format": {
-                                    "type": "string",
-                                    "example": "MiB"
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
                       }
                     }
                   }
