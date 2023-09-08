@@ -4,7 +4,7 @@
 # Options that must be configured by app owner
 # --------------------------------------------
 export APP_NAME="ros"  # name of app-sre "application" folder this component lives in
-export COMPONENT_NAME="ros-ocp-backend"  # name of app-sre "resourceTemplate" in deploy.yaml for this component
+export COMPONENT_NAME="kruize ros-ocp-backend"  # name of app-sre "resourceTemplate" in deploy.yaml for this component
 export COMPONENTS="kruize ros-ocp-backend"
 export IMAGE="quay.io/cloudservices/ros-ocp-backend"
 export DOCKERFILE="Dockerfile"
