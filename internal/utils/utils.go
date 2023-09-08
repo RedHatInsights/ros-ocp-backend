@@ -185,8 +185,9 @@ func Start_prometheus_server() {
 	}
 }
 
-func ChunkK8sobjectSlice(k8s_objects []map[string]interface{}, chunkSize int) [][]map[string]interface{} {
+func SliceK8sObjectToChunks(k8s_objects []map[string]interface{}) [][]map[string]interface{} {
 	var chunks [][]map[string]interface{}
+	chunkSize := cfg.KruizeMaxBulkChunkSize
 	for i := 0; i < len(k8s_objects); i += chunkSize {
 		end := i + chunkSize
 
