@@ -122,14 +122,22 @@ func ProcessReport(msg *kafka.Message) {
 			for _, chunk := range k8s_object_chunks {
 				usage_data_byte, err := kruize.Update_results(experiment_name, chunk)
 				if err != nil {
-					log.Error(err)
+					log.Error(err, experiment_name)
 					continue
 				}
 
 				for _, data := range usage_data_byte {
 
-					interval_start_time, _ := utils.ConvertISO8601StringToTime(data.Interval_start_time)
-					interval_end_time, _ := utils.ConvertISO8601StringToTime(data.Interval_end_time)
+					interval_start_time, err := utils.ConvertISO8601StringToTime(data.Interval_start_time)
+					if err != nil {
+						log.Errorf("Unable to convert start time ISO8601 string to time: %s", err)
+						continue
+					}
+					interval_end_time, err := utils.ConvertISO8601StringToTime(data.Interval_end_time)
+					if err != nil {
+						log.Errorf("Unable to convert end time ISO8601 string to time: %s", err)
+						continue
+					}
 
 					if workload_metrics, err := model.GetWorkloadMetricsForTimestamp(experiment_name, interval_end_time); err != nil {
 						log.Errorf("Error while checking for workload_metrics record: %s", err)
