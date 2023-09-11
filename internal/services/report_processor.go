@@ -130,12 +130,12 @@ func ProcessReport(msg *kafka.Message) {
 
 					interval_start_time, err := utils.ConvertISO8601StringToTime(data.Interval_start_time)
 					if err != nil {
-						log.Errorf("Unable to convert start time ISO8601 string to time: %s", err)
+						log.Errorf("Error for start time: %s", err)
 						continue
 					}
 					interval_end_time, err := utils.ConvertISO8601StringToTime(data.Interval_end_time)
 					if err != nil {
-						log.Errorf("Unable to convert end time ISO8601 string to time: %s", err)
+						log.Errorf("Error for end time: %s", err)
 						continue
 					}
 
