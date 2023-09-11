@@ -126,6 +126,14 @@ func ConvertStringToTime(data string) (time.Time, error) {
 
 }
 
+func ConvertISO8601StringToTime(data string) (time.Time, error) {
+	dateTime, err := time.Parse("2006-01-02T15:04:05.000Z", data)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("unable to convert string to time: %s", err)
+	}
+	return dateTime, nil
+}
+
 func MaxIntervalEndTime(slice []string) (time.Time, error) {
 	var converted_date_slice []time.Time
 	for _, v := range slice {
@@ -175,4 +183,20 @@ func Start_prometheus_server() {
 		http.Handle("/metrics", promhttp.Handler())
 		_ = http.ListenAndServe(fmt.Sprintf(":%s", cfg.PrometheusPort), nil)
 	}
+}
+
+func SliceK8sObjectToChunks(k8s_objects []map[string]interface{}) [][]map[string]interface{} {
+	var chunks [][]map[string]interface{}
+	chunkSize := cfg.KruizeMaxBulkChunkSize
+	for i := 0; i < len(k8s_objects); i += chunkSize {
+		end := i + chunkSize
+
+		if end > len(k8s_objects) {
+			end = len(k8s_objects)
+		}
+
+		chunks = append(chunks, k8s_objects[i:end])
+	}
+
+	return chunks
 }
