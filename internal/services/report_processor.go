@@ -10,6 +10,7 @@ import (
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-playground/validator/v10"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
@@ -20,6 +21,7 @@ import (
 
 func ProcessReport(msg *kafka.Message) {
 	log := logging.GetLogger()
+	cfg := config.GetConfig()
 	validate := validator.New()
 	var kafkaMsg types.KafkaMsg
 	if !json.Valid([]byte(msg.Value)) {
@@ -117,7 +119,12 @@ func ProcessReport(msg *kafka.Message) {
 				continue
 			}
 
-			k8s_object_chunks := utils.SliceK8sObjectToChunks(k8s_object)
+			var k8s_object_chunks [][]map[string]interface{}
+			if len(k8s_object) > cfg.KruizeMaxBulkChunkSize {
+				k8s_object_chunks = utils.SliceK8sObjectToChunks(k8s_object)
+			} else {
+				k8s_object_chunks = append(k8s_object_chunks, k8s_object)
+			}
 
 			for _, chunk := range k8s_object_chunks {
 				usage_data_byte, err := kruize.Update_results(experiment_name, chunk)
