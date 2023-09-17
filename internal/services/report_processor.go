@@ -106,13 +106,14 @@ func ProcessReport(msg *kafka.Message) {
 
 			// Create workload entry into the table.
 			workload := model.Workload{
+				OrgId:           rh_account.OrgId,
 				ClusterID:       cluster.ID,
 				ExperimentName:  experiment_name,
 				Namespace:       namespace,
 				WorkloadType:    w.WorkloadType(k8s_object_type),
 				WorkloadName:    k8s_object_name,
 				Containers:      container_names,
-				MetricsUploadAt: time.Now(),
+				MetricsUploadAt: maxEndTime,
 			}
 			if err := workload.CreateWorkload(); err != nil {
 				log.Errorf("unable to save workload record: %v. Error: %v", workload, err)
@@ -153,6 +154,7 @@ func ProcessReport(msg *kafka.Message) {
 						}
 
 						workload_metric := model.WorkloadMetrics{
+							OrgId:         rh_account.OrgId,
 							WorkloadID:    workload.ID,
 							ContainerName: container.Container_name,
 							IntervalStart: interval_start_time,
@@ -217,6 +219,7 @@ func ProcessReport(msg *kafka.Message) {
 
 						// Create entry into HistoricalRecommendationSet table.
 						historicalRecommendationSet := model.HistoricalRecommendationSet{
+							OrgId:               rh_account.OrgId,
 							WorkloadID:          workload.ID,
 							ContainerName:       container.Container_name,
 							MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,

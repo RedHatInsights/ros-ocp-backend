@@ -9,7 +9,8 @@ import (
 )
 
 type WorkloadMetrics struct {
-	ID            uint `gorm:"primaryKey;not null;autoIncrement"`
+	ID            uint   `gorm:"primaryKey;not null;autoIncrement"`
+	OrgId         string `gorm:"type:text;not null"`
 	WorkloadID    uint
 	Workload      Workload `gorm:"foreignKey:WorkloadID"`
 	ContainerName string
@@ -21,7 +22,7 @@ type WorkloadMetrics struct {
 func (w *WorkloadMetrics) CreateWorkloadMetrics() error {
 	db := database.GetDB()
 	result := db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "workload_id"}, {Name: "container_name"}, {Name: "interval_start"}, {Name: "interval_end"}},
+		Columns:   []clause.Column{{Name: "org_id"}, {Name: "workload_id"}, {Name: "container_name"}, {Name: "interval_start"}, {Name: "interval_end"}},
 		DoNothing: true,
 	}).Create(w)
 
