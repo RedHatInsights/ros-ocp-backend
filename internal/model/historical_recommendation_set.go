@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"time"
 
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
@@ -28,7 +29,11 @@ func (r *HistoricalRecommendationSet) CreateHistoricalRecommendationSet() error 
 	}).Create(r)
 
 	if result.Error != nil {
-		dbError.Inc()
+		if strings.Contains(result.Error.Error(), "no partition") {
+			partitionMissing.Inc()
+		} else {
+			dbError.Inc()
+		}
 		return result.Error
 	}
 

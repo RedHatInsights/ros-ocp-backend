@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"time"
 
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
@@ -27,7 +28,11 @@ func (w *WorkloadMetrics) CreateWorkloadMetrics() error {
 	}).Create(w)
 
 	if result.Error != nil {
-		dbError.Inc()
+		if strings.Contains(result.Error.Error(), "no partition") {
+			partitionMissing.Inc()
+		} else {
+			dbError.Inc()
+		}
 		return result.Error
 	}
 
