@@ -38,7 +38,7 @@ objects:
           - name: LOGGING_LEVEL
             value: "info"
           - name: ROOT_LOGGING_LEVEL
-            value: "info"
+            value: "error"
           - name: dbdriver
             value: "jdbc:postgresql://"
           - name: clustertype
@@ -60,15 +60,15 @@ objects:
           - name: hibernate_driver
             value: "org.postgresql.Driver"
           - name: hibernate_c3p0minsize
-            value: "2"
-          - name: hibernate_c3p0maxsize
             value: "5"
+          - name: hibernate_c3p0maxsize
+            value: "10"
           - name: hibernate_c3p0timeout
             value: "300"
           - name: hibernate_c3p0maxstatements
-            value: "50"
+            value: "100"
           - name: hibernate_hbm2ddlauto
-            value: "update"
+            value: "none"
           - name: hibernate_showsql
             value: "false"
           - name: hibernate_timezone
