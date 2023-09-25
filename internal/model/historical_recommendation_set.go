@@ -34,7 +34,7 @@ func (r *HistoricalRecommendationSet) CreateHistoricalRecommendationSet() error 
 		if strings.Contains(result.Error.Error(), "no partition") {
 			partitionMissing.With(prometheus.Labels{"resource_name": "historical_recommendation_set"}).Inc()
 			dbError.Inc()
-			return fmt.Errorf("parition not found for resource %s with org_id %s and end_time %s", "historical_recommendation_set", r.OrgId, r.MonitoringEndTime.String())
+			return fmt.Errorf("partition not found for resource %s with org_id %s and end_time %s", "historical_recommendation_set", r.OrgId, r.MonitoringEndTime.String())
 		}
 		dbError.Inc()
 		return result.Error
