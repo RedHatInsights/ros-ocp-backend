@@ -29,7 +29,7 @@ BEGIN
             || ' (''' || NEW.org_id || ''')'
             || ' PARTITION BY RANGE(interval_end)';
    END IF;
-   EXECUTE create_monthly_patitions(NEW.metrics_upload_at, org_id_partition_table_name);
+   EXECUTE create_monthly_partitions(NEW.metrics_upload_at, org_id_partition_table_name);
    return NEW;
 END;
 $BODY$
