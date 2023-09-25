@@ -1,9 +1,11 @@
 package model
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
 	"gorm.io/datatypes"
 	"gorm.io/gorm/clause"
@@ -30,10 +32,11 @@ func (r *HistoricalRecommendationSet) CreateHistoricalRecommendationSet() error 
 
 	if result.Error != nil {
 		if strings.Contains(result.Error.Error(), "no partition") {
-			partitionMissing.Inc()
-		} else {
+			partitionMissing.With(prometheus.Labels{"resource_name": "historical_recommendation_set"}).Inc()
 			dbError.Inc()
+			return fmt.Errorf("parition not found for resource_name = %s, org_id = %s, end_time = %s", "workload_metrics", r.OrgId, r.MonitoringEndTime.String())
 		}
+		dbError.Inc()
 		return result.Error
 	}
 
