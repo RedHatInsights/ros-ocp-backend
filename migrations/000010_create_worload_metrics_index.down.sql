@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_workload_metrics_workload_id_interval_end;
