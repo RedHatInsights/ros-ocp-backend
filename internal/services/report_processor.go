@@ -146,14 +146,6 @@ func ProcessReport(msg *kafka.Message) {
 						continue
 					}
 
-					if workload_metrics, err := model.GetWorkloadMetricsForTimestamp(experiment_name, interval_end_time); err != nil {
-						log.Errorf("Error while checking for workload_metrics record: %s", err)
-						continue
-					} else if !reflect.ValueOf(workload_metrics).IsZero() {
-						log.Debugf("workload_metrics table already has data for interval_end time: %v.", interval_end_time)
-						continue
-					}
-
 					for _, container := range data.Kubernetes_objects[0].Containers {
 						container_usage_metrics, err := json.Marshal(container.Metrics)
 						if err != nil {
