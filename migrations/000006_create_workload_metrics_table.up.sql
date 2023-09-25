@@ -15,6 +15,7 @@ ON DELETE CASCADE;
 ALTER TABLE workload_metrics
 ADD CONSTRAINT UQ_Workload_Metrics UNIQUE (org_id, workload_id, container_name, interval_start, interval_end);
 
+CREATE INDEX IF NOT EXISTS idx_workload_metrics_workload_id_interval_end ON workload_metrics(workload_id, interval_end);
 
 CREATE OR REPLACE FUNCTION workload_metrics_insert_trigger_func() RETURNS trigger AS
 $BODY$
