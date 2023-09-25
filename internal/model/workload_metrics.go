@@ -33,7 +33,7 @@ func (w *WorkloadMetrics) CreateWorkloadMetrics() error {
 		if strings.Contains(result.Error.Error(), "no partition") {
 			partitionMissing.With(prometheus.Labels{"resource_name": "workload_metrics"}).Inc()
 			dbError.Inc()
-			return fmt.Errorf("parition not found for resource_name = %s, org_id = %s, end_time = %s", "workload_metrics", w.OrgId, w.IntervalEnd.String())
+			return fmt.Errorf("parition not found for resource %s with org_id %s and end_time %s", "workload_metrics", w.OrgId, w.IntervalEnd.String())
 		}
 		dbError.Inc()
 		return result.Error
