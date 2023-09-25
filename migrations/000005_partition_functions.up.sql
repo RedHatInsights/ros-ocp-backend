@@ -26,7 +26,7 @@ BEGIN
     record_date := TO_CHAR(max_interval_end,'YYYY-MM-');
     IF record_day > 15 THEN
         partition_start_date = CONCAT(record_date, '16');
-        select (date_trunc('month', max_interval_end) + interval '1 month - 1 day')::date INTO partition_end_date;
+        select (date_trunc('month', max_interval_end) + interval '1 month')::date INTO partition_end_date;
         partition_table_name = replace(parent_table || '_' || partition_start_date, '-', '_');
         IF NOT EXISTS(SELECT relname FROM pg_class WHERE relname=partition_table_name) THEN
             EXECUTE create_range_patition(partition_table_name, parent_table, partition_start_date, partition_end_date);
