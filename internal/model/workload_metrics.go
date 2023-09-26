@@ -22,7 +22,7 @@ func (w *WorkloadMetrics) CreateWorkloadMetrics() error {
 	db := database.GetDB()
 	result := db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "workload_id"}, {Name: "container_name"}, {Name: "interval_start"}, {Name: "interval_end"}},
-		DoUpdates: clause.AssignmentColumns([]string{"usage_metrics"}),
+		DoNothing: true,
 	}).Create(w)
 
 	if result.Error != nil {
@@ -31,11 +31,4 @@ func (w *WorkloadMetrics) CreateWorkloadMetrics() error {
 	}
 
 	return nil
-}
-
-func GetWorkloadMetricsForTimestamp(experiment_name string, interval_end time.Time) (WorkloadMetrics, error) {
-	db := database.GetDB()
-	var workload_metrics WorkloadMetrics
-	err := db.Table("workload_metrics").Joins("JOIN workloads ON workloads.id = workload_metrics.workload_id AND workloads.experiment_name = ? AND workload_metrics.interval_end = ?", experiment_name, interval_end).Scan(&workload_metrics).Error
-	return workload_metrics, err
 }
