@@ -38,7 +38,7 @@ objects:
           - name: LOGGING_LEVEL
             value: "info"
           - name: ROOT_LOGGING_LEVEL
-            value: "info"
+            value: "error"
           - name: dbdriver
             value: "jdbc:postgresql://"
           - name: clustertype
@@ -60,24 +60,88 @@ objects:
           - name: hibernate_driver
             value: "org.postgresql.Driver"
           - name: hibernate_c3p0minsize
-            value: "2"
-          - name: hibernate_c3p0maxsize
             value: "5"
+          - name: hibernate_c3p0maxsize
+            value: "10"
           - name: hibernate_c3p0timeout
             value: "300"
           - name: hibernate_c3p0maxstatements
-            value: "50"
+            value: "100"
           - name: hibernate_hbm2ddlauto
-            value: "update"
+            value: "none"
           - name: hibernate_showsql
             value: "false"
           - name: hibernate_timezone
             value: "UTC"
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
+    jobs:
+      - name: create-kruize-partitions
+        schedule: "0 0 25 * *" # Run on 25th of every month at midnight
+        podSpec:
+          name: kruizecronjob
+          image: ${KRUIZE_IMAGE}:${KRUIZE_IMAGE_TAG}
+          imagePullPolicy: Always
+          restartPolicy: OnFailure
+          command: ["sh"]
+          args: ["-c", "export DB_CONFIG_FILE=${ACG_CONFIG} && /home/autotune/app/target/bin/CreatePartition"]
+          env:
+            - name: CLOWDER_ENABLED
+              value: ${CLOWDER_ENABLED}
+            - name: SSL_CERT_DIR
+              value: ${SSL_CERT_DIR}
+            - name: START_AUTOTUNE
+              value: "false"
+            - name: LOGGING_LEVEL
+              value: "info"
+            - name: ROOT_LOGGING_LEVEL
+              value: "error"
+            - name: dbdriver
+              value: "jdbc:postgresql://"
+            - name: clustertype
+              value: "kubernetes"
+            - name: k8stype
+              value: "openshift"
+            - name: authtype
+              value: "openshift"
+            - name: monitoringagent
+              value: "prometheus"
+            - name: monitoringservice
+              value: "prometheus-k8s"
+            - name: monitoringendpoint
+              value: "prometheus-k8s"
+            - name: savetodb
+              value: "true"
+            - name: hibernate_dialect
+              value: "org.hibernate.dialect.PostgreSQLDialect"
+            - name: hibernate_driver
+              value: "org.postgresql.Driver"
+            - name: hibernate_c3p0minsize
+              value: "5"
+            - name: hibernate_c3p0maxsize
+              value: "10"
+            - name: hibernate_c3p0timeout
+              value: "300"
+            - name: hibernate_c3p0maxstatements
+              value: "100"
+            - name: hibernate_hbm2ddlauto
+              value: "none"
+            - name: hibernate_showsql
+              value: "false"
+            - name: hibernate_timezone
+              value: "UTC"
     database:
       name: postgres
       version: 13
+
+- apiVersion: cloud.redhat.com/v1alpha1
+  kind: ClowdJobInvocation
+  metadata:
+    name: create-kruize-partitions
+  spec:
+    appName: kruize
+    jobs:
+      - create-kruize-partitions
 
 parameters:
 - description : ClowdEnvironment name
@@ -93,7 +157,7 @@ parameters:
 - description: Kruize image tag
   name: KRUIZE_IMAGE_TAG
   required: true
-  value: "d56a15f"
+  value: "b517204"
 - description: Kruize server port
   name: KRUIZE_PORT
   required: true
