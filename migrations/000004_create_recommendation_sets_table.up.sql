@@ -11,3 +11,6 @@ CREATE TABLE IF NOT EXISTS recommendation_sets(
 ALTER TABLE recommendation_sets
 ADD CONSTRAINT fk_recommendation_sets_workload FOREIGN KEY (workload_id) REFERENCES workloads (id)
 ON DELETE CASCADE;
+
+ALTER TABLE recommendation_sets
+ADD CONSTRAINT UQ_Recommendation UNIQUE (workload_id, container_name);

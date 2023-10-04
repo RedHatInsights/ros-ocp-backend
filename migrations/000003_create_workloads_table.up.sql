@@ -2,6 +2,7 @@ CREATE TYPE workloadtype AS ENUM ('deployment', 'deploymentconfig', 'replicaset'
 
 CREATE TABLE IF NOT EXISTS workloads(
    id BIGSERIAL PRIMARY KEY,
+   org_id TEXT NOT NULL,
    cluster_id BIGINT NOT NULL,
    experiment_name TEXT NOT NULL,
    namespace TEXT NOT NULL,
@@ -18,4 +19,4 @@ ON DELETE CASCADE;
 CREATE INDEX idx_workloads_containers ON workloads USING gin(containers);
 
 ALTER TABLE workloads
-ADD UNIQUE (cluster_id, experiment_name);
+ADD UNIQUE (org_id, cluster_id, experiment_name);

@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS workload_metrics;
+DROP TABLE IF EXISTS workload_metrics CASCADE;

@@ -12,7 +12,8 @@ import (
 )
 
 type Workload struct {
-	ID              uint `gorm:"primaryKey;not null;autoIncrement"`
+	ID              uint   `gorm:"primaryKey;not null;autoIncrement"`
+	OrgId           string `gorm:"type:text;not null"`
 	ClusterID       uint
 	Cluster         Cluster               `gorm:"foreignKey:ClusterID" json:"-"`
 	ExperimentName  string                `gorm:"type:text"`
@@ -32,7 +33,7 @@ func (w *Workload) AfterFind(tx *gorm.DB) error {
 func (w *Workload) CreateWorkload() error {
 	db := database.GetDB()
 	result := db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "cluster_id"}, {Name: "experiment_name"}},
+		Columns:   []clause.Column{{Name: "org_id"}, {Name: "cluster_id"}, {Name: "experiment_name"}},
 		DoUpdates: clause.AssignmentColumns([]string{"containers", "metrics_upload_at"}),
 	}).Create(w)
 
