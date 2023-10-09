@@ -36,7 +36,7 @@ objects:
           - name: AUTH_TOKEN
             value: ""
           - name: LOGGING_LEVEL
-            value: "info"
+            value: ${KRUIZE_LOGGING_LEVEL}
           - name: ROOT_LOGGING_LEVEL
             value: "error"
           - name: dbdriver
@@ -189,3 +189,5 @@ parameters:
   value: ''
 - name: SSL_CERT_DIR
   value: '/etc/ssl/certs:/etc/pki/tls/certs:/system/etc/security/cacerts:/cdapp/certs'
+- name: KRUIZE_LOGGING_LEVEL
+  value: "info"
