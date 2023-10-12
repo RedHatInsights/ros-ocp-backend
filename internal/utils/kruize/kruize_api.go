@@ -102,15 +102,16 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 
 	// Update metrics to kruize experiment
 	url := cfg.KruizeUrl + "/updateResults"
-
+	log.Debugf("\n Sending /updateResult request to kruize with payload - %s \n", string(postBody))
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues("/updateResults").Inc()
 		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
 	}
 	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	log.Debugf("\n Respose from API /updateResult - %s \n", string(body))
 	if res.StatusCode != 201 {
-		body, _ := io.ReadAll(res.Body)
 		resdata := kruizePayload.UpdateResultResponse{}
 		if err := json.Unmarshal(body, &resdata); err != nil {
 			return nil, fmt.Errorf("can not unmarshal response data: %v", err)
@@ -153,6 +154,7 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 	q.Add("experiment_name", experiment_name)
 	q.Add("interval_end_time", utils.ConvertDateToISO8601(interval_end_time.String()))
 	req.URL.RawQuery = q.Encode()
+	log.Debugf("\n Sending /updateRecommendations request to kruize - %s \n", q)
 	res, err := client.Do(req)
 	if err != nil {
 		kruizeAPIException.WithLabelValues("/updateRecommendations").Inc()
@@ -160,6 +162,7 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
+	log.Debugf("\nResponse from /updateRecommendations - %s \n", string(body))
 	if res.StatusCode == 400 {
 		data := map[string]interface{}{}
 		if err := json.Unmarshal(body, &data); err != nil {
