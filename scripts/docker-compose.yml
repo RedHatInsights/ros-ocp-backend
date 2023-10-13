@@ -54,13 +54,13 @@ services:
     depends_on:
        - kafka
   kruize-autotune:
-    image: quay.io/cloudservices/autotune:b517204
+    image: quay.io/cloudservices/autotune:870ea25
     volumes:
       - ./cdappconfig.json:/tmp/cdappconfig.json
     ports:
       - 8080:8080
     environment:
-      - LOGGING_LEVEL=info
+      - LOGGING_LEVEL=debug
       - ROOT_LOGGING_LEVEL=error
       - DB_CONFIG_FILE=/tmp/cdappconfig.json
       - dbdriver=jdbc:postgresql://
