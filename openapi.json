@@ -12,7 +12,13 @@
   "paths": {
     "/recommendations/openshift": {
       "get": {
+        "tags": [ "Optimizations" ],
         "summary": "Get all recommendations",
+        "description": "This feature is in limited preview for select customers",
+        "externalDocs": {
+          "description": "Please refer to this blog post if you want to be included in the preview",
+          "url": "https://www.redhat.com/en/blog/red-hat-insights-brings-resource-optimization-red-hat-openshift"
+        },
         "operationId": "getRecommendationList",
         "parameters": [
           {
@@ -147,6 +153,12 @@
     },
     "/recommendations/openshift/{recommendation-id}": {
       "get": {
+        "tags": [ "Optimizations" ],
+        "description": "This feature is in limited preview for select customers",
+        "externalDocs": {
+          "description": "Please refer to this blog post if you want to be included in the preview",
+          "url": "https://www.redhat.com/en/blog/red-hat-insights-brings-resource-optimization-red-hat-openshift"
+        },
         "operationId": "getRecommendationById",
         "parameters": [
           {
