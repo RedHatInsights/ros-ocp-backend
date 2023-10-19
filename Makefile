@@ -105,12 +105,6 @@ else
 	@ echo "Env not defined"
 endif
 
-local-upload-data:
-	curl -vvvv -F "upload=@$(file);type=application/application/vnd.redhat.hccm.tar+tgz" \
-		-H "x-rh-identity: ${b64_identity}" \
-		-H "x-rh-request_id: testtesttest" \
-		http://localhost:${INGRESS_PORT}/api/ingress/v1/upload
-
 upload-msg-to-rosocp:
 	echo ${ros_ocp_msg} | docker-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
 
@@ -118,9 +112,9 @@ upload-msg-to-rosocp:
 get-recommendations:
 ifdef env
 	$(eval APIPOD=$(shell oc get pods -o custom-columns=POD:.metadata.name --no-headers -n ${env} | grep ros-ocp-backend-api))
-	oc exec ${APIPOD} -c ros-ocp-backend-api -n ${env} -- /bin/bash -c 'curl -s -H "X-Rh-Identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/recommendations/openshift' | python -m json.tool
+	oc exec ${APIPOD} -c ros-ocp-backend-api -n ${env} -- /bin/bash -c 'curl -s -H "X-Rh-Identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/recommendations/openshift?start_date=2023-04-01' | python -m json.tool
 else
 	curl -s -H "x-rh-identity: ${b64_identity}" \
 		 -H "x-rh-request_id: testtesttest" \
-		 http://localhost:8000/api/cost-management/v1/recommendations/openshift | python -m json.tool
+		 http://localhost:8000/api/cost-management/v1/recommendations/openshift?start_date=2023-04-01 | python -m json.tool
 endif
