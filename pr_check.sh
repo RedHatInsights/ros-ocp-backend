@@ -24,6 +24,7 @@ source $CICD_ROOT/build.sh
 source $CICD_ROOT/deploy_ephemeral_env.sh
 
 # Run iqe-ros-ocp smoke tests with ClowdJobInvocation
+export COMPONENT_NAME="ros-ocp-backend"
 source $CICD_ROOT/cji_smoke_test.sh
 
 # This will add the Ibutsu URL and test run IDs as a git check on PRs.
