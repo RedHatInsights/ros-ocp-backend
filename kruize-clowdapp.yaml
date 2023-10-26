@@ -28,6 +28,26 @@ objects:
           limits:
             cpu: ${KRUIZE_CPU_LIMIT}
             memory: ${KRUIZE_MEMORY_LIMIT}
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: 10000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 10000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+          timeoutSeconds: 3
         env:
           - name: JAVA_TOOL_OPTIONS
             value: "-XX:MaxRAMPercentage=80"
@@ -81,10 +101,7 @@ objects:
       - name: create-kruize-partitions
         schedule: "0 0 25 * *" # Run on 25th of every month at midnight
         podSpec:
-          name: kruizecronjob
           image: ${KRUIZE_IMAGE}:${KRUIZE_IMAGE_TAG}
-          imagePullPolicy: Always
-          restartPolicy: OnFailure
           command: ["sh"]
           args: ["-c", "export DB_CONFIG_FILE=${ACG_CONFIG} && /home/autotune/app/target/bin/CreatePartition"]
           env:
