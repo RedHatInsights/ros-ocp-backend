@@ -14,14 +14,17 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
 	w "github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils/kruize"
 )
 
+var cfg *config.Config = config.GetConfig()
+
 func ProcessReport(msg *kafka.Message) {
 	log := logging.GetLogger()
-	cfg := config.GetConfig()
+	cfg = config.GetConfig()
 	validate := validator.New()
 	var kafkaMsg types.KafkaMsg
 	if !json.Valid([]byte(msg.Value)) {
@@ -120,11 +123,12 @@ func ProcessReport(msg *kafka.Message) {
 				continue
 			}
 
-			var k8s_object_chunks [][]map[string]interface{}
-			if len(k8s_object) > cfg.KruizeMaxBulkChunkSize {
-				k8s_object_chunks = utils.SliceK8sObjectToChunks(k8s_object)
+			var k8s_object_chunks [][]kruizePayload.UpdateResult
+			update_result_payload_data := kruizePayload.GetUpdateResultPayload(experiment_name, k8s_object)
+			if len(update_result_payload_data) > cfg.KruizeMaxBulkChunkSize {
+				k8s_object_chunks = sliceK8sObjectToChunks(update_result_payload_data)
 			} else {
-				k8s_object_chunks = append(k8s_object_chunks, k8s_object)
+				k8s_object_chunks = append(k8s_object_chunks, update_result_payload_data)
 			}
 
 			for _, chunk := range k8s_object_chunks {
@@ -237,4 +241,20 @@ func ProcessReport(msg *kafka.Message) {
 			}
 		}
 	}
+}
+
+func sliceK8sObjectToChunks(k8s_objects []kruizePayload.UpdateResult) [][]kruizePayload.UpdateResult {
+	var chunks [][]kruizePayload.UpdateResult
+	chunkSize := cfg.KruizeMaxBulkChunkSize
+	for i := 0; i < len(k8s_objects); i += chunkSize {
+		end := i + chunkSize
+
+		if end > len(k8s_objects) {
+			end = len(k8s_objects)
+		}
+
+		chunks = append(chunks, k8s_objects[i:end])
+	}
+
+	return chunks
 }

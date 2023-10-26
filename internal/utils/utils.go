@@ -184,19 +184,3 @@ func Start_prometheus_server() {
 		_ = http.ListenAndServe(fmt.Sprintf(":%s", cfg.PrometheusPort), nil)
 	}
 }
-
-func SliceK8sObjectToChunks(k8s_objects []map[string]interface{}) [][]map[string]interface{} {
-	var chunks [][]map[string]interface{}
-	chunkSize := cfg.KruizeMaxBulkChunkSize
-	for i := 0; i < len(k8s_objects); i += chunkSize {
-		end := i + chunkSize
-
-		if end > len(k8s_objects) {
-			end = len(k8s_objects)
-		}
-
-		chunks = append(chunks, k8s_objects[i:end])
-	}
-
-	return chunks
-}
