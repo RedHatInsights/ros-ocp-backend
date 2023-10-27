@@ -43,8 +43,6 @@ jobs:
           echo "current_tag = $current_tag"
           echo "new_tag = $new_tag"
 
-          # Added this for testing
-          new_tag=8dd52f3
           sed -i "s/$current_tag/$new_tag/g" ./kruize-clowdapp.yaml
           cat ./kruize-clowdapp.yaml
 
