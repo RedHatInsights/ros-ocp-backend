@@ -126,7 +126,7 @@ func ProcessReport(msg *kafka.Message) {
 			var k8s_object_chunks [][]kruizePayload.UpdateResult
 			update_result_payload_data := kruizePayload.GetUpdateResultPayload(experiment_name, k8s_object)
 			if len(update_result_payload_data) > cfg.KruizeMaxBulkChunkSize {
-				k8s_object_chunks = sliceK8sObjectToChunks(update_result_payload_data)
+				k8s_object_chunks = sliceUpdatePayloadToChunks(update_result_payload_data)
 			} else {
 				k8s_object_chunks = append(k8s_object_chunks, update_result_payload_data)
 			}
@@ -243,7 +243,7 @@ func ProcessReport(msg *kafka.Message) {
 	}
 }
 
-func sliceK8sObjectToChunks(k8s_objects []kruizePayload.UpdateResult) [][]kruizePayload.UpdateResult {
+func sliceUpdatePayloadToChunks(k8s_objects []kruizePayload.UpdateResult) [][]kruizePayload.UpdateResult {
 	var chunks [][]kruizePayload.UpdateResult
 	chunkSize := cfg.KruizeMaxBulkChunkSize
 	for i := 0; i < len(k8s_objects); i += chunkSize {
