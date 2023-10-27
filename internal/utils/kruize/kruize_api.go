@@ -93,8 +93,7 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 	return container_names, nil
 }
 
-func Update_results(experiment_name string, k8s_object []map[string]interface{}) ([]kruizePayload.UpdateResult, error) {
-	payload_data := kruizePayload.GetUpdateResultPayload(experiment_name, k8s_object)
+func Update_results(experiment_name string, payload_data []kruizePayload.UpdateResult) ([]kruizePayload.UpdateResult, error) {
 	postBody, err := json.Marshal(payload_data)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create payload: %v", err)
@@ -122,7 +121,7 @@ func Update_results(experiment_name string, k8s_object []map[string]interface{})
 			log.Error("Performance profile does not exist")
 			log.Info("Tring to create resource_optimization_openshift performance profile")
 			utils.Setup_kruize_performance_profile()
-			if payload_data, err := Update_results(experiment_name, k8s_object); err != nil {
+			if payload_data, err := Update_results(experiment_name, payload_data); err != nil {
 				return nil, err
 			} else {
 				return payload_data, nil
