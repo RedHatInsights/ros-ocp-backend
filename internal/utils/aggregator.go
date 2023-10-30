@@ -5,12 +5,13 @@ import (
 
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-gota/gota/series"
-	"github.com/sirupsen/logrus"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	w "github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
 )
 
-func Aggregate_data(df dataframe.DataFrame, log *logrus.Entry) dataframe.DataFrame {
+func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
+	log = logging.GetLogger()
 	df = df.FilterAggregation(
 		dataframe.And,
 		dataframe.F{Colname: "owner_kind", Comparator: series.Neq, Comparando: ""},

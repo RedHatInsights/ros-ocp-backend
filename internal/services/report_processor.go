@@ -73,7 +73,7 @@ func ProcessReport(msg *kafka.Message) {
 			return
 		}
 		df := dataframe.LoadRecords(data)
-		df = utils.Aggregate_data(df, log)
+		df = utils.Aggregate_data(df)
 
 		// grouping container(row in csv) by there deployement.
 		k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name").GetGroups()
