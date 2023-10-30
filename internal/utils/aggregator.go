@@ -5,11 +5,12 @@ import (
 
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-gota/gota/series"
+	"github.com/sirupsen/logrus"
 
 	w "github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
 )
 
-func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
+func Aggregate_data(df dataframe.DataFrame, log *logrus.Entry) dataframe.DataFrame {
 	df = df.FilterAggregation(
 		dataframe.And,
 		dataframe.F{Colname: "owner_kind", Comparator: series.Neq, Comparando: ""},
@@ -40,6 +41,33 @@ func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
 
 	df = df.Mutate(s.Col("X0")).Rename("k8s_object_type", "X0")
 	df = df.Mutate(s.Col("X1")).Rename("k8s_object_name", "X1")
+
+	// filter out only valid workload type
+	df = df.Filter(
+		dataframe.F{
+			Colname:    "k8s_object_type",
+			Comparator: series.In,
+			Comparando: []string{
+				w.Daemonset.String(),
+				w.Deployment.String(),
+				w.Deploymentconfig.String(),
+				w.Replicaset.String(),
+				w.Replicationcontroller.String(),
+				w.Statefulset.String(),
+			}},
+	)
+
+	// Validation to check if metrics for cpuUsage, memoryUsage and memoryRSS are missing
+	df, no_of_dropped_records := filter_valid_csv_records(df)
+	if no_of_dropped_records != 0 {
+		invalidDataPoints.Add(float64(no_of_dropped_records))
+		log.Infof("Invalid records in CSV - %v", no_of_dropped_records)
+	}
+
+	if df.Nrow() == 0 {
+		return df
+	}
+
 	dfGroups := df.GroupBy(
 		"namespace",
 		"k8s_object_type",
@@ -86,4 +114,26 @@ func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
 
 	df = dfGroups.Aggregation(columnsAggregationType, columnsToAggregate)
 	return df
+}
+
+func filter_valid_csv_records(main_df dataframe.DataFrame) (dataframe.DataFrame, int) {
+	df := main_df.FilterAggregation(
+		dataframe.And,
+		dataframe.F{Colname: "memory_rss_usage_container_sum", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "memory_rss_usage_container_max", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "memory_rss_usage_container_min", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "memory_rss_usage_container_avg", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "memory_usage_container_sum", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "memory_usage_container_max", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "memory_usage_container_min", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "memory_usage_container_avg", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "cpu_usage_container_sum", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "cpu_usage_container_max", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "cpu_usage_container_min", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "cpu_usage_container_avg", Comparator: series.GreaterEq, Comparando: 0},
+	)
+
+	no_of_dropped_records := main_df.Nrow() - df.Nrow()
+
+	return df, no_of_dropped_records
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/go-gota/gota/dataframe"
 	"github.com/spf13/cobra"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
 
@@ -46,7 +47,7 @@ var (
 			}
 
 			df := dataframe.LoadRecords(records)
-			df = utils.Aggregate_data(df)
+			df = utils.Aggregate_data(df, logging.GetLogger())
 			fileio, err := os.Create(outputFile)
 			if err != nil {
 				panic(err.Error())
