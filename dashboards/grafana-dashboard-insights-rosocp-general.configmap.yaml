@@ -343,7 +343,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Invalid recommendation send by Kruize",
+          "title": "Invalid recommendations from Kruize",
           "type": "stat"
         },
         {
@@ -525,7 +525,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "RH account created",
+          "title": "RH accounts created",
           "type": "stat"
         },
         {
@@ -605,7 +605,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Number of DB error",
+          "title": "ROS DB Error Count",
           "type": "stat"
         },
         {
