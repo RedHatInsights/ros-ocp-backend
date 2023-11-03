@@ -33,7 +33,7 @@ func (p WorkloadType) String() string {
 	case Replicationcontroller:
 		return "replicationcontroller"
 	case Statefulset:
-		return "statefulsets"
+		return "statefulset"
 	case Daemonset:
 		return "daemonset"
 	}

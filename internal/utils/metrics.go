@@ -8,6 +8,6 @@ import (
 var (
 	invalidDataPoints = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "rosocp_invalid_datapoints_total",
-		Help: "The total number of invalid datapoints(rows) found in CSVs recevied",
+		Help: "The total number of invalid datapoints(rows) found in received CSVs",
 	})
 )
