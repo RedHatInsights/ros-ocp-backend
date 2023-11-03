@@ -24,6 +24,10 @@ func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
 	index_of_workload := findInStringSlice("workload", columns)
 	index_of_workload_type := findInStringSlice("workload_type", columns)
 
+	if df.Nrow() == 0 {
+		return df
+	}
+
 	s := df.Rapply(func(s series.Series) series.Series {
 		owner_name := s.Elem(index_of_owner_name).String()
 		owner_kind := s.Elem(index_of_owner_kind).String()
