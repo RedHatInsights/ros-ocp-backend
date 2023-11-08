@@ -231,7 +231,8 @@ func ProcessReport(msg *kafka.Message) {
 							Recommendations:     marshalData,
 						}
 						if err := historicalRecommendationSet.CreateHistoricalRecommendationSet(); err != nil {
-							log.Errorf("unable to get or add record to historical recommendation set table: %v. Error: %v", recommendationSet, err)
+							recommendationJson, _ := json.Marshal(recommendation)
+							log.Errorf("unable to get or add record to historical recommendation set table: %s. Error: %v", string(recommendationJson), err)
 							return
 						}
 					}
