@@ -145,6 +145,20 @@ objects:
             value: "rosocp-housekeeper"
           - name: LOG_LEVEL
             value: ${LOG_LEVEL}
+    jobs:
+      - name: update-recommendations
+        podSpec:
+        image: ${IMAGE}:${IMAGE_TAG}
+        command: ["sh"]
+        args: ["-c", "./rosocp db migrate up && ./rosocp start update-recommendations"]
+        resources:
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+        restartPolicy: Never
     database:
       name: rosocp
       version: 13

@@ -10,6 +10,8 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/kafka"
 	"github.com/redhatinsights/ros-ocp-backend/internal/services"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
+	"github.com/redhatinsights/ros-ocp-backend/internal/jobs"
+
 )
 
 var startCmd = &cobra.Command{Use: "start", Short: "Use to start ros-ocp-backend services"}
@@ -44,9 +46,20 @@ var houseKeeperCmd = &cobra.Command{
 	},
 }
 
+// One time job
+var updateRecommendationsCmd = &cobra.Command{
+	Use:   "update-recommendations",
+	Short: "updates missing recommendations",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("updating missing recommendations using Kruize v20")
+		jobs.UpdateRecommendations()
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(startCmd)
 	startCmd.AddCommand(processorCmd)
 	startCmd.AddCommand(apiCmd)
 	startCmd.AddCommand(houseKeeperCmd)
+	startCmd.AddCommand(updateRecommendationsCmd)
 }
