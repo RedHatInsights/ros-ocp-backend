@@ -62,7 +62,7 @@ func GetLogger() *logrus.Entry {
 }
 
 func Set_request_details(data types.KafkaMsg) *logrus.Entry {
-	return log.WithFields(logrus.Fields{
+	log = log.WithFields(logrus.Fields{
 		"request_id":    data.Request_id,
 		"account":       data.Metadata.Account,
 		"org_id":        data.Metadata.Org_id,
@@ -70,4 +70,5 @@ func Set_request_details(data types.KafkaMsg) *logrus.Entry {
 		"cluster_uuid":  data.Metadata.Cluster_uuid,
 		"cluster_alias": data.Metadata.Cluster_alias,
 	})
+	return log
 }
