@@ -1,4 +1,4 @@
-name: Test ROS OCP with latest Kruize remote monitoring
+name: EE Dry Run - Latest Kruize image
 
 on:
   schedule:
@@ -71,5 +71,5 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ steps.generate-token.outputs.token }}
-          title: '[Do not merge] - PR to trigger tests on EE against ROS OCP with latest Kruize RM image'
+          title: '[Do not merge] - EE Dry Run with latest Kruize RM image'
           base: main

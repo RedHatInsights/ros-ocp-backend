@@ -1,4 +1,4 @@
-name: github action pr check
+name: CI/CD Sanity Checks
 
 on:
   push:
