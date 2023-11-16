@@ -216,7 +216,7 @@ func ProcessReport(msg *kafka.Message) {
 						}
 						if err := recommendationSet.CreateRecommendationSet(); err != nil {
 							log.Errorf("Unable to save a record into recommendation set: %v. Error: %v", recommendationSet, err)
-							return
+							continue
 						} else {
 							log.Infof("Recommendation saved for experiment - %s and end_interval - %s", experiment_name, recommendationSet.MonitoringEndTime)
 						}
@@ -233,7 +233,7 @@ func ProcessReport(msg *kafka.Message) {
 						if err := historicalRecommendationSet.CreateHistoricalRecommendationSet(); err != nil {
 							recommendationJson, _ := json.Marshal(recommendation)
 							log.Errorf("unable to get or add record to historical recommendation set table: %s. Error: %v", string(recommendationJson), err)
-							return
+							continue
 						}
 					}
 				}
