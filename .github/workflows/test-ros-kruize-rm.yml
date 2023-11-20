@@ -73,3 +73,13 @@ jobs:
           token: ${{ steps.generate-token.outputs.token }}
           title: '[Do not merge] - EE Dry Run with latest Kruize RM image'
           base: main
+
+      - name: Display Pull Request Number
+        run: |
+          echo "Pull Request Number:${{ env.PULL_REQUEST_NUMBER }}"
+
+      - name: Comment on PR
+        run: |
+          gh pr comment ${{ env.PULL_REQUEST_NUMBER }} --body "/retest"
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
