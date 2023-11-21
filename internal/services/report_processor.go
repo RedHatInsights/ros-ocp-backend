@@ -100,7 +100,8 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 				k8s_object_name,
 			)
 
-			container_names, err := kruize.Create_kruize_experiments(experiment_name, k8s_object)
+			cluster_identifier := kafkaMsg.Metadata.Org_id + ";" + kafkaMsg.Metadata.Cluster_uuid
+			container_names, err := kruize.Create_kruize_experiments(experiment_name, cluster_identifier, k8s_object)
 			if err != nil {
 				log.Error(err)
 				continue

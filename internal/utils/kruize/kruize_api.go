@@ -20,7 +20,7 @@ var log *logrus.Entry = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
 var experimentCreateAttempt bool = true
 
-func Create_kruize_experiments(experiment_name string, k8s_object []map[string]interface{}) ([]string, error) {
+func Create_kruize_experiments(experiment_name string, cluster_identifier string, k8s_object []map[string]interface{}) ([]string, error) {
 	// k8s_object (can) contain multiple containers of same k8s object type.
 	data := map[string]string{
 		"namespace":       kruizePayload.AssertAndConvertToString(k8s_object[0]["namespace"]),
@@ -39,7 +39,7 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 			})
 		}
 	}
-	payload, err := kruizePayload.GetCreateExperimentPayload(experiment_name, containers, data)
+	payload, err := kruizePayload.GetCreateExperimentPayload(experiment_name, cluster_identifier, containers, data)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create payload: %v", err)
 	}
@@ -69,7 +69,7 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 			log.Info("Tring to create resource_optimization_openshift performance profile")
 			utils.Setup_kruize_performance_profile()
 			experimentCreateAttempt = false // Attempting only once
-			container_names, err := Create_kruize_experiments(experiment_name, k8s_object)
+			container_names, err := Create_kruize_experiments(experiment_name, cluster_identifier, k8s_object)
 			experimentCreateAttempt = true
 			if err != nil {
 				return nil, err
@@ -178,14 +178,74 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 
 }
 
-func Is_valid_recommendation(d []kruizePayload.ListRecommendations) bool {
+func Is_valid_recommendation(d []kruizePayload.ListRecommendations, experiment_name string, maxEndTime time.Time) bool {
 	if len(d) > 0 {
-		notifications := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
-		// 112101 is notification code for "Duration Based Recommendations Available".
-		if _, ok := notifications["112101"]; ok {
+
+		// Convert the time object to the expected format
+		formattedMaxEndTime := maxEndTime.UTC().Format("2006-01-02T15:04:05.000Z")
+
+		// Allowed object of notifications
+		// https://github.com/kruize/autotune/blob/master/design/NotificationCodes.md#detailed-codes
+		notificationCodes := map[string]string{
+			"111000": "INFO",
+			"120001": "INFO",
+			"111101": "INFO",
+			"111102": "INFO",
+			"111103": "INFO",
+			"112101": "INFO",
+			"112102": "INFO",
+			"221001": "ERROR",
+			"221002": "ERROR",
+			"221003": "ERROR",
+			"221004": "ERROR",
+			"223001": "ERROR",
+			"223002": "ERROR",
+			"223003": "ERROR",
+			"223004": "ERROR",
+			"224001": "ERROR",
+			"224002": "ERROR",
+			"224003": "ERROR",
+			"224004": "ERROR",
+		}
+
+		// Recommendation level
+		notificationsTopLevel := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
+
+		// At the top level 111000 and 120001 are considered valid notifications
+		for key := range notificationsTopLevel {
+			_, notificationExists := notificationCodes[key]
+			dataExists := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data
+			if (key != "120001" && len(dataExists) == 0) || !notificationExists{
+				// Setting the metric counter to 1
+				// Expecting a single metric for a combination of notification_code, experiment_name
+				kruizeInvalidRecommendationDetail.WithLabelValues(key, experiment_name).Set(1)
+				return false
+			}
+
+			// Timestamp level
+			notificationsLevelTwo := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data[formattedMaxEndTime].Notifications
+			// Term Level
+			notificationsLevelThreeShortTerm := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data[formattedMaxEndTime].RecommendationTerms.Short_term.Notifications
+			notificationsLevelThreeMediumTerm := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data[formattedMaxEndTime].RecommendationTerms.Medium_term.Notifications
+			notificationsLevelThreeLongTerm := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data[formattedMaxEndTime].RecommendationTerms.Long_term.Notifications
+
+			notificationSections := []map[string]kruizePayload.Notification{
+				notificationsLevelTwo,
+				notificationsLevelThreeShortTerm,
+				notificationsLevelThreeMediumTerm,
+				notificationsLevelThreeLongTerm,
+			}
+
+			for _, notificationBody := range notificationSections {
+				for key := range notificationBody {
+					_, keyExists := notificationCodes[key]
+					if !keyExists {
+						kruizeInvalidRecommendationDetail.WithLabelValues(key, experiment_name).Set(1)
+					}
+
+				}
+			}
 			return true
-		} else {
-			return false
 		}
 	}
 	return false

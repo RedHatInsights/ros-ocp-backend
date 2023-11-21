@@ -54,7 +54,11 @@ services:
     depends_on:
        - kafka
   kruize-autotune:
+<<<<<<< HEAD
     image: quay.io/cloudservices/autotune:6c23945
+=======
+    image: quay.io/cloudservices/autotune:c84bd63
+>>>>>>> 752adf2 (RHIROS-1326 Kruize 0.0.20.1_rm Integration)
     volumes:
       - ./cdappconfig.json:/tmp/cdappconfig.json:Z
     ports:

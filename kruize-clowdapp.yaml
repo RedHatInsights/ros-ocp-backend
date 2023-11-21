@@ -159,7 +159,11 @@ parameters:
 - description: Kruize image tag
   name: KRUIZE_IMAGE_TAG
   required: true
+<<<<<<< HEAD
   value: "6c23945"
+=======
+  value: "c84bd63"
+>>>>>>> 752adf2 (RHIROS-1326 Kruize 0.0.20.1_rm Integration)
 - description: Kruize server port
   name: KRUIZE_PORT
   required: true
