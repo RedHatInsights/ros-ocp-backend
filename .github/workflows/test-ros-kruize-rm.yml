@@ -82,4 +82,4 @@ jobs:
         run: |
           gh pr comment ${{ env.PULL_REQUEST_NUMBER }} --body "/retest"
         env:
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
