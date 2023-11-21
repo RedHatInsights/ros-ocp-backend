@@ -196,6 +196,12 @@
           }
         }
       }
+    },
+    "/status/": {
+      "$ref": "https://raw.githubusercontent.com/project-koku/koku/main/docs/specs/openapi.json#/paths/~1status~1"
+    },
+    "/forecasts/aws/costs/": {
+      "$ref": "https://raw.githubusercontent.com/project-koku/koku/main/docs/specs/openapi.json#/paths/~1forecasts~1aws~1costs~1"
     }
   },
   "components": {
