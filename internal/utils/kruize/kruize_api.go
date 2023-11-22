@@ -181,10 +181,12 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 func Is_valid_recommendation(d []kruizePayload.ListRecommendations, experiment_name string, maxEndTime time.Time) bool {
 	if len(d) > 0 {
 
+
 		// Convert the time object to the expected format
 		formattedMaxEndTime := maxEndTime.UTC().Format("2006-01-02T15:04:05.000Z")
+		_, timeStampisValid := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data[formattedMaxEndTime]
 
-		// Allowed object of notifications
+		// Allowed object of notifications; "111000" means valid and actionable recommendation
 		// https://github.com/kruize/autotune/blob/master/design/NotificationCodes.md#detailed-codes
 		notificationCodes := map[string]string{
 			"111000": "INFO",
@@ -211,11 +213,16 @@ func Is_valid_recommendation(d []kruizePayload.ListRecommendations, experiment_n
 		// Recommendation level
 		notificationsTopLevel := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
 
-		// At the top level 111000 and 120001 are considered valid notifications
 		for key := range notificationsTopLevel {
-			_, notificationExists := notificationCodes[key]
+
+			if (key == "111000" && !timeStampisValid) {
+				log.Error("recommendation endtime does not match with requested endtime:", formattedMaxEndTime)
+				return false
+			}
+
 			dataExists := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data
-			if (key != "120001" && len(dataExists) == 0) || !notificationExists{
+			if (key == "111000" && len(dataExists) == 0) {
+				log.Error("recommendation does not contain data for endtime:", formattedMaxEndTime)
 				// Setting the metric counter to 1
 				// Expecting a single metric for a combination of notification_code, experiment_name
 				kruizeInvalidRecommendationDetail.WithLabelValues(key, experiment_name).Set(1)
