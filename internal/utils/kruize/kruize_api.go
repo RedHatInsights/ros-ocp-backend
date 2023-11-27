@@ -23,7 +23,7 @@ var experimentCreateAttempt bool = true
 func Create_kruize_experiments(experiment_name string, k8s_object []map[string]interface{}) ([]string, error) {
 	// k8s_object (can) contain multiple containers of same k8s object type.
 	data := map[string]string{
-		"namespace":       k8s_object[0]["namespace"].(string),
+		"namespace":       kruizePayload.AssertAndConvertToString(k8s_object[0]["namespace"]),
 		"k8s_object_type": k8s_object[0]["k8s_object_type"].(string),
 		"k8s_object_name": k8s_object[0]["k8s_object_name"].(string),
 	}

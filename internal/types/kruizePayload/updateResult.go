@@ -40,7 +40,7 @@ func GetUpdateResultPayload(experiment_name string, containers []map[string]inte
 	for _, v := range df.GroupBy("interval_end").GetGroups() {
 		k8s_object := v.Maps()
 		data := map[string]string{
-			"namespace":       k8s_object[0]["namespace"].(string),
+			"namespace":       AssertAndConvertToString(k8s_object[0]["namespace"]),
 			"k8s_object_type": k8s_object[0]["k8s_object_type"].(string),
 			"k8s_object_name": k8s_object[0]["k8s_object_name"].(string),
 			"interval_start":  utils.ConvertDateToISO8601(k8s_object[0]["interval_start"].(string)),
