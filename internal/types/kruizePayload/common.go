@@ -85,12 +85,15 @@ type recommendedValues struct {
 	Format string  `json:"format,omitempty"`
 }
 
-func convertMetricToString(data interface{}) string {
+func AssertAndConvertToString(data interface{}) string {
 	if metric, ok := data.(float64); ok {
 		return fmt.Sprintf("%.2f", metric)
 	}
 	if metric, ok := data.(int); ok {
 		return strconv.Itoa(metric)
+	}
+	if metric, ok := data.(string); ok {
+		return metric
 	}
 	return ""
 
@@ -176,7 +179,7 @@ func make_container_data(c map[string]interface{}) container {
 		// Check if "sum" key exists in map
 		if sum_field, ok := metricFields["sum"]; ok {
 			// Assign the sum value returned
-			sum = convertMetricToString(c[sum_field])
+			sum = AssertAndConvertToString(c[sum_field])
 		} else {
 			// Set "sum" to empty string (to get it skipped in json)
 			sum = ""
@@ -185,7 +188,7 @@ func make_container_data(c map[string]interface{}) container {
 		// Check if "avg" key exists in map
 		if avg_field, ok := metricFields["avg"]; ok {
 			// Assign the avg value returned
-			avg = convertMetricToString(c[avg_field])
+			avg = AssertAndConvertToString(c[avg_field])
 		} else {
 			// Set "avg" to empty string (to get it skipped in json)
 			avg = ""
@@ -194,7 +197,7 @@ func make_container_data(c map[string]interface{}) container {
 		// Check if "min" key exists in map
 		if min_field, ok := metricFields["min"]; ok {
 			// Assign the min value returned
-			min = convertMetricToString(c[min_field])
+			min = AssertAndConvertToString(c[min_field])
 		} else {
 			// Set "min" to empty string (to get it skipped in json)
 			min = ""
@@ -203,7 +206,7 @@ func make_container_data(c map[string]interface{}) container {
 		// Check if "max" key exists in map
 		if max_field, ok := metricFields["max"]; ok {
 			// Assign the max value returned
-			max = convertMetricToString(c[max_field])
+			max = AssertAndConvertToString(c[max_field])
 		} else {
 			// Set "max" to empty string (to get it skipped in json)
 			max = ""

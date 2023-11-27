@@ -88,7 +88,7 @@ func ProcessReport(msg *kafka.Message) {
 			}
 
 			k8s_object := v.Maps()
-			namespace := k8s_object[0]["namespace"].(string)
+			namespace := kruizePayload.AssertAndConvertToString(k8s_object[0]["namespace"])
 			k8s_object_type := k8s_object[0]["k8s_object_type"].(string)
 			k8s_object_name := k8s_object[0]["k8s_object_name"].(string)
 
