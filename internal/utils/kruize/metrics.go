@@ -12,15 +12,15 @@ var (
 	},
 		[]string{"path"},
 	)
-)
-
-
-var (
-    kruizeInvalidRecommendationDetail = promauto.NewGaugeVec(
-        prometheus.GaugeOpts{
-            Name: "rosocp_kruize_invalid_recommendation_detail",
-            Help: "List of INFO/ERROR type recommendations from Kruize",
-        },
-        []string{"notification_code", "experiment_name"},
-    )
+	invalidRecommendation = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rosocp_invalid_recommendation_total",
+		Help: "The total number of invalid recommendation send by Kruize",
+	})
+	kruizeRecommendationError = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "rosocp_kruize_error_recommendations_count",
+			Help: "Count of ERROR type recommendations from Kruize",
+		},
+		[]string{"notification_code"},
+	)
 )

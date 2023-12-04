@@ -178,82 +178,96 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 
 }
 
-func Is_valid_recommendation(d []kruizePayload.ListRecommendations, experiment_name string, maxEndTime time.Time) bool {
-	if len(d) > 0 {
+func Is_valid_recommendation(recommendation kruizePayload.Recommendation, experiment_name string, maxEndTime time.Time) bool {
 
-
+	validRecommendationCode := "111000"
+	_, recommendationIsValid := recommendation.Notifications[validRecommendationCode]
+	if recommendationIsValid {
 		// Convert the time object to the expected format
 		formattedMaxEndTime := maxEndTime.UTC().Format("2006-01-02T15:04:05.000Z")
-		_, timeStampisValid := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data[formattedMaxEndTime]
+		recommendationData, timeStampisValid := recommendation.Data[formattedMaxEndTime]
+		if !timeStampisValid {
+			log.Error("recommendation not found for endtime: ", formattedMaxEndTime)
+			invalidRecommendation.Inc()
+			return false
+		}
+		LogKruizeErrors(recommendationData, formattedMaxEndTime, experiment_name)
+		return true
+	} else {
+		return false
+	}
+}
 
-		// Allowed object of notifications; "111000" means valid and actionable recommendation
-		// https://github.com/kruize/autotune/blob/master/design/NotificationCodes.md#detailed-codes
-		notificationCodes := map[string]string{
-			"111000": "INFO",
-			"120001": "INFO",
-			"111101": "INFO",
-			"111102": "INFO",
-			"111103": "INFO",
-			"112101": "INFO",
-			"112102": "INFO",
-			"221001": "ERROR",
-			"221002": "ERROR",
-			"221003": "ERROR",
-			"221004": "ERROR",
-			"223001": "ERROR",
-			"223002": "ERROR",
-			"223003": "ERROR",
-			"223004": "ERROR",
-			"224001": "ERROR",
-			"224002": "ERROR",
-			"224003": "ERROR",
-			"224004": "ERROR",
+func LogKruizeErrors(recommendationData kruizePayload.RecommendationData, formattedMaxEndTime string, experiment_name string) {
+
+	// https://github.com/kruize/autotune/blob/master/design/NotificationCodes.md#detailed-codes
+	errorNotificationCodes := map[string]string{
+		"221001": "ERROR",
+		"221002": "ERROR",
+		"221003": "ERROR",
+		"221004": "ERROR",
+		"223001": "ERROR",
+		"223002": "ERROR",
+		"223003": "ERROR",
+		"223004": "ERROR",
+		"224001": "ERROR",
+		"224002": "ERROR",
+		"224003": "ERROR",
+		"224004": "ERROR",
+	}
+	notificationSections := []map[string]kruizePayload.Notification{}
+
+	// Timestamp level
+	notificationsLevelTwo := recommendationData.Notifications
+	if notificationsLevelTwo != nil {
+		notificationSections = append(notificationSections, notificationsLevelTwo)
+		// Term Level
+		notificationsLevelThreeShortTerm := recommendationData.RecommendationTerms.Short_term.Notifications
+		if notificationsLevelThreeShortTerm != nil {
+			notificationSections = append(notificationSections, notificationsLevelThreeShortTerm)
+			// Engine Level
+			if recommendationData.RecommendationTerms.Short_term.RecommendationEngines != nil {
+				shortTermCostNotification := recommendationData.RecommendationTerms.Short_term.RecommendationEngines.Cost.Notifications
+				notificationSections = append(notificationSections, shortTermCostNotification)
+
+				shortTermPerformanceNotification := recommendationData.RecommendationTerms.Short_term.RecommendationEngines.Performance.Notifications
+				notificationSections = append(notificationSections, shortTermPerformanceNotification)
+			}
+		}
+		notificationsLevelThreeMediumTerm := recommendationData.RecommendationTerms.Medium_term.Notifications
+		if notificationsLevelThreeMediumTerm != nil {
+			notificationSections = append(notificationSections, notificationsLevelThreeMediumTerm)
+			if recommendationData.RecommendationTerms.Medium_term.RecommendationEngines != nil {
+				mediumTermCostNotification := recommendationData.RecommendationTerms.Medium_term.RecommendationEngines.Cost.Notifications
+				notificationSections = append(notificationSections, mediumTermCostNotification)
+
+				mediumTermPerformanceNotification := recommendationData.RecommendationTerms.Medium_term.RecommendationEngines.Performance.Notifications
+				notificationSections = append(notificationSections, mediumTermPerformanceNotification)
+			}
+		}
+		notificationsLevelThreeLongTerm := recommendationData.RecommendationTerms.Long_term.Notifications
+		if notificationsLevelThreeLongTerm != nil {
+			notificationSections = append(notificationSections, notificationsLevelThreeLongTerm)
+			if recommendationData.RecommendationTerms.Long_term.RecommendationEngines != nil {
+				longTermCostNotification := recommendationData.RecommendationTerms.Long_term.RecommendationEngines.Cost.Notifications
+				notificationSections = append(notificationSections, longTermCostNotification)
+
+				longTermPerformanceNotification := recommendationData.RecommendationTerms.Long_term.RecommendationEngines.Performance.Notifications
+				notificationSections = append(notificationSections, longTermPerformanceNotification)
+			}
 		}
 
-		// Recommendation level
-		notificationsTopLevel := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
+	}
 
-		for key := range notificationsTopLevel {
-
-			if (key == "111000" && !timeStampisValid) {
-				log.Error("recommendation endtime does not match with requested endtime:", formattedMaxEndTime)
-				return false
+	for _, notificationBody := range notificationSections {
+		for key := range notificationBody {
+			_, keyExists := errorNotificationCodes[key]
+			if keyExists {
+				log.Error("kruize recommendation error; experiment_name: ", experiment_name, ", notification_code: ", key)
+				kruizeRecommendationError.WithLabelValues(key).Inc()
 			}
 
-			dataExists := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data
-			if (key == "111000" && len(dataExists) == 0) {
-				log.Error("recommendation does not contain data for endtime:", formattedMaxEndTime)
-				// Setting the metric counter to 1
-				// Expecting a single metric for a combination of notification_code, experiment_name
-				kruizeInvalidRecommendationDetail.WithLabelValues(key, experiment_name).Set(1)
-				return false
-			}
-
-			// Timestamp level
-			notificationsLevelTwo := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data[formattedMaxEndTime].Notifications
-			// Term Level
-			notificationsLevelThreeShortTerm := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data[formattedMaxEndTime].RecommendationTerms.Short_term.Notifications
-			notificationsLevelThreeMediumTerm := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data[formattedMaxEndTime].RecommendationTerms.Medium_term.Notifications
-			notificationsLevelThreeLongTerm := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Data[formattedMaxEndTime].RecommendationTerms.Long_term.Notifications
-
-			notificationSections := []map[string]kruizePayload.Notification{
-				notificationsLevelTwo,
-				notificationsLevelThreeShortTerm,
-				notificationsLevelThreeMediumTerm,
-				notificationsLevelThreeLongTerm,
-			}
-
-			for _, notificationBody := range notificationSections {
-				for key := range notificationBody {
-					_, keyExists := notificationCodes[key]
-					if !keyExists {
-						kruizeInvalidRecommendationDetail.WithLabelValues(key, experiment_name).Set(1)
-					}
-
-				}
-			}
-			return true
 		}
 	}
-	return false
+
 }
