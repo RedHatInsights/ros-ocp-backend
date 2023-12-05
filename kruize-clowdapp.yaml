@@ -77,7 +77,7 @@ objects:
             value: ${SSL_CERT_DIR}
     jobs:
       - name: delete-kruize-partitions
-        schedule: "0 0 25 * *" # Run on 25th of every month at midnight
+        schedule: "0 0 16 * *" # Run on 16th of every month at midnight
         podSpec:
           name: kruizecrondeletejob
           image: ${KRUIZE_IMAGE}:${KRUIZE_IMAGE_TAG}
@@ -131,7 +131,7 @@ objects:
             - name: hibernate_timezone
               value: "UTC"
             - name: deletepartitionsthreshold
-              value: "15"
+              value: "16"
       - name: create-kruize-partitions
         schedule: "0 0 25 * *" # Run on 25th of every month at midnight
         podSpec:
