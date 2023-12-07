@@ -29,6 +29,8 @@ objects:
             cpu: ${KRUIZE_CPU_LIMIT}
             memory: ${KRUIZE_MEMORY_LIMIT}
         env:
+          - name: JAVA_TOOL_OPTIONS
+            value: "-XX:MaxRAMPercentage=80"
           - name: CLOWDER_ENABLED
             value: ${CLOWDER_ENABLED}
           - name: AUTOTUNE_SERVER_PORT
