@@ -23,7 +23,7 @@ source $CICD_ROOT/build.sh
 # Deploy to an ephemeral namespace for testing
 source $CICD_ROOT/deploy_ephemeral_env.sh
 
-# Testing sleep
+# Testing sleep changes1
 echo "sleeping for 5 min"
 sleep 5m
 
