@@ -29,25 +29,23 @@ objects:
             cpu: ${KRUIZE_CPU_LIMIT}
             memory: ${KRUIZE_MEMORY_LIMIT}
         livenessProbe:
-          failureThreshold: 3
           httpGet:
             path: /health
             port: 10000
             scheme: HTTP
           initialDelaySeconds: 30
           periodSeconds: 10
-          successThreshold: 1
           timeoutSeconds: 3
+          failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /health
             port: 10000
             scheme: HTTP
-          initialDelaySeconds: 10
+          initialDelaySeconds: 20
           periodSeconds: 10
-          successThreshold: 1
-          failureThreshold: 3
           timeoutSeconds: 3
+          failureThreshold: 5
         env:
           - name: JAVA_TOOL_OPTIONS
             value: "-XX:MaxRAMPercentage=80"
