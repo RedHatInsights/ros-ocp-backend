@@ -81,8 +81,3 @@ jobs:
         run: |
           echo "Pull Request Number:${{ env.PULL_REQUEST_NUMBER }}"
 
-      - name: Comment on PR
-        run: |
-          gh pr comment ${{ env.PULL_REQUEST_NUMBER }} --body "/retest"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
