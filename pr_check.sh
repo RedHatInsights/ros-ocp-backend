@@ -24,8 +24,8 @@ source $CICD_ROOT/build.sh
 source $CICD_ROOT/deploy_ephemeral_env.sh
 
 # Testing sleep changes1
-echo "sleeping for 5 min"
-sleep 5m
+echo "sleeping for 10 min"
+sleep 10m
 
 # Run iqe-ros-ocp smoke tests with ClowdJobInvocation
 export COMPONENT_NAME="ros-ocp-backend"
