@@ -16,11 +16,4 @@ var (
 		Name: "rosocp_invalid_recommendation_total",
 		Help: "The total number of invalid recommendation send by Kruize",
 	})
-	kruizeRecommendationError = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "rosocp_kruize_error_recommendations_count",
-			Help: "Count of ERROR type recommendations from Kruize",
-		},
-		[]string{"notification_code"},
-	)
 )

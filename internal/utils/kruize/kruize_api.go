@@ -185,89 +185,14 @@ func Is_valid_recommendation(recommendation kruizePayload.Recommendation, experi
 	if recommendationIsValid {
 		// Convert the time object to the expected format
 		formattedMaxEndTime := maxEndTime.UTC().Format("2006-01-02T15:04:05.000Z")
-		recommendationData, timeStampisValid := recommendation.Data[formattedMaxEndTime]
+		_, timeStampisValid := recommendation.Data[formattedMaxEndTime]
 		if !timeStampisValid {
 			log.Error("recommendation not found for endtime: ", formattedMaxEndTime)
 			invalidRecommendation.Inc()
 			return false
 		}
-		LogKruizeErrors(recommendationData, formattedMaxEndTime, experiment_name)
 		return true
 	} else {
 		return false
 	}
-}
-
-func LogKruizeErrors(recommendationData kruizePayload.RecommendationData, formattedMaxEndTime string, experiment_name string) {
-
-	// https://github.com/kruize/autotune/blob/master/design/NotificationCodes.md#detailed-codes
-	errorNotificationCodes := map[string]string{
-		"221001": "ERROR",
-		"221002": "ERROR",
-		"221003": "ERROR",
-		"221004": "ERROR",
-		"223001": "ERROR",
-		"223002": "ERROR",
-		"223003": "ERROR",
-		"223004": "ERROR",
-		"224001": "ERROR",
-		"224002": "ERROR",
-		"224003": "ERROR",
-		"224004": "ERROR",
-	}
-	notificationSections := []map[string]kruizePayload.Notification{}
-
-	// Timestamp level
-	notificationsLevelTwo := recommendationData.Notifications
-	if notificationsLevelTwo != nil {
-		notificationSections = append(notificationSections, notificationsLevelTwo)
-		// Term Level
-		notificationsLevelThreeShortTerm := recommendationData.RecommendationTerms.Short_term.Notifications
-		if notificationsLevelThreeShortTerm != nil {
-			notificationSections = append(notificationSections, notificationsLevelThreeShortTerm)
-			// Engine Level
-			if recommendationData.RecommendationTerms.Short_term.RecommendationEngines != nil {
-				shortTermCostNotification := recommendationData.RecommendationTerms.Short_term.RecommendationEngines.Cost.Notifications
-				notificationSections = append(notificationSections, shortTermCostNotification)
-
-				shortTermPerformanceNotification := recommendationData.RecommendationTerms.Short_term.RecommendationEngines.Performance.Notifications
-				notificationSections = append(notificationSections, shortTermPerformanceNotification)
-			}
-		}
-		notificationsLevelThreeMediumTerm := recommendationData.RecommendationTerms.Medium_term.Notifications
-		if notificationsLevelThreeMediumTerm != nil {
-			notificationSections = append(notificationSections, notificationsLevelThreeMediumTerm)
-			if recommendationData.RecommendationTerms.Medium_term.RecommendationEngines != nil {
-				mediumTermCostNotification := recommendationData.RecommendationTerms.Medium_term.RecommendationEngines.Cost.Notifications
-				notificationSections = append(notificationSections, mediumTermCostNotification)
-
-				mediumTermPerformanceNotification := recommendationData.RecommendationTerms.Medium_term.RecommendationEngines.Performance.Notifications
-				notificationSections = append(notificationSections, mediumTermPerformanceNotification)
-			}
-		}
-		notificationsLevelThreeLongTerm := recommendationData.RecommendationTerms.Long_term.Notifications
-		if notificationsLevelThreeLongTerm != nil {
-			notificationSections = append(notificationSections, notificationsLevelThreeLongTerm)
-			if recommendationData.RecommendationTerms.Long_term.RecommendationEngines != nil {
-				longTermCostNotification := recommendationData.RecommendationTerms.Long_term.RecommendationEngines.Cost.Notifications
-				notificationSections = append(notificationSections, longTermCostNotification)
-
-				longTermPerformanceNotification := recommendationData.RecommendationTerms.Long_term.RecommendationEngines.Performance.Notifications
-				notificationSections = append(notificationSections, longTermPerformanceNotification)
-			}
-		}
-
-	}
-
-	for _, notificationBody := range notificationSections {
-		for key := range notificationBody {
-			_, keyExists := errorNotificationCodes[key]
-			if keyExists {
-				log.Error("kruize recommendation error; experiment_name: ", experiment_name, ", notification_code: ", key)
-				kruizeRecommendationError.WithLabelValues(key).Inc()
-			}
-
-		}
-	}
-
 }

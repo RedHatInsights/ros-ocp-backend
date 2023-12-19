@@ -1,14 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
-	"encoding/json"
-	"math"
 
 	"gorm.io/datatypes"
 
@@ -269,7 +269,7 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 		return nil
 	}
 
-	// Current
+	// Current section of recommendation
 	current_config, ok := data["current"].(map[string]interface{})
 	if !ok {
 		log.Error("current not found in JSON")
@@ -300,15 +300,16 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 
 	/*
 		Recommendation data is available for three periods
-		under cost and performance keys
+		under cost and performance keys(engines)
 		For each of these actual values will be present in
 		below mentioned dataBlocks > request and limits
 	*/
 
-	// Recommendations
+	// Recommendation section
 	recommendation_terms, ok := data["recommendation_terms"].(map[string]interface{})
 	if !ok {
-		log.Error("recommendation_terms not found in JSON")
+		log.Error("recommendation data not found in JSON")
+		return data
 	}
 
 	for _, period := range []string{"short_term", "medium_term", "long_term"} {
@@ -317,13 +318,16 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 			continue
 		}
 
-		// Hack 
+		/* Hack
+		// monitoring_start_time is currently not nullable on DB
+		// Hence cannot be set to null while saving response from Kruize
+		*/
 		// remove nil equivalent monitoring_start_time in API response
 		monitoring_start_time := intervalData["monitoring_start_time"]
 		if monitoring_start_time == "0001-01-01T00:00:00Z" {
 			delete(intervalData, "monitoring_start_time")
 		}
-		
+
 		if intervalData["recommendation_engines"] != nil {
 
 			for _, recommendationType := range []string{"cost", "performance"} {
