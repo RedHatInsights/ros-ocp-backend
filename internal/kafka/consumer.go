@@ -34,13 +34,19 @@ func StartConsumer(kafka_topic string, handler func(msg *kafka.Message, consumer
 			"group.id":                 cfg.KafkaConsumerGroupId,
 			"security.protocol":        cfg.KafkaSecurityProtocol,
 			"sasl.mechanism":           cfg.KafkaSASLMechanism,
-			"ssl.ca.location":          cfg.KafkaCA,
 			"sasl.username":            cfg.KafkaUsername,
 			"sasl.password":            cfg.KafkaPassword,
 			"enable.auto.commit":       auto_commit,
 			"go.logs.channel.enable":   true,
 			"allow.auto.create.topics": true,
 		}
+
+		// As per librdkafka doc - https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md?plain=1#L73
+		// Default ca location is set to ca-certificates package. i.e. /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+		if cfg.KafkaCA != "" {
+			configMap["ssl.ca.location"] = cfg.KafkaCA
+		}
+
 	} else {
 		configMap = kafka.ConfigMap{
 			"bootstrap.servers":        cfg.KafkaBootstrapServers,
