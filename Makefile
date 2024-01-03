@@ -114,9 +114,9 @@ upload-msg-to-rosocp:
 get-recommendations:
 ifdef env
 	$(eval APIPOD=$(shell oc get pods -o custom-columns=POD:.metadata.name --no-headers -n ${env} | grep ros-ocp-backend-api))
-	oc exec ${APIPOD} -c ros-ocp-backend-api -n ${env} -- /bin/bash -c 'curl -s -H "X-Rh-Identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/recommendations/openshift?start_date=${start_date}' | python -m json.tool
+	oc exec ${APIPOD} -c ros-ocp-backend-api -n ${env} -- /bin/bash -c 'curl -v -H "X-Rh-Identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/recommendations/openshift?start_date=${start_date}' | python -m json.tool
 else
-	curl -s -H "x-rh-identity: ${b64_identity}" \
+	curl -v -H "x-rh-identity: ${b64_identity}" \
 		 -H "x-rh-request_id: testtesttest" \
 		 http://localhost:8000/api/cost-management/v1/recommendations/openshift?start_date=${start_date} | python -m json.tool
 endif
