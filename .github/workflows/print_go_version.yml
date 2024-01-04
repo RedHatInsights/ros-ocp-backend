@@ -1,0 +1,28 @@
+name: Print go version from ubi8/go-toolset:latest image
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  print_go_version:
+
+    runs-on: ubuntu-latest
+
+    permissions: write-all
+
+    steps:
+      - name: Pull the regctl command
+        run: |
+          curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 > regctl
+          chmod 755 regctl
+    
+      - name: Print GO Version used in ubi8/go-toolset:latest image
+        run: |
+          echo "GO_VERSION_DETAILS=$(./regctl image config registry.access.redhat.com/ubi8/go-toolset:latest|grep "\"GO_MAJOR_VERSION\|\"GO_MINOR_VERSION\|\"GO_PATCH_VERSION\|\"VERSION="|tr -cd "[:alnum:]|\n|=|_|.")" >> $GITHUB_ENV
+      - uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            echo "Go Version Details:"
+            echo
+            echo "${{ env.GO_VERSION_DETAILS }}""
