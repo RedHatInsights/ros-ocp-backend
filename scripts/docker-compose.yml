@@ -56,7 +56,7 @@ services:
   kruize-autotune:
     image: quay.io/cloudservices/autotune:6c23945
     volumes:
-      - ./cdappconfig.json:/tmp/cdappconfig.json
+      - ./cdappconfig.json:/tmp/cdappconfig.json:Z
     ports:
       - 8080:8080
     environment:
@@ -86,7 +86,7 @@ services:
   nginx:
     image: nginx
     volumes:
-      - ./samples:/usr/share/nginx/html
+      - ./samples:/usr/share/nginx/html:Z
     ports:
       - 8888:80
 
