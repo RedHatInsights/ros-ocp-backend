@@ -1,8 +1,6 @@
 package types
 
-import (
-	"time"
-)
+import "time"
 
 type KafkaMsg struct {
 	Request_id   string `validate:"required"`

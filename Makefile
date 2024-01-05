@@ -63,8 +63,8 @@ run-processor:
 	go run rosocp.go start processor
 
 .PHONY: run-recommender
-run-recommender:
-	go run rosocp.go start recommender
+run-recommendation-poller:
+	go run rosocp.go start recommendation-poller
 
 .PHONY: run-api-server
 run-api-server:
