@@ -203,8 +203,12 @@ func ProcessReport(msg *kafka.Message, consumer_object *kafka.Consumer) {
 					continue
 				}
 
-				kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experiment_name)
-				log.Infof("New - Recommendation request queued for experiment - %s and end_interval - %s", experiment_name, maxEndtimeFromReport)
+				msgProduceErr := kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experiment_name)
+				if msgProduceErr != nil {
+					log.Errorf("Failed to produce message: %v for experiment - %s and end_interval - %s\n", err, experiment_name, maxEndtimeFromReport)
+				} else {
+					log.Infof("New - Recommendation request queued for experiment - %s and end_interval - %s", experiment_name, maxEndtimeFromReport)
+				}
 
 			} else {
 				if int(duration.Hours()) >= cfg.RecommendationFetchDelay {
@@ -225,8 +229,12 @@ func ProcessReport(msg *kafka.Message, consumer_object *kafka.Consumer) {
 						continue
 					}
 
-					kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experiment_name)
-					log.Infof("Update - Recommendation request queued for experiment - %s and end_interval - %s", experiment_name, maxEndtimeFromReport)	
+					msgProduceErr := kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experiment_name)
+					if msgProduceErr != nil {
+						log.Errorf("Failed to produce message : %v for experiment - %s and end_interval - %s\n", err, experiment_name, maxEndtimeFromReport)
+					} else {
+						log.Infof("Update - Recommendation request queued for experiment - %s and end_interval - %s", experiment_name, maxEndtimeFromReport)
+					}
 
 				}
 			}
