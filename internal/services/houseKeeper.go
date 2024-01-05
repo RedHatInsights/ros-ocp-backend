@@ -32,7 +32,7 @@ func StartHouseKeeperService() {
 
 }
 
-func sourcesListener(msg *k.Message) {
+func sourcesListener(msg *k.Message, consumer_object *k.Consumer) {
 	headers := msg.Headers
 	for _, v := range headers {
 		if v.Key == "event_type" && string(v.Value) == "Application.destroy" {

@@ -2,7 +2,6 @@ package services
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	kafka_internal "github.com/redhatinsights/ros-ocp-backend/internal/kafka"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
@@ -22,7 +22,7 @@ import (
 
 var cfg *config.Config = config.GetConfig()
 
-func ProcessReport(msg *kafka.Message) {
+func ProcessReport(msg *kafka.Message, consumer_object *kafka.Consumer) {
 	log := logging.GetLogger()
 	cfg = config.GetConfig()
 	validate := validator.New()
@@ -174,71 +174,61 @@ func ProcessReport(msg *kafka.Message) {
 				}
 			}
 
-			// Below we make sure that report which is been processed is the latest(interval_endtime) report.
-			// If not then replace the maxEndTime so that we can recommendation is again calculated for the same(latest)
-			// interval_endtime
-			if recommendation_stored_in_db, err := model.GetFirstRecommendationSetsByWorkloadID(workload.ID); err != nil {
+			recommendation_stored_in_db, err := model.GetFirstRecommendationSetsByWorkloadID(workload.ID)
+			if err != nil {
 				log.Errorf("Error while checking for recommendation_set record: %s", err)
 				continue
-			} else if !reflect.ValueOf(recommendation_stored_in_db).IsZero() {
-				if recommendation_stored_in_db.MonitoringEndTime.UTC().After(maxEndTime) {
-					maxEndTime = recommendation_stored_in_db.MonitoringEndTime.UTC()
-				}
 			}
 
-			recommendation, err := kruize.Update_recommendations(experiment_name, maxEndTime)
-			if err != nil {
-				end_interval := utils.ConvertDateToISO8601(maxEndTime.String())
-				if err.Error() == fmt.Sprintf("Recommendation for timestamp - \" %s \" does not exist", end_interval) {
-					log.Infof("Recommendation does not exist for timestamp - \" %s \"", end_interval)
+			maxEndtimeFromDB := recommendation_stored_in_db.MonitoringEndTime.UTC()
+			maxEndtimeFromReport := maxEndTime.UTC()
+			duration := maxEndtimeFromReport.Sub(maxEndtimeFromDB)
+
+			if reflect.ValueOf(recommendation_stored_in_db).IsZero() {
+
+				messageData := types.RecommendationKafkaMsg{
+					Request_id: kafkaMsg.Request_id,
+					Metadata: types.RecommendationMetadata{
+						Org_id:             kafkaMsg.Metadata.Org_id,
+						Workload_id:        workload.ID,
+						Max_endtime_report: maxEndtimeFromReport,
+						Experiment_name:    experiment_name,
+						New_record:         true,
+					},
+				}
+
+				msgBytes, err := json.Marshal(messageData)
+				if err != nil {
+					log.Error("Error marshaling JSON:", err)
 					continue
 				}
-				log.Errorf("Unable to list recommendation for: %v", err)
-				continue
-			}
 
-			if kruize.Is_valid_recommendation(recommendation) {
-				containers := recommendation[0].Kubernetes_objects[0].Containers
-				for _, container := range containers {
-					for _, v := range container.Recommendations.Data {
-						marshalData, err := json.Marshal(v)
-						if err != nil {
-							log.Errorf("Unable to list recommendation for: %v", err)
-						}
+				kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experiment_name)
+				log.Infof("New - Recommendation request queued for experiment - %s and end_interval - %s", experiment_name, maxEndtimeFromReport)
 
-						// Create RecommendationSet entry into the table.
-						recommendationSet := model.RecommendationSet{
-							WorkloadID:          workload.ID,
-							ContainerName:       container.Container_name,
-							MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
-							MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
-							Recommendations:     marshalData,
-						}
-						if err := recommendationSet.CreateRecommendationSet(); err != nil {
-							log.Errorf("Unable to save a record into recommendation set: %v. Error: %v", recommendationSet, err)
-							continue
-						} else {
-							log.Infof("Recommendation saved for experiment - %s and end_interval - %s", experiment_name, recommendationSet.MonitoringEndTime)
-						}
-
-						// Create entry into HistoricalRecommendationSet table.
-						historicalRecommendationSet := model.HistoricalRecommendationSet{
-							OrgId:               rh_account.OrgId,
-							WorkloadID:          workload.ID,
-							ContainerName:       container.Container_name,
-							MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
-							MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
-							Recommendations:     marshalData,
-						}
-						if err := historicalRecommendationSet.CreateHistoricalRecommendationSet(); err != nil {
-							recommendationJson, _ := json.Marshal(recommendation)
-							log.Errorf("unable to get or add record to historical recommendation set table: %s. Error: %v", string(recommendationJson), err)
-							continue
-						}
-					}
-				}
 			} else {
-				invalidRecommendation.Inc()
+				if int(duration.Hours()) >= cfg.RecommendationFetchDelay {
+					messageData := types.RecommendationKafkaMsg{
+						Request_id: kafkaMsg.Request_id,
+						Metadata: types.RecommendationMetadata{
+							Org_id:             kafkaMsg.Metadata.Org_id,
+							Workload_id:        workload.ID,
+							Max_endtime_report: maxEndtimeFromReport,
+							Experiment_name:    experiment_name,
+							New_record:         false,
+						},
+					}
+
+					msgBytes, err := json.Marshal(messageData)
+					if err != nil {
+						log.Error("Error marshaling JSON:", err)
+						continue
+					}
+
+					kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experiment_name)
+					log.Infof("Update - Recommendation request queued for experiment - %s and end_interval - %s", experiment_name, maxEndtimeFromReport)	
+
+				}
 			}
 		}
 	}

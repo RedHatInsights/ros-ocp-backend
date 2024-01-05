@@ -65,6 +65,56 @@ objects:
             value: "rosocp-backend"
           - name: LOG_LEVEL
             value: ${LOG_LEVEL}
+    - name: recommendation-poller
+      replicas: ${{POLLER_REPLICA_COUNT}}
+      podSpec:
+        image: ${IMAGE}:${IMAGE_TAG}
+        command: ["sh"]
+        args: ["-c", "./rosocp db migrate up && ./rosocp start recommendation-poller"]
+        resources:
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /metrics
+            port: 9000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 9000
+            scheme: HTTP
+          initialDelaySeconds: 3
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+          timeoutSeconds: 3
+        env:
+          - name: CLOWDER_ENABLED
+            value: ${CLOWDER_ENABLED}
+          - name: KRUIZE_HOST
+            value: ${KRUIZE_HOST}
+          - name: KRUIZE_PORT
+            value: ${KRUIZE_PORT}
+          - name: KRUIZE_WAIT_TIME
+            value: ${KRUIZE_WAIT_TIME}
+          - name: SSL_CERT_DIR
+            value: ${SSL_CERT_DIR}
+          - name: SERVICE_NAME
+            value: "rosocp-recommendation-poller"
+          - name: CW_LOG_STREAM_NAME
+            value: "rosocp-backend"
+          - name: LOG_LEVEL
+            value: ${LOG_LEVEL}
     - name: api
       replicas: ${{API_REPLICA_COUNT}}
       webServices:
@@ -151,7 +201,7 @@ objects:
     kafkaTopics:
       - topicName: hccm.ros.events
         partitions: 1
-      - topicName: rosocp.kruize.experiments
+      - topicName: rosocp.kruize.recommendations
         partitions: 1
       - topicName: platform.sources.event-stream
         partitions: 1
@@ -164,6 +214,9 @@ parameters:
   required: true
 - description: Replica count for processor pod
   name: PROCESSOR_REPLICA_COUNT
+  value: "1"
+- description: Replica count for recommendation-poller pod
+  name: POLLER_REPLICA_COUNT
   value: "1"
 - description: Image NAME
   name: IMAGE

@@ -12,17 +12,18 @@ import (
 )
 
 type Config struct {
-	//Application config
-	ServiceName string `mapstructure:"SERVICE_NAME"`
-	LogFormater string `mapstructure:"LogFormater"`
-	LogLevel    string `mapstructure:"LOG_LEVEL"`
+	// Application config
+	ServiceName              string `mapstructure:"SERVICE_NAME"`
+	LogFormater              string `mapstructure:"LogFormater"`
+	LogLevel                 string `mapstructure:"LOG_LEVEL"`
+	RecommendationFetchDelay int    `mapstructure:"RECOMMENDATION_FETCH_DELAY"`
 
-	//Kafka configs
+	// Kafka config
 	KafkaBootstrapServers string `mapstructure:"KAFKA_BOOTSTRAP_SERVERS"`
 	KafkaConsumerGroupId  string `mapstructure:"KAFKA_CONSUMER_GROUP_ID"`
 	KafkaAutoCommit       bool   `mapstructure:"KAFKA_AUTO_COMMIT"`
 	UploadTopic           string `mapstructure:"UPLOAD_TOPIC"`
-	ExperimentsTopic      string `mapstructure:"EXPERIMENTS_TOPIC"`
+	RecommendationTopic   string `mapstructure:"RECOMMENDATION_TOPIC"`
 	SourcesEventTopic     string `mapstructure:"SOURCES_EVENT_TOPIC"`
 	KafkaUsername         string
 	KafkaPassword         string
@@ -78,7 +79,7 @@ func initConfig() {
 		broker := c.Kafka.Brokers[0]
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", strings.Join(clowder.KafkaServers, ","))
 		viper.SetDefault("UPLOAD_TOPIC", clowder.KafkaTopics["hccm.ros.events"].Name)
-		viper.SetDefault("EXPERIMENTS_TOPIC", clowder.KafkaTopics["rosocp.kruize.experiments"].Name)
+		viper.SetDefault("RECOMMENDATION_TOPIC", clowder.KafkaTopics["rosocp.kruize.recommendations"].Name)
 		viper.SetDefault("SOURCES_EVENT_TOPIC", clowder.KafkaTopics["platform.sources.event-stream"].Name)
 
 		// Kafka SSL Config
@@ -133,7 +134,7 @@ func initConfig() {
 
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
 		viper.SetDefault("UPLOAD_TOPIC", "hccm.ros.events")
-		viper.SetDefault("EXPERIMENTS_TOPIC", "rosocp.kruize.experiments")
+		viper.SetDefault("RECOMMENDATION_TOPIC", "rosocp.kruize.recommendations")
 		viper.SetDefault("SOURCES_EVENT_TOPIC", "platform.sources.event-stream")
 
 		// default DB Config
@@ -170,6 +171,7 @@ func initConfig() {
 	viper.SetDefault("KRUIZE_HOST", "localhost")
 	viper.SetDefault("KRUIZE_PORT", "8080")
 	viper.SetDefault("KRUIZE_URL", fmt.Sprintf("http://%s:%s", viper.GetString("KRUIZE_HOST"), viper.GetString("KRUIZE_PORT")))
+	viper.SetDefault("RECOMMENDATION_FETCH_DELAY", 24)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}

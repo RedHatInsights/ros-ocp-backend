@@ -26,6 +26,17 @@ var processorCmd = &cobra.Command{
 	},
 }
 
+var recommendationPollerCmd = &cobra.Command{
+	Use:   "recommendation-poller",
+	Short: "starts ros-ocp recommendation-poller",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("starting ros-ocp recommendation-poller")
+		cfg := config.GetConfig()
+		go utils.Start_prometheus_server()
+		kafka.StartConsumer(cfg.RecommendationTopic, services.FetchRecommendations, false)
+	},
+}
+
 var apiCmd = &cobra.Command{
 	Use:   "api",
 	Short: "starts ros-ocp api server",
@@ -47,6 +58,7 @@ var houseKeeperCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(startCmd)
 	startCmd.AddCommand(processorCmd)
+	startCmd.AddCommand(recommendationPollerCmd)
 	startCmd.AddCommand(apiCmd)
 	startCmd.AddCommand(houseKeeperCmd)
 }

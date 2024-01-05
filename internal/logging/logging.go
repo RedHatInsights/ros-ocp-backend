@@ -72,3 +72,14 @@ func Set_request_details(data types.KafkaMsg) *logrus.Entry {
 	})
 	return log
 }
+
+func Set_request_details_recommendations(data types.RecommendationKafkaMsg) *logrus.Entry {
+	log = log.WithFields(logrus.Fields{
+		"request_id":         data.Request_id,
+		"org_id":             data.Metadata.Org_id,
+		"workload_id":        data.Metadata.Workload_id,
+		"max_endtime_report": data.Metadata.Max_endtime_report,
+		"experiment_name":    data.Metadata.Experiment_name,
+	})
+	return log
+}
