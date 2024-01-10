@@ -20,7 +20,6 @@ type RecommendationMetadata struct {
 	Workload_id        uint      `validate:"required"`
 	Experiment_name    string    `validate:"required"`
 	Max_endtime_report time.Time `validate:"required"`
-	New_record         bool
 }
 
 type RecommendationKafkaMsg struct {

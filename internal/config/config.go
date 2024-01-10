@@ -13,10 +13,10 @@ import (
 
 type Config struct {
 	// Application config
-	ServiceName              string `mapstructure:"SERVICE_NAME"`
-	LogFormater              string `mapstructure:"LogFormater"`
-	LogLevel                 string `mapstructure:"LOG_LEVEL"`
-	RecommendationFetchDelay int    `mapstructure:"RECOMMENDATION_FETCH_DELAY"`
+	ServiceName                     string `mapstructure:"SERVICE_NAME"`
+	LogFormater                     string `mapstructure:"LogFormater"`
+	LogLevel                        string `mapstructure:"LOG_LEVEL"`
+	RecommendationPollIntervalHours int    `mapstructure:"RECOMMENDATION_POLL_INTERVAL_HOURS"`
 
 	// Kafka config
 	KafkaBootstrapServers string `mapstructure:"KAFKA_BOOTSTRAP_SERVERS"`
@@ -45,7 +45,7 @@ type Config struct {
 	DBssl      string
 	DBCACert   string
 
-	//RBAC config
+	// RBAC config
 	RBACHost     string
 	RBACPort     string
 	RBACProtocol string
@@ -119,7 +119,7 @@ func initConfig() {
 			}
 		}
 
-		//clowder cloudwatch config
+		// clowder cloudwatch config
 		viper.SetDefault("CwLogGroup", c.Logging.Cloudwatch.LogGroup)
 		viper.SetDefault("CwRegion", c.Logging.Cloudwatch.Region)
 		viper.SetDefault("CwAccessKey", c.Logging.Cloudwatch.AccessKeyId)
@@ -146,7 +146,7 @@ func initConfig() {
 		viper.SetDefault("DBssl", "disable")
 		viper.SetDefault("DBCACert", "")
 
-		//default RBAC Config
+		// default RBAC Config
 		viper.SetDefault("RBACHost", "localhost")
 		viper.SetDefault("RBACPort", "9080")
 		viper.SetDefault("RBACProtocol", "http")
@@ -171,7 +171,7 @@ func initConfig() {
 	viper.SetDefault("KRUIZE_HOST", "localhost")
 	viper.SetDefault("KRUIZE_PORT", "8080")
 	viper.SetDefault("KRUIZE_URL", fmt.Sprintf("http://%s:%s", viper.GetString("KRUIZE_HOST"), viper.GetString("KRUIZE_PORT")))
-	viper.SetDefault("RECOMMENDATION_FETCH_DELAY", 24)
+	viper.SetDefault("RECOMMENDATION_POLL_INTERVAL_HOURS", 24)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}

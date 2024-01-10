@@ -2,7 +2,6 @@ package services
 
 import (
 	"encoding/json"
-	"reflect"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -22,7 +21,7 @@ import (
 
 var cfg *config.Config = config.GetConfig()
 
-func ProcessReport(msg *kafka.Message, consumer_object *kafka.Consumer) {
+func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 	log := logging.GetLogger()
 	cfg = config.GetConfig()
 	validate := validator.New()
@@ -173,71 +172,31 @@ func ProcessReport(msg *kafka.Message, consumer_object *kafka.Consumer) {
 
 				}
 			}
+			// Sending recommendation request to recommendation-poller
+			maxEndtimeFromReport := maxEndTime.UTC()
+			messageData := types.RecommendationKafkaMsg{
+				Request_id: kafkaMsg.Request_id,
+				Metadata: types.RecommendationMetadata{
+					Org_id:             kafkaMsg.Metadata.Org_id,
+					Workload_id:        workload.ID,
+					Max_endtime_report: maxEndtimeFromReport,
+					Experiment_name:    experiment_name,
+				},
+			}
 
-			recommendation_stored_in_db, err := model.GetFirstRecommendationSetsByWorkloadID(workload.ID)
+			msgBytes, err := json.Marshal(messageData)
 			if err != nil {
-				log.Errorf("Error while checking for recommendation_set record: %s", err)
+				log.Error("Error marshaling JSON:", err)
 				continue
 			}
 
-			maxEndtimeFromDB := recommendation_stored_in_db.MonitoringEndTime.UTC()
-			maxEndtimeFromReport := maxEndTime.UTC()
-			duration := maxEndtimeFromReport.Sub(maxEndtimeFromDB)
-
-			if reflect.ValueOf(recommendation_stored_in_db).IsZero() {
-
-				messageData := types.RecommendationKafkaMsg{
-					Request_id: kafkaMsg.Request_id,
-					Metadata: types.RecommendationMetadata{
-						Org_id:             kafkaMsg.Metadata.Org_id,
-						Workload_id:        workload.ID,
-						Max_endtime_report: maxEndtimeFromReport,
-						Experiment_name:    experiment_name,
-						New_record:         true,
-					},
-				}
-
-				msgBytes, err := json.Marshal(messageData)
-				if err != nil {
-					log.Error("Error marshaling JSON:", err)
-					continue
-				}
-
-				msgProduceErr := kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experiment_name)
-				if msgProduceErr != nil {
-					log.Errorf("Failed to produce message: %v for experiment - %s and end_interval - %s\n", err, experiment_name, maxEndtimeFromReport)
-				} else {
-					log.Infof("New - Recommendation request queued for experiment - %s and end_interval - %s", experiment_name, maxEndtimeFromReport)
-				}
-
+			msgProduceErr := kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experiment_name)
+			if msgProduceErr != nil {
+				log.Errorf("Failed to produce message: %v for experiment - %s and end_interval - %s\n", err, experiment_name, maxEndtimeFromReport)
 			} else {
-				if int(duration.Hours()) >= cfg.RecommendationFetchDelay {
-					messageData := types.RecommendationKafkaMsg{
-						Request_id: kafkaMsg.Request_id,
-						Metadata: types.RecommendationMetadata{
-							Org_id:             kafkaMsg.Metadata.Org_id,
-							Workload_id:        workload.ID,
-							Max_endtime_report: maxEndtimeFromReport,
-							Experiment_name:    experiment_name,
-							New_record:         false,
-						},
-					}
-
-					msgBytes, err := json.Marshal(messageData)
-					if err != nil {
-						log.Error("Error marshaling JSON:", err)
-						continue
-					}
-
-					msgProduceErr := kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experiment_name)
-					if msgProduceErr != nil {
-						log.Errorf("Failed to produce message : %v for experiment - %s and end_interval - %s\n", err, experiment_name, maxEndtimeFromReport)
-					} else {
-						log.Infof("Update - Recommendation request queued for experiment - %s and end_interval - %s", experiment_name, maxEndtimeFromReport)
-					}
-
-				}
+				log.Infof("Recommendation request sent for experiment - %s and end_interval - %s", experiment_name, maxEndtimeFromReport)
 			}
+
 		}
 	}
 }

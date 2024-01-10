@@ -33,7 +33,7 @@ var recommendationPollerCmd = &cobra.Command{
 		fmt.Println("starting ros-ocp recommendation-poller")
 		cfg := config.GetConfig()
 		go utils.Start_prometheus_server()
-		kafka.StartConsumer(cfg.RecommendationTopic, services.FetchRecommendations, false)
+		kafka.StartConsumer(cfg.RecommendationTopic, services.PollForRecommendations, false)
 	},
 }
 
