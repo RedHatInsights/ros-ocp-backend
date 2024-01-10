@@ -59,7 +59,8 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 				if err := recommendationSet.CreateRecommendationSet(); err != nil {
 					log.Errorf("unable to save a record into recommendation set: %v. Error: %v", recommendationSet, err)
 				} else {
-					log.Infof(" %s - Recommendation saved for experiment - %s and end_interval - %s", recommendationType, experiment_name, recommendationSet.MonitoringEndTime)
+					log.Infof("%s - Recommendation saved for experiment - %s and end_interval - %s", recommendationType, experiment_name, recommendationSet.MonitoringEndTime)
+					poll_cycle_complete = true
 				}
 
 				// Create entry into HistoricalRecommendationSet table.
@@ -74,11 +75,10 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 				if err := historicalRecommendationSet.CreateHistoricalRecommendationSet(); err != nil {
 					recommendationJSON, _ := json.Marshal(recommendation)
 					log.Errorf("unable to get or add record to historical recommendation set table: %s. Error: %v", string(recommendationJSON), err)
+					poll_cycle_complete = false
 				}
-
 			}
 		}
-		poll_cycle_complete = true
 	} else {
 		poll_cycle_complete = true
 		invalidRecommendation.Inc()
@@ -136,6 +136,5 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 				commitKafkaMsg(msg, consumer_object)
 			}
 		}
-
 	}
 }
