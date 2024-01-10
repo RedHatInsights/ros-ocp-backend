@@ -27,7 +27,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 	log := logging.GetLogger()
 	experiment_name := kafkaMsg.Metadata.Experiment_name
 	maxEndTimeFromReport := kafkaMsg.Metadata.Max_endtime_report
-	var poll_cycle_complete bool = false
+	poll_cycle_complete := false
 
 	recommendation, err := kruize.Update_recommendations(experiment_name, maxEndTimeFromReport)
 	if err != nil {
