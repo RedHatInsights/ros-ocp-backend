@@ -146,6 +146,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 	recommendation_stored_in_db, err := model.GetFirstRecommendationSetsByWorkloadID(workloadID)
 	if err != nil {
 		log.Errorf("Error while checking for recommendation_set record: %s", err)
+		return
 	}
 	recommendationFound := !reflect.ValueOf(recommendation_stored_in_db).IsZero()
 
