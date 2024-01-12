@@ -7,8 +7,8 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/go-playground/validator/v10"
-	"github.com/labstack/gommon/log"
 
+	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
@@ -17,10 +17,44 @@ import (
 )
 
 func commitKafkaMsg(msg *kafka.Message, consumer_object *kafka.Consumer) {
+	log := logging.GetLogger()
 	_, err := consumer_object.CommitMessage(msg)
 	if err != nil {
 		log.Error("unable to commit msg: ", err)
 	}
+}
+
+func transactionForRecommendation(recommendationSetList []model.RecommendationSet, histRecommendationSetList []model.HistoricalRecommendationSet, experiment_name string, recommendationType string) error {
+	log := logging.GetLogger()
+	db := database.GetDB()
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Error; err != nil {
+		return err
+	}
+
+	for _, recommendationSet := range recommendationSetList {
+		if err := recommendationSet.CreateRecommendationSet(tx); err != nil {
+			log.Errorf("unable to save a record into recommendation set: %v. Error: %v", recommendationSet, err)
+			tx.Rollback()
+			return err
+		} else {
+			log.Infof("%s - Recommendation saved for experiment - %s and end_interval - %s", recommendationType, experiment_name, recommendationSet.MonitoringEndTimeStr)
+		}
+	}
+	for _, historicalRecommendationSet := range histRecommendationSetList {
+		if err := historicalRecommendationSet.CreateHistoricalRecommendationSet(tx); err != nil {
+			log.Errorf("unable to get or add record to historical recommendation set table: %v. Error: %v", historicalRecommendationSet, err)
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit().Error
 }
 
 func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recommendationType string) bool {
@@ -36,18 +70,21 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 			log.Infof("recommendation does not exist for timestamp - \" %s \"", end_interval)
 		}
 		log.Errorf("unable to list recommendation for: %v", err)
+		return poll_cycle_complete
 	}
 
 	// TODO: Is_valid_recommendation to be called on every container record v20.1 upgrade on wards
 	if kruize.Is_valid_recommendation(recommendation) {
 		containers := recommendation[0].Kubernetes_objects[0].Containers
+		recommendationSetList := []model.RecommendationSet{}
+		histRecommendationSetList := []model.HistoricalRecommendationSet{}
+
 		for _, container := range containers {
 			for _, v := range container.Recommendations.Data {
 				marshalData, err := json.Marshal(v)
 				if err != nil {
 					log.Errorf("unable to list recommendation for: %v", err)
 				}
-
 				// Create RecommendationSet entry into the table.
 				recommendationSet := model.RecommendationSet{
 					WorkloadID:          kafkaMsg.Metadata.Workload_id,
@@ -56,12 +93,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
 					Recommendations:     marshalData,
 				}
-				if err := recommendationSet.CreateRecommendationSet(); err != nil {
-					log.Errorf("unable to save a record into recommendation set: %v. Error: %v", recommendationSet, err)
-				} else {
-					log.Infof("%s - Recommendation saved for experiment - %s and end_interval - %s", recommendationType, experiment_name, recommendationSet.MonitoringEndTime)
-					poll_cycle_complete = true
-				}
+				recommendationSetList = append(recommendationSetList, recommendationSet)
 
 				// Create entry into HistoricalRecommendationSet table.
 				historicalRecommendationSet := model.HistoricalRecommendationSet{
@@ -72,12 +104,12 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
 					Recommendations:     marshalData,
 				}
-				if err := historicalRecommendationSet.CreateHistoricalRecommendationSet(); err != nil {
-					recommendationJSON, _ := json.Marshal(recommendation)
-					log.Errorf("unable to get or add record to historical recommendation set table: %s. Error: %v", string(recommendationJSON), err)
-					poll_cycle_complete = false
-				}
+				histRecommendationSetList = append(histRecommendationSetList, historicalRecommendationSet)
 			}
+		}
+		txError := transactionForRecommendation(recommendationSetList, histRecommendationSetList, experiment_name, recommendationType)
+		if txError == nil {
+			poll_cycle_complete = true
 		}
 	} else {
 		poll_cycle_complete = true
@@ -123,6 +155,9 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 		if poll_cycle_complete {
 			commitKafkaMsg(msg, consumer_object)
 		}
+		// To consume upcoming Kafka msg, explicitly
+		// Especially in case of un-committed msgs
+		return 
 	case true:
 		// MonitoringEndTime.UTC() defaults to 0001-01-01 00:00:00 +0000 UTC if not found
 		if !recommendation_stored_in_db.MonitoringEndTime.UTC().IsZero() {
@@ -136,5 +171,6 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 				commitKafkaMsg(msg, consumer_object)
 			}
 		}
+		return
 	}
 }
