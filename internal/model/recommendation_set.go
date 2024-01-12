@@ -90,9 +90,8 @@ func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendatio
 	return recommendationSet, nil
 }
 
-func (r *RecommendationSet) CreateRecommendationSet() error {
-	db := database.GetDB()
-	result := db.Clauses(clause.OnConflict{
+func (r *RecommendationSet) CreateRecommendationSet(tx *gorm.DB) error {
+	result := tx.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "workload_id"}, {Name: "container_name"}},
 		DoUpdates: clause.AssignmentColumns([]string{"monitoring_start_time", "monitoring_end_time", "recommendations", "updated_at"}),
 	}).Create(r)

@@ -46,7 +46,7 @@ func startProducer() {
 
 }
 
-func SendMessage(msg []byte, topic *string, key string) error {
+func SendMessage(msg []byte, topic string, key string) error {
 	if p == nil {
 		log = logging.GetLogger()
 		log.Info("initializing kafka producer")
@@ -55,7 +55,7 @@ func SendMessage(msg []byte, topic *string, key string) error {
 	delivery_chan := make(chan kafka.Event)
 	defer close(delivery_chan)
 	err := p.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{Topic: topic, Partition: kafka.PartitionAny},
+		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 		Key:            []byte(key),
 		Value:          []byte(msg),
 	}, delivery_chan)

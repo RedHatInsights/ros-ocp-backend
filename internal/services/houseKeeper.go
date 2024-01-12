@@ -29,10 +29,9 @@ func StartHouseKeeperService() {
 	}
 
 	kafka.StartConsumer(cfg.SourcesEventTopic, sourcesListener)
-
 }
 
-func sourcesListener(msg *k.Message) {
+func sourcesListener(msg *k.Message, _ *k.Consumer) {
 	headers := msg.Headers
 	for _, v := range headers {
 		if v.Key == "event_type" && string(v.Value) == "Application.destroy" {
@@ -58,5 +57,4 @@ func sourcesListener(msg *k.Message) {
 
 		}
 	}
-
 }
