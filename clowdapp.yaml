@@ -198,7 +198,7 @@ objects:
 
     jobs:
       - name: delete-rosocp-partitions
-        schedule: "0 0 25 * *" # Run on 25th of every month at midnight
+        schedule: "0 0 */15 * *" # Runs at 12:00 AM, every 15 days.
         podSpec:
           name: rosocpcronjob
           image: ${IMAGE}:${IMAGE_TAG}
