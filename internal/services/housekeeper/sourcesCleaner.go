@@ -1,4 +1,4 @@
-package services
+package housekeeper
 
 import (
 	"encoding/json"

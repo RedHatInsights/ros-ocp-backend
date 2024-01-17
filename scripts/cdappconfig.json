@@ -2,7 +2,7 @@
   "database": {
     "adminPassword": "postgres",
     "adminUsername": "postgres",
-    "hostname": "db-ros",
+    "hostname": "db-kruize",
     "name": "postgres",
     "password": "postgres",
     "port": 5432,

@@ -176,7 +176,7 @@ objects:
       podSpec:
         image: ${IMAGE}:${IMAGE_TAG}
         command: ["sh"]
-        args: ["-c", "./rosocp db migrate up && ./rosocp start housekeeper"]
+        args: ["-c", "./rosocp db migrate up && ./rosocp start housekeeper --sources"]
         resources:
           requests:
             cpu: ${CPU_REQUEST}
@@ -190,11 +190,34 @@ objects:
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
           - name: SERVICE_NAME
-            value: "rosocp-housekeeper"
+            value: "rosocp-housekeeper-sources"
           - name: CW_LOG_STREAM_NAME
             value: "rosocp-housekeeper"
           - name: LOG_LEVEL
             value: ${LOG_LEVEL}
+
+    jobs:
+      - name: delete-rosocp-partitions
+        schedule: "0 0 25 * *" # Run on 25th of every month at midnight
+        podSpec:
+          name: rosocpcronjob
+          image: ${IMAGE}:${IMAGE_TAG}
+          imagePullPolicy: Always
+          restartPolicy: OnFailure
+          command: ["sh"]
+          args: ["-c", "./rosocp db migrate up && ./rosocp start housekeeper --partition"]
+          env:
+            - name: CLOWDER_ENABLED
+              value: ${CLOWDER_ENABLED}
+            - name: SSL_CERT_DIR
+              value: ${SSL_CERT_DIR}
+            - name: SERVICE_NAME
+              value: "rosocp-housekeeper-partition"
+            - name: CW_LOG_STREAM_NAME
+              value: "rosocp-housekeeper"
+            - name: LOG_LEVEL
+              value: ${LOG_LEVEL}
+
     database:
       name: rosocp
       version: 13
