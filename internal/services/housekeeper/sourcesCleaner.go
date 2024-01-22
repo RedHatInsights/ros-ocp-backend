@@ -18,7 +18,7 @@ import (
 
 var cost_app_id int
 
-func StartHouseKeeperService() {
+func StartSourcesListenerService() {
 	log := logging.GetLogger()
 	cfg := config.GetConfig()
 	var err error

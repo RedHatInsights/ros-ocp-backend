@@ -55,7 +55,7 @@ var houseKeeperCmd = &cobra.Command{
 		sourcesFlag, _ := cmd.Flags().GetBool("sources")
 		partitionFlag, _ := cmd.Flags().GetBool("partition")
 		if sourcesFlag {
-			housekeeper.StartHouseKeeperService()
+			housekeeper.StartSourcesListenerService()
 		}
 		if partitionFlag {
 			housekeeper.DeletePartitions()
