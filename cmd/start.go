@@ -63,8 +63,7 @@ var houseKeeperCmd = &cobra.Command{
 	},
 }
 
-var sources bool
-var partition bool
+var sources, partitions bool
 
 func init() {
 	rootCmd.AddCommand(startCmd)
@@ -74,7 +73,7 @@ func init() {
 	startCmd.AddCommand(houseKeeperCmd)
 
 	houseKeeperCmd.Flags().BoolVar(&sources, "sources", false, "starts sources listener service")
-	houseKeeperCmd.Flags().BoolVar(&partition, "partition", false, "deletes older partition")
-	houseKeeperCmd.MarkFlagsOneRequired("sources", "partition")
-	houseKeeperCmd.MarkFlagsMutuallyExclusive("sources", "partition")
+	houseKeeperCmd.Flags().BoolVar(&partitions, "partitions", false, "deletes older partitions")
+	houseKeeperCmd.MarkFlagsOneRequired("sources", "partitions")
+	houseKeeperCmd.MarkFlagsMutuallyExclusive("sources", "partitions")
 }
