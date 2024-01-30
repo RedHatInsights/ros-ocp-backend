@@ -97,7 +97,7 @@ ifeq (,$(wildcard $(MCCILINT)))
 	chmod +x $(MCCILINT)
 	@ echo "✅ Done"
 endif
-	bin/mc alias set myminio http://env-${env}-minio-${env}.apps.c-rh-c-eph.8p0c.p1.openshiftapps.com ${minio_accessKey} ${minio_secretKey}
+	bin/mc alias set myminio http://env-${env}-minio-${env}.apps.crc-eph.r9lp.p1.openshiftapps.com ${minio_accessKey} ${minio_secretKey}
 	bin/mc cp ${CSVfile} myminio/insights-upload-perma/
 	sleep 5
 	$(eval SHAREURL=$(shell bin/mc share download --json myminio/insights-upload-perma/${CSVfile_name} | jq -r '.share'))
