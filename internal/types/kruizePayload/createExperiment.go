@@ -7,6 +7,7 @@ import (
 type createExperiment struct {
 	Version                 string                  `json:"version"`
 	Experiment_name         string                  `json:"experiment_name"`
+	Cluster_name            string                  `json:"cluster_name"`
 	Performance_profile     string                  `json:"performance_profile"`
 	Mode                    string                  `json:"mode"`
 	Target_cluster          string                  `json:"target_cluster"`
@@ -23,7 +24,7 @@ type recommendation_settings struct {
 	Threshold string `json:"threshold"`
 }
 
-func GetCreateExperimentPayload(experiment_name string, containers []map[string]string, data map[string]string) ([]byte, error) {
+func GetCreateExperimentPayload(experiment_name string, cluster_identifier string, containers []map[string]string, data map[string]string) ([]byte, error) {
 	container_array := []container{}
 	for _, c := range containers {
 		container_array = append(container_array, container{
@@ -35,6 +36,7 @@ func GetCreateExperimentPayload(experiment_name string, containers []map[string]
 		{
 			Version:                 "1.0",
 			Experiment_name:         experiment_name,
+			Cluster_name:            cluster_identifier,
 			Performance_profile:     "resource-optimization-openshift",
 			Mode:                    "monitor",
 			Target_cluster:          "remote",

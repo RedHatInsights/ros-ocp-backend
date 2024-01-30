@@ -17,7 +17,7 @@ type container struct {
 	Container_image_name string         `json:"container_image_name,omitempty"`
 	Container_name       string         `json:"container_name,omitempty"`
 	Metrics              []metric       `json:"metrics,omitempty"`
-	Recommendations      recommendation `json:"recommendations,omitempty"`
+	Recommendations      Recommendation `json:"recommendations,omitempty"`
 }
 
 type metric struct {
@@ -37,37 +37,47 @@ type aggregation_info struct {
 	Format string `json:"format,omitempty"`
 }
 
-type recommendation struct {
-	Data          map[string]recommendationType `json:"data,omitempty"`
-	Notifications map[string]notification       `json:"notifications,omitempty"`
+type Recommendation struct {
+	Version       string                        `json:"version,omitempty"`
+	Data          map[string]RecommendationData `json:"data,omitempty"`
+	Notifications map[string]Notification       `json:"notifications,omitempty"`
 }
 
-type notification struct {
+type Notification struct {
 	NotifyType string `json:"type,omitempty"`
 	Message    string `json:"message,omitempty"`
 	Code       int    `json:"code,omitempty"`
 }
 
-type recommendationType struct {
-	Duration_based termbased `json:"duration_based,omitempty"`
+type RecommendationEngineObject struct {
+	PodsCount       int                     `json:"pods_count,omitempty"`
+	ConfidenceLevel float64                 `json:"confidence_level,omitempty"`
+	Config          ConfigObject            `json:"config,omitempty"`
+	Variation       ConfigObject            `json:"variation,omitempty"`
+	Notifications   map[string]Notification `json:"notifications,omitempty"`
 }
 
-type termbased struct {
-	Short_term  recommendationObject `json:"short_term,omitempty"`
-	Medium_term recommendationObject `json:"medium_term,omitempty"`
-	Long_term   recommendationObject `json:"long_term,omitempty"`
+type RecommendationData struct {
+	Notifications       map[string]Notification `json:"notifications,omitempty"`
+	MonitoringEndTime   time.Time               `json:"monitoring_end_time,omitempty"`
+	Current             ConfigObject            `json:"current,omitempty"`
+	RecommendationTerms Term                    `json:"recommendation_terms,omitempty"`
 }
 
-type recommendationObject struct {
-	Monitoring_start_time time.Time               `json:"monitoring_start_time,omitempty"`
-	Monitoring_end_time   time.Time               `json:"monitoring_end_time,omitempty"`
-	Duration_in_hours     float64                 `json:"duration_in_hours,omitempty"`
-	Pods_count            int                     `json:"pods_count,omitempty"`
-	Confidence_level      float64                 `json:"confidence_level,omitempty"`
-	Current               ConfigObject            `json:"current,omitempty"`
-	Config                ConfigObject            `json:"config,omitempty"`
-	Variation             ConfigObject            `json:"variation,omitempty"`
-	Notifications         map[string]notification `json:"notifications,omitempty"`
+type RecommendationTerm struct {
+	DurationInHours       float64                 `json:"duration_in_hours,omitempty"`
+	Notifications         map[string]Notification `json:"notifications,omitempty"`
+	MonitoringStartTime   time.Time               `json:"monitoring_start_time,omitempty"`
+	RecommendationEngines *struct {
+		Cost        RecommendationEngineObject `json:"cost,omitempty"`
+		Performance RecommendationEngineObject `json:"performance,omitempty"`
+	} `json:"recommendation_engines,omitempty"`
+}
+
+type Term struct {
+	Short_term  RecommendationTerm `json:"short_term"`
+	Medium_term RecommendationTerm `json:"medium_term"`
+	Long_term   RecommendationTerm `json:"long_term,omitempty"`
 }
 
 type ConfigObject struct {

@@ -73,13 +73,12 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 		return poll_cycle_complete
 	}
 
-	// TODO: Is_valid_recommendation to be called on every container record v20.1 upgrade on wards
-	if kruize.Is_valid_recommendation(recommendation) {
-		containers := recommendation[0].Kubernetes_objects[0].Containers
-		recommendationSetList := []model.RecommendationSet{}
-		histRecommendationSetList := []model.HistoricalRecommendationSet{}
+	containers := recommendation[0].Kubernetes_objects[0].Containers
+	recommendationSetList := []model.RecommendationSet{}
+	histRecommendationSetList := []model.HistoricalRecommendationSet{}
 
-		for _, container := range containers {
+	for _, container := range containers {
+		if kruize.Is_valid_recommendation(container.Recommendations, experiment_name, maxEndTimeFromReport) {
 			for _, v := range container.Recommendations.Data {
 				marshalData, err := json.Marshal(v)
 				if err != nil {
@@ -89,8 +88,8 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 				recommendationSet := model.RecommendationSet{
 					WorkloadID:          kafkaMsg.Metadata.Workload_id,
 					ContainerName:       container.Container_name,
-					MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
-					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
+					MonitoringStartTime: v.RecommendationTerms.Short_term.MonitoringStartTime,
+					MonitoringEndTime:   v.MonitoringEndTime,
 					Recommendations:     marshalData,
 				}
 				recommendationSetList = append(recommendationSetList, recommendationSet)
@@ -100,20 +99,24 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 					OrgId:               kafkaMsg.Metadata.Org_id,
 					WorkloadID:          kafkaMsg.Metadata.Workload_id,
 					ContainerName:       container.Container_name,
-					MonitoringStartTime: v.Duration_based.Short_term.Monitoring_start_time,
-					MonitoringEndTime:   v.Duration_based.Short_term.Monitoring_end_time,
+					MonitoringStartTime: v.RecommendationTerms.Short_term.MonitoringStartTime,
+					MonitoringEndTime:   v.MonitoringEndTime,
 					Recommendations:     marshalData,
 				}
 				histRecommendationSetList = append(histRecommendationSetList, historicalRecommendationSet)
 			}
+		} else {
+			poll_cycle_complete = true
+			continue
 		}
+	}
+	if len(recommendationSetList) > 0 {
 		txError := transactionForRecommendation(recommendationSetList, histRecommendationSetList, experiment_name, recommendationType)
 		if txError == nil {
 			poll_cycle_complete = true
+		} else {
+			poll_cycle_complete = false
 		}
-	} else {
-		poll_cycle_complete = true
-		invalidRecommendation.Inc()
 	}
 	return poll_cycle_complete
 }
@@ -157,10 +160,9 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 			commitKafkaMsg(msg, consumer_object)
 		}
 		// To consume upcoming Kafka msg, explicitly
-		// Especially in case of un-committed msgs
-		return 
+		return
 	case true:
-		// MonitoringEndTime.UTC() defaults to 0001-01-01 00:00:00 +0000 UTC if not found
+		// MonitoringEndTime.UTC() defaults to 0001-01-01 00:00:00 +0000 UTC if not set
 		if !recommendation_stored_in_db.MonitoringEndTime.UTC().IsZero() {
 			duration := maxEndTimeFromReport.Sub(recommendation_stored_in_db.MonitoringEndTime.UTC())
 			if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours {

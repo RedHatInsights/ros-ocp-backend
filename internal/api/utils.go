@@ -1,14 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
-	"encoding/json"
-	"math"
 
 	"gorm.io/datatypes"
 
@@ -223,11 +223,6 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 		return nil
 	}
 
-	durationBased, ok := data["duration_based"].(map[string]interface{})
-	if !ok {
-		fmt.Printf("duration_based not found in JSON")
-	}
-
 	convertMemory := func(memory map[string]interface{}) error {
 		amount, ok := memory["amount"].(float64)
 		if ok {
@@ -235,10 +230,10 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 			if math.Abs(memoryInMiB) >= 1024 {
 				memoryInGiB := memoryInMiB / 1024
 				memory["amount"] = math.Trunc(memoryInGiB*100) / 100
-				memory["format"] = "GiB"
+				memory["format"] = "Gi"
 			} else {
 				memory["amount"] = math.Trunc(memoryInMiB*100) / 100
-				memory["format"] = "MiB"
+				memory["format"] = "Mi"
 			}
 		}
 		return nil
@@ -265,56 +260,113 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 			if math.Abs(cpuInCores) < 1 {
 				cpuInMillicores := cpuInCores * 1000
 				cpu["amount"] = math.Round(cpuInMillicores) // millicore values are rounded & don't require decimal precision
-				cpu["format"] = "millicores"
+				cpu["format"] = "m"
 			} else {
 				cpu["amount"] = truncateToThreeDecimalPlaces(cpuInCores)
-				cpu["format"] = "cores"
+				cpu["format"] = nil
 			}
 		}
 		return nil
 	}
 
+	// Current section of recommendation
+	current_config, ok := data["current"].(map[string]interface{})
+	if !ok {
+		log.Error("current not found in JSON")
+	}
+
+	for _, section := range []string{"limits", "requests"} {
+
+		sectionObject, ok := current_config[section].(map[string]interface{})
+		if ok {
+			memory, ok := sectionObject["memory"].(map[string]interface{})
+			if ok {
+				err := convertMemory(memory)
+				if err != nil {
+					fmt.Printf("error converting memory in %s: %v\n", sectionObject, err)
+					continue
+				}
+			}
+			cpu, ok := sectionObject["cpu"].(map[string]interface{})
+			if ok {
+				err := convertCPU(cpu)
+				if err != nil {
+					fmt.Printf("error converting cpu in %s: %v\n", sectionObject, err)
+					continue
+				}
+			}
+		}
+	}
+
 	/*
 		Recommendation data is available for three periods
+		under cost and performance keys(engines)
 		For each of these actual values will be present in
 		below mentioned dataBlocks > request and limits
 	*/
 
-	for _, period := range []string{"long_term", "medium_term", "short_term"} {
-		intervalData, ok := durationBased[period].(map[string]interface{})
+	// Recommendation section
+	recommendation_terms, ok := data["recommendation_terms"].(map[string]interface{})
+	if !ok {
+		log.Error("recommendation data not found in JSON")
+		return data
+	}
+
+	for _, period := range []string{"short_term", "medium_term", "long_term"} {
+		intervalData, ok := recommendation_terms[period].(map[string]interface{})
 		if !ok {
 			continue
 		}
 
-		for _, dataBlock := range []string{"current", "config", "variation"} {
-			recommendationSection, ok := intervalData[dataBlock].(map[string]interface{})
-			if !ok {
-				continue
-			}
+		/* Hack
+		// monitoring_start_time is currently not nullable on DB
+		// Hence cannot be set to null while saving response from Kruize
+		*/
+		// remove nil equivalent monitoring_start_time in API response
+		monitoring_start_time := intervalData["monitoring_start_time"]
+		if monitoring_start_time == "0001-01-01T00:00:00Z" {
+			delete(intervalData, "monitoring_start_time")
+		}
 
-			for _, section := range []string{"limits", "requests"} {
+		if intervalData["recommendation_engines"] != nil {
 
-				sectionObject, ok := recommendationSection[section].(map[string]interface{})
-				if ok {
-					memory, ok := sectionObject["memory"].(map[string]interface{})
-					if ok {
-						err := convertMemory(memory)
-						if err != nil {
-							fmt.Printf("error converting memory in %s: %v\n", period, err)
-							continue
-						}
-					}
-					cpu, ok := sectionObject["cpu"].(map[string]interface{})
-					if ok {
-						err := convertCPU(cpu)
-						if err != nil {
-							fmt.Printf("error converting cpu in %s: %v\n", period, err)
-							continue
-						}
-					}
+			for _, recommendationType := range []string{"cost", "performance"} {
+				engineData, ok := intervalData["recommendation_engines"].(map[string]interface{})[recommendationType].(map[string]interface{})
+				if !ok {
+					continue
 				}
-			}	
-			
+
+				for _, dataBlock := range []string{"config", "variation"} {
+					recommendationSection, ok := engineData[dataBlock].(map[string]interface{})
+					if !ok {
+						continue
+					}
+
+					for _, section := range []string{"limits", "requests"} {
+
+						sectionObject, ok := recommendationSection[section].(map[string]interface{})
+						if ok {
+							memory, ok := sectionObject["memory"].(map[string]interface{})
+							if ok {
+								err := convertMemory(memory)
+								if err != nil {
+									fmt.Printf("error converting memory in %s: %v\n", period, err)
+									continue
+								}
+							}
+							cpu, ok := sectionObject["cpu"].(map[string]interface{})
+							if ok {
+								err := convertCPU(cpu)
+								if err != nil {
+									fmt.Printf("error converting cpu in %s: %v\n", period, err)
+									continue
+								}
+							}
+						}
+					}
+
+				}
+			}
 		}
 	}
 

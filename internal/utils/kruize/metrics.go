@@ -12,4 +12,8 @@ var (
 	},
 		[]string{"path"},
 	)
+	invalidRecommendation = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rosocp_invalid_recommendation_total",
+		Help: "The total number of invalid recommendation send by Kruize",
+	})
 )

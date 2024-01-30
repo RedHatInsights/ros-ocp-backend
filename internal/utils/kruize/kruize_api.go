@@ -20,7 +20,7 @@ var log *logrus.Entry = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
 var experimentCreateAttempt bool = true
 
-func Create_kruize_experiments(experiment_name string, k8s_object []map[string]interface{}) ([]string, error) {
+func Create_kruize_experiments(experiment_name string, cluster_identifier string, k8s_object []map[string]interface{}) ([]string, error) {
 	// k8s_object (can) contain multiple containers of same k8s object type.
 	data := map[string]string{
 		"namespace":       kruizePayload.AssertAndConvertToString(k8s_object[0]["namespace"]),
@@ -39,7 +39,7 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 			})
 		}
 	}
-	payload, err := kruizePayload.GetCreateExperimentPayload(experiment_name, containers, data)
+	payload, err := kruizePayload.GetCreateExperimentPayload(experiment_name, cluster_identifier, containers, data)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create payload: %v", err)
 	}
@@ -69,7 +69,7 @@ func Create_kruize_experiments(experiment_name string, k8s_object []map[string]i
 			log.Info("Tring to create resource_optimization_openshift performance profile")
 			utils.Setup_kruize_performance_profile()
 			experimentCreateAttempt = false // Attempting only once
-			container_names, err := Create_kruize_experiments(experiment_name, k8s_object)
+			container_names, err := Create_kruize_experiments(experiment_name, cluster_identifier, k8s_object)
 			experimentCreateAttempt = true
 			if err != nil {
 				return nil, err
@@ -178,15 +178,21 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 
 }
 
-func Is_valid_recommendation(d []kruizePayload.ListRecommendations) bool {
-	if len(d) > 0 {
-		notifications := d[0].Kubernetes_objects[0].Containers[0].Recommendations.Notifications
-		// 112101 is notification code for "Duration Based Recommendations Available".
-		if _, ok := notifications["112101"]; ok {
-			return true
-		} else {
+func Is_valid_recommendation(recommendation kruizePayload.Recommendation, experiment_name string, maxEndTime time.Time) bool {
+
+	validRecommendationCode := "111000"
+	_, recommendationIsValid := recommendation.Notifications[validRecommendationCode]
+	if recommendationIsValid {
+		// Convert the time object to the expected format
+		formattedMaxEndTime := maxEndTime.UTC().Format("2006-01-02T15:04:05.000Z")
+		_, timeStampisValid := recommendation.Data[formattedMaxEndTime]
+		if !timeStampisValid {
+			log.Error("recommendation not found for endtime: ", formattedMaxEndTime)
+			invalidRecommendation.Inc()
 			return false
 		}
+		return true
+	} else {
+		return false
 	}
-	return false
 }
