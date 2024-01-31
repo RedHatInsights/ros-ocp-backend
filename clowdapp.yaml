@@ -198,7 +198,7 @@ objects:
 
     jobs:
       - name: delete-rosocp-partitions
-        schedule: "0 0 */15 * *" # Runs at 12:00 AM, every 15 days.
+        schedule: ${PARTITION_DELETE_INTERVAL}
         podSpec:
           name: rosocpcronjob
           image: ${IMAGE}:${IMAGE_TAG}
@@ -300,3 +300,5 @@ parameters:
   value: "true"
 - name: LOG_LEVEL
   value: 'INFO'
+- name: PARTITION_DELETE_INTERVAL
+  value: "0 0 */15 * *" # Runs at 12:00 AM, every 15 days.
