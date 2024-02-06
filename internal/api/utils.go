@@ -196,26 +196,8 @@ func get_user_permissions(c echo.Context) map[string][]string {
 
 func transformComponentUnits(recommendationJSON map[string]interface{}) map[string]interface{} {
 	/*
-		Converts units for Memory and CPU
-		bytes -> MiB -> GiB
-		cores -> millicores
+		Truncates CPU units to three decimal places
 	*/
-
-	convertMemory := func(memory map[string]interface{}) error {
-		amount, ok := memory["amount"].(float64)
-		if ok {
-			memoryInMiB := amount / 1024 / 1024
-			if math.Abs(memoryInMiB) >= 1024 {
-				memoryInGiB := memoryInMiB / 1024
-				memory["amount"] = math.Trunc(memoryInGiB*100) / 100
-				memory["format"] = "Gi"
-			} else {
-				memory["amount"] = math.Trunc(memoryInMiB*100) / 100
-				memory["format"] = "Mi"
-			}
-		}
-		return nil
-	}
 
 	hasMoreThanThreeDecimals := func(value float64) bool {
 		const decimalPrecision int = 3
@@ -232,19 +214,13 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 		return value
 	}
 
-	convertCPU := func(cpu map[string]interface{}) error {
+	truncateCPU := func(cpu map[string]interface{}) bool {
 		cpuInCores, ok := cpu["amount"].(float64)
 		if ok {
-			if math.Abs(cpuInCores) < 1 {
-				cpuInMillicores := cpuInCores * 1000
-				cpu["amount"] = math.Round(cpuInMillicores) // millicore values are rounded & don't require decimal precision
-				cpu["format"] = "m"
-			} else {
-				cpu["amount"] = truncateToThreeDecimalPlaces(cpuInCores)
-				cpu["format"] = nil
-			}
+			cpu["amount"] = truncateToThreeDecimalPlaces(cpuInCores)
+			cpu["format"] = nil
 		}
-		return nil
+		return ok
 	}
 
 	// Current section of recommendation
@@ -257,18 +233,10 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 
 		sectionObject, ok := current_config[section].(map[string]interface{})
 		if ok {
-			memory, ok := sectionObject["memory"].(map[string]interface{})
-			if ok {
-				err := convertMemory(memory)
-				if err != nil {
-					fmt.Printf("error converting memory in %s: %v\n", sectionObject, err)
-					continue
-				}
-			}
 			cpu, ok := sectionObject["cpu"].(map[string]interface{})
 			if ok {
-				err := convertCPU(cpu)
-				if err != nil {
+				err := truncateCPU(cpu)
+				if !err {
 					fmt.Printf("error converting cpu in %s: %v\n", sectionObject, err)
 					continue
 				}
@@ -324,19 +292,11 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 
 						sectionObject, ok := recommendationSection[section].(map[string]interface{})
 						if ok {
-							memory, ok := sectionObject["memory"].(map[string]interface{})
-							if ok {
-								err := convertMemory(memory)
-								if err != nil {
-									fmt.Printf("error converting memory in %s: %v\n", period, err)
-									continue
-								}
-							}
 							cpu, ok := sectionObject["cpu"].(map[string]interface{})
 							if ok {
-								err := convertCPU(cpu)
-								if err != nil {
-									fmt.Printf("error converting cpu in %s: %v\n", period, err)
+								err := truncateCPU(cpu)
+								if !err {
+									fmt.Printf("error truncating cpu in %s: %v\n", period, err)
 									continue
 								}
 							}

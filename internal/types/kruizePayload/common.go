@@ -2,6 +2,7 @@ package kruizePayload
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 )
@@ -72,6 +73,26 @@ type RecommendationTerm struct {
 		Cost        RecommendationEngineObject `json:"cost,omitempty"`
 		Performance RecommendationEngineObject `json:"performance,omitempty"`
 	} `json:"recommendation_engines,omitempty"`
+	Plots Plot `json:"plots,omitempty"`
+}
+
+type Plot struct {
+	DataPoints int                  `json:"datapoints,omitempty"`
+	PlotsData  map[string]PlotsData `json:"plots_data,omitempty"`
+}
+
+type PlotsData struct {
+	CpuUsage    BoxPlotDetails `json:"cpuUsage,omitempty"`
+	MemoryUsage BoxPlotDetails `json:"memoryUsage,omitempty"`
+}
+
+type BoxPlotDetails struct {
+	Min    float64 `json:"min"`
+	Q1     float64 `json:"q1"`
+	Median float64 `json:"median"`
+	Q3     float64 `json:"q3"`
+	Max    float64 `json:"max"`
+	Format string  `json:"format"`
 }
 
 type Term struct {
@@ -146,13 +167,13 @@ func make_container_data(c map[string]interface{}) container {
 		"memoryRequest": {
 			"sum":    "memory_request_container_sum_SUM",
 			"avg":    "memory_request_container_avg_MEAN",
-			"format": "bytes",
+			"format": "Mi",
 		},
 		// Memory Limit
 		"memoryLimit": {
 			"sum":    "memory_limit_container_sum_SUM",
 			"avg":    "memory_limit_container_avg_MEAN",
-			"format": "bytes",
+			"format": "Mi",
 		},
 		// Memory Usage
 		"memoryUsage": {
@@ -160,7 +181,7 @@ func make_container_data(c map[string]interface{}) container {
 			"avg":    "memory_usage_container_avg_MEAN",
 			"min":    "memory_usage_container_min_MIN",
 			"max":    "memory_usage_container_max_MAX",
-			"format": "bytes",
+			"format": "Mi",
 		},
 		// Memory RSS
 		"memoryRSS": {
@@ -168,7 +189,7 @@ func make_container_data(c map[string]interface{}) container {
 			"avg":    "memory_rss_usage_container_avg_MEAN",
 			"min":    "memory_rss_usage_container_min_MIN",
 			"max":    "memory_rss_usage_container_max_MAX",
-			"format": "bytes",
+			"format": "Mi",
 		},
 	}
 
@@ -188,6 +209,7 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "sum" key exists in map
 		if sum_field, ok := metricFields["sum"]; ok {
+			convertMemoryFields(metricName, sum_field, c)
 			// Assign the sum value returned
 			sum = AssertAndConvertToString(c[sum_field])
 		} else {
@@ -197,6 +219,7 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "avg" key exists in map
 		if avg_field, ok := metricFields["avg"]; ok {
+			convertMemoryFields(metricName, avg_field, c)
 			// Assign the avg value returned
 			avg = AssertAndConvertToString(c[avg_field])
 		} else {
@@ -206,6 +229,7 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "min" key exists in map
 		if min_field, ok := metricFields["min"]; ok {
+			convertMemoryFields(metricName, min_field, c)
 			// Assign the min value returned
 			min = AssertAndConvertToString(c[min_field])
 		} else {
@@ -215,6 +239,7 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "max" key exists in map
 		if max_field, ok := metricFields["max"]; ok {
+			convertMemoryFields(metricName, max_field, c)
 			// Assign the max value returned
 			max = AssertAndConvertToString(c[max_field])
 		} else {
@@ -255,4 +280,24 @@ func make_container_data(c map[string]interface{}) container {
 	}
 
 	return container_data
+}
+
+func MemBytesToMi(mem float64) float64 {
+	memoryInMi := mem / 1024 / 1024
+	truncatedMem := math.Trunc(memoryInMi*100) / 100
+	return truncatedMem
+}
+
+func isMemoryField(metricName string) bool {
+	// TO DO: In go 1.21 use slices package instead of map
+	memoryFields := map[string]string{"memoryRSS": "", "memoryUsage": "", "memoryLimit": "", "memoryRequest": ""}
+	_, keyExists := memoryFields[metricName]
+	return keyExists
+}
+
+func convertMemoryFields(metricName string, field string, c map[string]interface{}) {
+	if isMemoryField(metricName) {
+		converted_mem := MemBytesToMi(c[field].(float64))
+		c[field] = converted_mem
+	}
 }
