@@ -9,6 +9,7 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/kafka"
 	"github.com/redhatinsights/ros-ocp-backend/internal/services"
+	"github.com/redhatinsights/ros-ocp-backend/internal/services/housekeeper"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
 
@@ -51,9 +52,18 @@ var houseKeeperCmd = &cobra.Command{
 	Short: "starts ros-ocp housekeeper service",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("starting ros-ocp housekeeper service")
-		services.StartHouseKeeperService()
+		sourcesFlag, _ := cmd.Flags().GetBool("sources")
+		partitionFlag, _ := cmd.Flags().GetBool("partition")
+		if sourcesFlag {
+			housekeeper.StartSourcesListenerService()
+		}
+		if partitionFlag {
+			housekeeper.DeletePartitions()
+		}
 	},
 }
+
+var sources, partitions bool
 
 func init() {
 	rootCmd.AddCommand(startCmd)
@@ -61,4 +71,9 @@ func init() {
 	startCmd.AddCommand(recommendationPollerCmd)
 	startCmd.AddCommand(apiCmd)
 	startCmd.AddCommand(houseKeeperCmd)
+
+	houseKeeperCmd.Flags().BoolVar(&sources, "sources", false, "starts sources listener service")
+	houseKeeperCmd.Flags().BoolVar(&partitions, "partitions", false, "deletes older partitions")
+	houseKeeperCmd.MarkFlagsOneRequired("sources", "partitions")
+	houseKeeperCmd.MarkFlagsMutuallyExclusive("sources", "partitions")
 }
