@@ -10,9 +10,9 @@ export IMAGE="quay.io/cloudservices/ros-ocp-backend"
 export DOCKERFILE="Dockerfile"
 
 export IQE_PLUGINS="ros_ocp"
-export IQE_MARKER_EXPRESSION="smoke"
+export IQE_MARKER_EXPRESSION="qa"
 export IQE_FILTER_EXPRESSION=""
-export IQE_CJI_TIMEOUT="30m"
+export IQE_CJI_TIMEOUT="2h"
 
 # Install bonfire repo/initialize
 CICD_URL=https://raw.githubusercontent.com/RedHatInsights/bonfire/master/cicd
