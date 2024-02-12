@@ -46,7 +46,10 @@ var (
 			}
 
 			df := dataframe.LoadRecords(records)
-			df = utils.Aggregate_data(df)
+			df, err = utils.Aggregate_data(df)
+			if err != nil {
+				panic(err.Error())
+			}
 			fileio, err := os.Create(outputFile)
 			if err != nil {
 				panic(err.Error())

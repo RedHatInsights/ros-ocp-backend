@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/go-gota/gota/dataframe"
@@ -10,8 +12,14 @@ import (
 	w "github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
 )
 
-func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
+func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	log = logging.GetLogger()
+
+	// Check if CSV has all the needed columns
+	if err := check_if_all_required_columns_in_CSV(df); err != nil {
+		return dataframe.DataFrame{}, err
+	}
+
 	df = determine_k8s_object_type(df)
 
 	// filter out only valid workload type
@@ -25,7 +33,7 @@ func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
 	}
 
 	if df.Nrow() == 0 {
-		return df
+		return df, nil
 	}
 
 	dfGroups := df.GroupBy(
@@ -73,7 +81,7 @@ func Aggregate_data(df dataframe.DataFrame) dataframe.DataFrame {
 	}
 
 	df = dfGroups.Aggregation(columnsAggregationType, columnsToAggregate)
-	return df
+	return df, nil
 }
 
 func filter_valid_csv_records(main_df dataframe.DataFrame) (dataframe.DataFrame, int) {
@@ -146,4 +154,52 @@ func determine_k8s_object_type(df dataframe.DataFrame) dataframe.DataFrame {
 	df = df.Mutate(s.Col("X0")).Rename("k8s_object_type", "X0")
 	df = df.Mutate(s.Col("X1")).Rename("k8s_object_name", "X1")
 	return df
+}
+
+func check_if_all_required_columns_in_CSV(df dataframe.DataFrame) error {
+	// Check if all the required columns are present in CSV
+	all_required_columns := []string{
+		"report_period_start",
+		"report_period_end",
+		"interval_start",
+		"interval_end",
+		"container_name",
+		"pod",
+		"owner_name",
+		"owner_kind",
+		"workload",
+		"workload_type",
+		"namespace",
+		"image_name",
+		"node",
+		"resource_id",
+		"cpu_request_container_avg",
+		"cpu_request_container_sum",
+		"cpu_limit_container_avg",
+		"cpu_limit_container_sum",
+		"cpu_usage_container_avg",
+		"cpu_usage_container_min",
+		"cpu_usage_container_max",
+		"cpu_usage_container_sum",
+		"cpu_throttle_container_avg",
+		"cpu_throttle_container_max",
+		"cpu_throttle_container_sum",
+		"memory_request_container_avg",
+		"memory_request_container_sum",
+		"memory_limit_container_avg",
+		"memory_limit_container_sum",
+		"memory_usage_container_avg",
+		"memory_usage_container_min",
+		"memory_usage_container_max",
+		"memory_usage_container_sum",
+		"memory_rss_usage_container_avg",
+		"memory_rss_usage_container_min",
+		"memory_rss_usage_container_max",
+		"memory_rss_usage_container_sum",
+	}
+	cloumns_in_csv := df.Names()
+	if !reflect.DeepEqual(all_required_columns, cloumns_in_csv) {
+		return fmt.Errorf("CSV file does not have all the required columns")
+	}
+	return nil
 }
