@@ -150,3 +150,18 @@ func Test_filter_valid_csv_records(t *testing.T) {
 	}
 
 }
+
+func Test_check_if_all_required_columns_in_CSV(t *testing.T) {
+	// Good case - all the columns are present
+	usage_data := []UsageData{{}}
+	df := dataframe.LoadStructs(usage_data)
+	if err := check_if_all_required_columns_in_CSV(df); err != nil {
+		t.Error("CSV has all required columns but test fails")
+	}
+
+	// Bad case - dropping one of the column
+	df = df.Drop([]int{5})
+	if err := check_if_all_required_columns_in_CSV(df); err == nil {
+		t.Error("Expecting error to be returned as all required column not present")
+	}
+}
