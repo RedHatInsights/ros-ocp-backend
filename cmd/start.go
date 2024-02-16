@@ -53,7 +53,7 @@ var houseKeeperCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("starting ros-ocp housekeeper service")
 		sourcesFlag, _ := cmd.Flags().GetBool("sources")
-		partitionFlag, _ := cmd.Flags().GetBool("partition")
+		partitionFlag, _ := cmd.Flags().GetBool("partitions")
 		if sourcesFlag {
 			housekeeper.StartSourcesListenerService()
 		}
