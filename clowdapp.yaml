@@ -205,7 +205,7 @@ objects:
           imagePullPolicy: Always
           restartPolicy: OnFailure
           command: ["sh"]
-          args: ["-c", "./rosocp db migrate up && ./rosocp start housekeeper --partition"]
+          args: ["-c", "./rosocp db migrate up && ./rosocp start housekeeper --partitions"]
           env:
             - name: CLOWDER_ENABLED
               value: ${CLOWDER_ENABLED}
