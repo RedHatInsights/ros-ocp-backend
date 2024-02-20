@@ -20,11 +20,6 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 		return dataframe.DataFrame{}, err
 	}
 
-	df = determine_k8s_object_type(df)
-
-	// filter out only valid workload type
-	df = filter_valid_k8s_object_types(df)
-
 	// Validation to check if metrics for cpuUsage, memoryUsage and memoryRSS are missing
 	df, no_of_dropped_records := filter_valid_csv_records(df)
 	if no_of_dropped_records != 0 {
@@ -33,8 +28,14 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	}
 
 	if df.Nrow() == 0 {
+		log.Error("No valid records present in CSV to process further.")
 		return df, nil
 	}
+
+	df = determine_k8s_object_type(df)
+
+	// filter out only valid workload type
+	df = filter_valid_k8s_object_types(df)
 
 	dfGroups := df.GroupBy(
 		"namespace",
@@ -99,6 +100,10 @@ func filter_valid_csv_records(main_df dataframe.DataFrame) (dataframe.DataFrame,
 		dataframe.F{Colname: "cpu_usage_container_max", Comparator: series.GreaterEq, Comparando: 0},
 		dataframe.F{Colname: "cpu_usage_container_min", Comparator: series.GreaterEq, Comparando: 0},
 		dataframe.F{Colname: "cpu_usage_container_avg", Comparator: series.GreaterEq, Comparando: 0},
+		dataframe.F{Colname: "owner_kind", Comparator: series.Neq, Comparando: ""},
+		dataframe.F{Colname: "owner_name", Comparator: series.Neq, Comparando: ""},
+		dataframe.F{Colname: "workload", Comparator: series.Neq, Comparando: ""},
+		dataframe.F{Colname: "workload_type", Comparator: series.Neq, Comparando: ""},
 	)
 
 	no_of_dropped_records := main_df.Nrow() - df.Nrow()
@@ -123,14 +128,6 @@ func filter_valid_k8s_object_types(df dataframe.DataFrame) dataframe.DataFrame {
 }
 
 func determine_k8s_object_type(df dataframe.DataFrame) dataframe.DataFrame {
-	df = df.FilterAggregation(
-		dataframe.And,
-		dataframe.F{Colname: "owner_kind", Comparator: series.Neq, Comparando: ""},
-		dataframe.F{Colname: "owner_name", Comparator: series.Neq, Comparando: ""},
-		dataframe.F{Colname: "workload", Comparator: series.Neq, Comparando: ""},
-		dataframe.F{Colname: "workload_type", Comparator: series.Neq, Comparando: ""},
-	)
-
 	columns := df.Names()
 	index_of_owner_name := findInStringSlice("owner_name", columns)
 	index_of_owner_kind := findInStringSlice("owner_kind", columns)
