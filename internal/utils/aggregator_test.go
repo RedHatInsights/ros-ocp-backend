@@ -159,6 +159,19 @@ func Test_check_if_all_required_columns_in_CSV(t *testing.T) {
 		t.Error("CSV has all required columns but test fails")
 	}
 
+	// Should allow change in column order.
+	columns := df.Names()
+	columns[1], columns[2] = columns[2], columns[1]
+	newdf := dataframe.LoadRecords(
+		[][]string{
+			columns,
+			columns,
+		},
+	)
+	if err := check_if_all_required_columns_in_CSV(newdf); err != nil {
+		t.Error("unordered columns should be allowed")
+	}
+
 	// Bad case - dropping one of the column
 	df = df.Drop([]int{5})
 	if err := check_if_all_required_columns_in_CSV(df); err == nil {
