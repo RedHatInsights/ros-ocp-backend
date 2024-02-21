@@ -28,8 +28,7 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	}
 
 	if df.Nrow() == 0 {
-		log.Error("No valid records present in CSV to process further.")
-		return df, nil
+		return df, fmt.Errorf("no valid records present in CSV to process further")
 	}
 
 	df = determine_k8s_object_type(df)
@@ -102,8 +101,8 @@ func filter_valid_csv_records(main_df dataframe.DataFrame) (dataframe.DataFrame,
 		dataframe.F{Colname: "cpu_usage_container_avg", Comparator: series.GreaterEq, Comparando: 0},
 		dataframe.F{Colname: "owner_kind", Comparator: series.Neq, Comparando: ""},
 		dataframe.F{Colname: "owner_name", Comparator: series.Neq, Comparando: ""},
-		dataframe.F{Colname: "workload", Comparator: series.Neq, Comparando: ""},
-		dataframe.F{Colname: "workload_type", Comparator: series.Neq, Comparando: ""},
+		dataframe.F{Colname: "owner_kind", Comparator: series.Neq, Comparando: "<none>"},
+		dataframe.F{Colname: "owner_name", Comparator: series.Neq, Comparando: "<none>"},
 	)
 
 	no_of_dropped_records := main_df.Nrow() - df.Nrow()
@@ -139,9 +138,9 @@ func determine_k8s_object_type(df dataframe.DataFrame) dataframe.DataFrame {
 		owner_kind := s.Elem(index_of_owner_kind).String()
 		workload := s.Elem(index_of_workload).String()
 		workload_type := s.Elem(index_of_workload_type).String()
-		if strings.ToLower(owner_kind) == string(w.Replicaset) && workload == "<none>" {
+		if strings.ToLower(owner_kind) == string(w.Replicaset) && (workload == "<none>" || workload == "") {
 			return series.Strings([]string{string(w.Replicaset), owner_name})
-		} else if strings.ToLower(owner_kind) == string(w.Replicationcontroller) && workload == "<none>" {
+		} else if strings.ToLower(owner_kind) == string(w.Replicationcontroller) && (workload == "<none>" || workload == "") {
 			return series.Strings([]string{string(w.Replicationcontroller), owner_name})
 		} else {
 			return series.Strings([]string{workload_type, workload})
