@@ -51,7 +51,7 @@ func GetUpdateResultPayload(experiment_name string, containers []map[string]inte
 			container_array = append(container_array, make_container_data(c))
 		}
 		payload = append(payload, UpdateResult{
-			Version:             "3.0",
+			Version:             "1.0",
 			Experiment_name:     experiment_name,
 			Interval_start_time: data["interval_start"],
 			Interval_end_time:   data["interval_end"],
