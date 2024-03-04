@@ -16,6 +16,8 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 )
 
+const timeLayout = "2006-01-02"
+
 type Collection struct {
 	Data  []interface{} `json:"data"`
 	Meta  Metadata      `json:"meta"`
@@ -83,74 +85,77 @@ func CollectionResponse(collection []interface{}, req *http.Request, count, limi
 	}
 }
 
-func MapQueryParameters(c echo.Context) map[string][]string {
+func MapQueryParameters(c echo.Context) (map[string][]string, error) {
 	log := logging.GetLogger()
 	queryParams := make(map[string][]string)
+	var startDate, endDate time.Time
+	var clusters, projects, workloadNames, workloadTypes, containers []string
 
 	now := time.Now().UTC()
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
 	dateSlice := []string{}
 	startDateStr := c.QueryParam("start_date")
-	var startDate time.Time
+
 	if startDateStr == "" {
 		startDate = firstOfMonth
 	} else {
 		var err error
-		startDate, err = time.Parse("2006-01-02", startDateStr)
+		startDate, err = time.Parse(timeLayout, startDateStr)
 		if err != nil {
 			log.Error("error parsing start_date:", err)
+			return queryParams, err
 		}
 	}
-	startDateSlice := append(dateSlice, startDate.Format("2006-01-02"))
-	queryParams["DATE(recommendation_sets.monitoring_start_time) >= ?"] = startDateSlice
-
+	startDateSlice := append(dateSlice, startDate.Format(timeLayout))
+	queryParams["DATE(recommendation_sets.monitoring_end_time) >= ?"] = startDateSlice
 	endDateStr := c.QueryParam("end_date")
-	var endDate time.Time
+
 	if endDateStr == "" {
 		endDate = now
 	} else {
 		var err error
-		endDate, err = time.Parse("2006-01-02", endDateStr)
+		endDate, err = time.Parse(timeLayout, endDateStr)
 		if err != nil {
 			log.Error("error parsing end_date:", err)
+			return queryParams, err
 		}
 	}
-	endDateSlice := append(dateSlice, endDate.Format("2006-01-02"))
+	endDateSlice := append(dateSlice, endDate.Format(timeLayout))
 
 	queryParams["DATE(recommendation_sets.monitoring_end_time) <= ?"] = endDateSlice
 
-	clusters := c.QueryParams()["cluster"]
+	clusters = c.QueryParams()["cluster"]
 	if len(clusters) > 0 {
 		paramString, values := parseQueryParams("cluster", clusters)
 		queryParams[paramString] = values
 	}
 
-	projects := c.QueryParams()["project"]
+	projects = c.QueryParams()["project"]
 	if len(projects) > 0 {
 		paramString, values := parseQueryParams("project", projects)
 		queryParams[paramString] = values
 	}
 
-	workloadNames := c.QueryParams()["workload"]
+	workloadNames = c.QueryParams()["workload"]
 	if len(workloadNames) > 0 {
 		paramString, values := parseQueryParams("workload", workloadNames)
 		queryParams[paramString] = values
 	}
 
-	workloadTypes := c.QueryParams()["workload_type"]
+	workloadTypes = c.QueryParams()["workload_type"]
 	if len(workloadTypes) > 0 {
 		paramString, values := parseQueryParams("workload_type", workloadTypes)
 		queryParams[paramString] = values
 	}
 
-	containers := c.QueryParams()["container"]
+	containers = c.QueryParams()["container"]
 	if len(containers) > 0 {
 		paramString, values := parseQueryParams("container", containers)
 		queryParams[paramString] = values
 	}
 
-	return queryParams
+	return queryParams, nil
 
 }
 
