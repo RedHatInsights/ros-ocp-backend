@@ -68,7 +68,10 @@ func GetRecommendationSetList(c echo.Context) error {
 		}
 	}
 
-	queryParams := MapQueryParameters(c)
+	queryParams, err := MapQueryParameters(c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
 	recommendationSet := model.RecommendationSet{}
 	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams, user_permissions)
 	if error != nil {

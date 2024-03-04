@@ -83,7 +83,7 @@ func CollectionResponse(collection []interface{}, req *http.Request, count, limi
 	}
 }
 
-func MapQueryParameters(c echo.Context) map[string][]string {
+func MapQueryParameters(c echo.Context) (map[string][]string, error) {
 	log := logging.GetLogger()
 	queryParams := make(map[string][]string)
 
@@ -100,10 +100,11 @@ func MapQueryParameters(c echo.Context) map[string][]string {
 		startDate, err = time.Parse("2006-01-02", startDateStr)
 		if err != nil {
 			log.Error("error parsing start_date:", err)
+			return queryParams, err
 		}
 	}
 	startDateSlice := append(dateSlice, startDate.Format("2006-01-02"))
-	queryParams["DATE(recommendation_sets.monitoring_start_time) >= ?"] = startDateSlice
+	queryParams["DATE(recommendation_sets.monitoring_end_time) >= ?"] = startDateSlice
 
 	endDateStr := c.QueryParam("end_date")
 	var endDate time.Time
@@ -114,6 +115,7 @@ func MapQueryParameters(c echo.Context) map[string][]string {
 		endDate, err = time.Parse("2006-01-02", endDateStr)
 		if err != nil {
 			log.Error("error parsing end_date:", err)
+			return queryParams, err
 		}
 	}
 	endDateSlice := append(dateSlice, endDate.Format("2006-01-02"))
@@ -150,7 +152,7 @@ func MapQueryParameters(c echo.Context) map[string][]string {
 		queryParams[paramString] = values
 	}
 
-	return queryParams
+	return queryParams, nil
 
 }
 
