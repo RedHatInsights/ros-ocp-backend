@@ -60,15 +60,15 @@ db-migrate:
 
 .PHONY: run-processor
 run-processor:
-	go run rosocp.go start processor
+	PROMETHEUS_PORT=5005 go run rosocp.go start processor
 
 .PHONY: run-recommender
 run-recommendation-poller:
-	go run rosocp.go start recommendation-poller
+	PROMETHEUS_PORT=5006 go run rosocp.go start recommendation-poller
 
 .PHONY: run-api-server
 run-api-server:
-	go run rosocp.go start api
+	PROMETHEUS_PORT=5007 go run rosocp.go start api
 
 .PHONY: build
 build:
