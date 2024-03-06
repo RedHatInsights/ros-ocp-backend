@@ -430,6 +430,9 @@
                 }
               }
             }
+          },
+          "plots":{
+            "$ref": "#/components/schemas/LongTermPlots"
           }
         }
       },
@@ -466,6 +469,9 @@
                 }
               }
             }
+          },
+          "plots":{
+            "$ref":"#/components/schemas/MediumTermPlots"
           }
         }
       },
@@ -530,6 +536,9 @@
                 "$ref": "#/components/schemas/PerformanceRecommendation"
               }
             }
+          },
+          "plots":{
+            "$ref": "#/components/schemas/ShortTermPlots"
           }
         }
       },
@@ -1554,6 +1563,401 @@
             "example": "deploymentconfig"
           }
         }
+      },
+      "ShortTermPlots":{
+        "type": "object",
+        "properties":{
+          "datapoints":{
+            "type": "integer",
+            "example": 4
+          },
+        "plots_data":{
+          "$ref": "#/components/schemas/ShortTermPlotsData"
+          }
+        }
+      },
+      "MediumTermPlots":{
+        "type": "object",
+        "properties":{
+          "datapoints":{
+            "type": "integer",
+            "example": 7
+          },
+          "plots_data":{
+            "$ref": "#/components/schemas/MediumTermPlotsData"
+          }
+        }
+      },
+      "LongTermPlots":{
+        "type": "object",
+        "properties":{
+          "datapoints":{
+            "type": "integer",
+            "example": 15
+          },
+          "plots_data":{
+            "$ref": "#/components/schemas/LongTermPlotsData"
+          }
+        }
+      },
+      "ShortTermPlotsData": {
+        "type": "object",
+        "properties":{
+          "2023-04-01T06:00:00Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-01T12:00:00Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-01T18:00:00Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-02T00:00:00Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          }
+        }
+      },
+      "MediumTermPlotsData": {
+        "type": "object",
+        "properties":{
+          "2023-04-01T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-02T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-03T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-04T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-05T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-06T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-07T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          }
+        }
+      },
+      "LongTermPlotsData": {
+        "type": "object",
+        "properties":{
+          "2023-04-01T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-02T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-03T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-04T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-05T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-06T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-07T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-08T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-09T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-10T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-11T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-12T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-13T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-14T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-15T00:00:00.000Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          }
+        }
+      },
+      "cpuUsage": {
+        "type": "object",
+        "properties":{
+          "format":{
+            "type": "string",
+            "example": "cores"
+          },
+          "max":{
+            "$ref": "#/components/schemas/cpuUsageFloatComponent"
+          },
+          "median":{
+            "$ref": "#/components/schemas/cpuUsageFloatComponent"
+          },
+          "min":{
+            "$ref": "#/components/schemas/cpuUsageFloatComponent"
+          },
+          "q1":{
+            "$ref": "#/components/schemas/cpuUsageFloatComponent"
+          },
+          "q3":{
+            "$ref": "#/components/schemas/cpuUsageFloatComponent"
+          }
+        }
+      },
+      "memoryUsage":{
+        "type": "object",
+        "properties":{
+          "format":{
+            "type": "string",
+            "example": "MiB"
+          },
+          "max":{
+            "$ref": "#/components/schemas/memoryUsageFloatComponent"
+          },
+          "median":{
+            "$ref": "#/components/schemas/memoryUsageFloatComponent"
+          },
+          "min":{
+            "$ref": "#/components/schemas/memoryUsageFloatComponent"
+          },
+          "q1":{
+            "$ref": "#/components/schemas/memoryUsageFloatComponent"
+          },
+          "q3":{
+            "$ref": "#/components/schemas/memoryUsageFloatComponent"
+          }
+        }
+      },
+      "cpuUsageFloatComponent":{
+        "type": "number",
+        "example": 0.05,
+        "format": "float"
+      },
+      "memoryUsageFloatComponent":{
+        "type": "number",
+        "example": 238.2,
+        "format": "float"
       }
     }
   }

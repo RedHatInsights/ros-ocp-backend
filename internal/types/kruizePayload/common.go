@@ -72,6 +72,26 @@ type RecommendationTerm struct {
 		Cost        RecommendationEngineObject `json:"cost,omitempty"`
 		Performance RecommendationEngineObject `json:"performance,omitempty"`
 	} `json:"recommendation_engines,omitempty"`
+	Plots Plot `json:"plots,omitempty"`
+}
+
+type Plot struct {
+	DataPoints int                  `json:"datapoints,omitempty"`
+	PlotsData  map[string]PlotsData `json:"plots_data,omitempty"`
+}
+
+type PlotsData struct {
+	CpuUsage    BoxPlotDetails `json:"cpuUsage,omitempty"`
+	MemoryUsage BoxPlotDetails `json:"memoryUsage,omitempty"`
+}
+
+type BoxPlotDetails struct {
+	Min    float64 `json:"min"`
+	Q1     float64 `json:"q1"`
+	Median float64 `json:"median"`
+	Q3     float64 `json:"q3"`
+	Max    float64 `json:"max"`
+	Format string  `json:"format"`
 }
 
 type Term struct {
