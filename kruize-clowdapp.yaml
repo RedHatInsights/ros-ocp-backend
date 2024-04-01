@@ -79,8 +79,6 @@ objects:
             value: ${SSL_CERT_DIR}
     jobs:
       - name: delete-kruize-partitions
-         # Apr 1st 2024 Editing to run the cronJob daily to delete partitions
-       # schedule: "0 0 * * *" # Run every day at midnight
         schedule: ${KRUIZE_PARTITION_INTERVAL}
         podSpec:
           name: kruizecrondeletejob
@@ -136,9 +134,7 @@ objects:
               value: "UTC"
             - name: deletepartitionsthreshold
               value: "16"
-            - name: KRUIZE_PARTITION_INTERVAL
-              value: "0 0 * * *" # Run the cronjob every day at midnight. Earlier it was set for 16th day
-      - name: create-kruize-partitions
+            - name: create-kruize-partitions
         schedule: "0 0 25 * *" # Run on 25th of every month at midnight
         podSpec:
           name: kruizecronjob
@@ -253,3 +249,5 @@ parameters:
   value: '/etc/ssl/certs:/etc/pki/tls/certs:/system/etc/security/cacerts:/cdapp/certs'
 - name: KRUIZE_LOGGING_LEVEL
   value: "info"
+- name: KRUIZE_PARTITION_INTERVAL
+  value: "0 0 * * *" # Run the cronjob every day at midnight. Earlier it was set for 16th day
