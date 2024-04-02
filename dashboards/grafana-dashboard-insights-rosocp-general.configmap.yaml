@@ -2,51 +2,6 @@ apiVersion: v1
 data:
   ROSOCP.json: |-
     {
-      "__inputs": [
-        {
-          "name": "DS_CRCP01UE1-PROMETHEUS",
-          "label": "crcp01ue1-prometheus",
-          "description": "",
-          "type": "datasource",
-          "pluginId": "prometheus",
-          "pluginName": "Prometheus"
-        },
-        {
-          "name": "DS_APP-SRE-PROD-01-PROMETHEUS",
-          "label": "app-sre-prod-01-prometheus",
-          "description": "",
-          "type": "datasource",
-          "pluginId": "prometheus",
-          "pluginName": "Prometheus"
-        }
-      ],
-      "__elements": {},
-      "__requires": [
-        {
-          "type": "grafana",
-          "id": "grafana",
-          "name": "Grafana",
-          "version": "9.3.8"
-        },
-        {
-          "type": "panel",
-          "id": "graph",
-          "name": "Graph (old)",
-          "version": ""
-        },
-        {
-          "type": "datasource",
-          "id": "prometheus",
-          "name": "Prometheus",
-          "version": "1.0.0"
-        },
-        {
-          "type": "panel",
-          "id": "stat",
-          "name": "Stat",
-          "version": ""
-        }
-      ],
       "annotations": {
         "list": [
           {
@@ -82,8 +37,7 @@ data:
           "dashLength": 10,
           "dashes": false,
           "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "fieldConfig": {
             "defaults": {
@@ -129,8 +83,7 @@ data:
           "targets": [
             {
               "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(kafka_consumergroup_group_lag{topic=~\".*hccm.ros.events\", group=\"ros-ocp\"})",
@@ -172,7 +125,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_APP-SRE-PROD-01-PROMETHEUS}"
+            "uid": "${DatasourceRDS}"
           },
           "description": "",
           "fieldConfig": {
@@ -195,8 +148,7 @@ data:
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -240,11 +192,10 @@ data:
           "targets": [
             {
               "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_APP-SRE-PROD-01-PROMETHEUS}"
+                "uid": "${DatasourceRDS}"
               },
               "editorMode": "code",
-              "expr": "aws_rds_free_storage_space_average{job=~\"cloudwatch-exporter.*\",dbinstance_identifier=\"rosocp-prod\"} / 1000 /1000 /1000",
+              "expr": "aws_rds_free_storage_space_average{job=~\"cloudwatch-exporter.*\",dbinstance_identifier=\"$namespace\"} / 1000 /1000 /1000",
               "legendFormat": "__auto",
               "range": true,
               "refId": "A"
@@ -268,8 +219,7 @@ data:
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "description": "",
           "fieldConfig": {
@@ -333,8 +283,7 @@ data:
           "targets": [
             {
               "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(increase(rosocp_invalid_recommendation_total[$__range]))",
@@ -348,8 +297,7 @@ data:
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "description": "",
           "fieldConfig": {
@@ -413,8 +361,7 @@ data:
           "targets": [
             {
               "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(increase(rosocp_invalid_csv_total[$__range]))",
@@ -454,8 +401,7 @@ data:
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "description": "",
           "fieldConfig": {
@@ -515,8 +461,7 @@ data:
           "targets": [
             {
               "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(increase(rosocp_rh_account_created_total[$__range]))",
@@ -530,8 +475,7 @@ data:
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "description": "",
           "fieldConfig": {
@@ -595,8 +539,7 @@ data:
           "targets": [
             {
               "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(increase(rosocp_db_error_total[$__range]))",
@@ -610,8 +553,7 @@ data:
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+            "uid": "${datasource}"
           },
           "description": "Error raised when table partition does not exist",
           "fieldConfig": {
@@ -675,8 +617,7 @@ data:
           "targets": [
             {
               "datasource": {
-                "type": "prometheus",
-                "uid": "${DS_CRCP01UE1-PROMETHEUS}"
+                "uid": "${datasource}"
               },
               "editorMode": "code",
               "expr": "sum(increase(rosocp_partition__missing_error_total[$__range]))",
@@ -696,12 +637,13 @@ data:
         "list": [
           {
             "current": {
-              "selected": true,
+              "selected": false,
               "text": "crcp01ue1-prometheus",
               "value": "crcp01ue1-prometheus"
             },
             "hide": 0,
             "includeAll": false,
+            "label": "datasource",
             "multi": false,
             "name": "datasource",
             "options": [],
@@ -711,6 +653,53 @@ data:
             "regex": "/.*crc(p|s).*ue1-prometheus/",
             "skipUrlSync": false,
             "type": "datasource"
+          },
+          {
+            "current": {
+              "selected": true,
+              "text": "app-sre-prod-01-prometheus",
+              "value": "app-sre-prod-01-prometheus"
+            },
+            "hide": 0,
+            "includeAll": false,
+            "label": "DatasourceRDS",
+            "multi": false,
+            "name": "DatasourceRDS",
+            "options": [],
+            "query": "prometheus",
+            "queryValue": "",
+            "refresh": 1,
+            "regex": "app-sre-stage-01-prometheus|app-sre-prod-01-prometheus",
+            "skipUrlSync": false,
+            "type": "datasource"
+          },
+          {
+            "current": {
+              "selected": true,
+              "text": "rosocp-prod",
+              "value": "rosocp-prod"
+            },
+            "hide": 0,
+            "includeAll": false,
+            "label": "namespace",
+            "multi": false,
+            "name": "namespace",
+            "options": [
+              {
+                "selected": false,
+                "text": "rosocp-stage",
+                "value": "rosocp-stage"
+              },
+              {
+                "selected": true,
+                "text": "rosocp-prod",
+                "value": "rosocp-prod"
+              }
+            ],
+            "query": "rosocp-stage,rosocp-prod",
+            "queryValue": "",
+            "skipUrlSync": false,
+            "type": "custom"
           }
         ]
       },
