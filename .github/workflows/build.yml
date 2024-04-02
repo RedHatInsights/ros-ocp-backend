@@ -22,3 +22,5 @@ jobs:
         run: make test
       - name: Check Build
         run: make build
+      - name: Check Service init
+        run: make run-processor
