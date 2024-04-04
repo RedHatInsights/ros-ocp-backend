@@ -216,7 +216,7 @@
             "properties": {
               "count": {
                 "type": "integer",
-                "minimum": 1
+                "minimum": 0
               },
               "limit": {
                 "type": "integer",
@@ -361,7 +361,7 @@
                   },
                   "code": {
                     "type": "string",
-                    "example": 112101
+                    "example": 111101
                   },
                   "message": {
                     "type": "string",
