@@ -8,6 +8,7 @@ RUN go get -d ./... && \
 
 FROM registry.redhat.io/ubi8/ubi-minimal:latest
 WORKDIR /
+RUN microdnf -y update
 COPY --from=builder /go/src/app/rosocp ./rosocp
 COPY --from=builder /go/src/app/go_version_details ./go_version_details
 COPY migrations ./migrations
