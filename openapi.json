@@ -360,7 +360,7 @@
                     "example": "info"
                   },
                   "code": {
-                    "type": "string",
+                    "type": "integer",
                     "example": 111101
                   },
                   "message": {
