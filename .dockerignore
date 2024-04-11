@@ -1,2 +1,12 @@
-scripts/_minio-conf/
-scripts/_minio-data/
+# Ignore everything
+*
+
+# Allow files and directories
+!/cmd
+!/internal
+!/migrations
+!/go.mod
+!/go.sum
+!/rosocp.go
+!/openapi.json
+!/resource_optimization_openshift.json
