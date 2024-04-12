@@ -216,7 +216,7 @@
             "properties": {
               "count": {
                 "type": "integer",
-                "minimum": 1
+                "minimum": 0
               },
               "limit": {
                 "type": "integer",
@@ -294,7 +294,8 @@
                           },
                           "format": {
                             "type": "string",
-                            "example": null
+                            "example": null,
+                            "nullable": true
                           }
                         }
                       },
@@ -325,7 +326,8 @@
                           },
                           "format": {
                             "type": "string",
-                            "example": null
+                            "example": null,
+                            "nullable": true
                           }
                         }
                       },
@@ -358,8 +360,8 @@
                     "example": "info"
                   },
                   "code": {
-                    "type": "string",
-                    "example": 112101
+                    "type": "integer",
+                    "example": 111101
                   },
                   "message": {
                     "type": "string",
@@ -551,7 +553,8 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null
+                        "example": null,
+                        "nullable": true
                       }
                     }
                   },
@@ -582,7 +585,8 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null
+                        "example": null,
+                        "nullable": true
                       }
                     }
                   },
@@ -622,7 +626,8 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null
+                        "example": null,
+                        "nullable": true
                       }
                     }
                   },
@@ -653,7 +658,8 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null
+                        "example": null,
+                        "nullable": true
                       }
                     }
                   },
@@ -725,7 +731,8 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null
+                        "example": null,
+                        "nullable": true
                       }
                     }
                   },
@@ -765,7 +772,8 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null
+                        "example": null,
+                        "nullable": true
                       }
                     }
                   },
@@ -796,7 +804,8 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null
+                        "example": null,
+                        "nullable": true
                       }
                     }
                   },
@@ -871,7 +880,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -902,7 +912,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -938,7 +949,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -969,7 +981,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1005,7 +1018,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1036,7 +1050,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1099,7 +1114,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1130,7 +1146,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1197,7 +1214,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1233,7 +1251,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1264,7 +1283,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1327,7 +1347,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1358,7 +1379,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1394,7 +1416,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1425,7 +1448,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1461,7 +1485,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1492,7 +1517,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": null
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
