@@ -18,6 +18,13 @@ import (
 
 const timeLayout = "2006-01-02"
 
+var NotificationsToShow = map[string]string{
+	"323004": "NOTICE",
+	"323005": "NOTICE",
+	"324003": "NOTICE",
+	"324004": "NOTICE",
+}
+
 type Collection struct {
 	Data  []interface{} `json:"data"`
 	Meta  Metadata      `json:"meta"`
@@ -215,7 +222,7 @@ func get_user_permissions(c echo.Context) map[string][]string {
 	return user_permissions
 }
 
-func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
+func transformComponentUnits(recommendationJSON map[string]interface{}) map[string]interface{} {
 	/*
 		Converts units for Memory and CPU
 		bytes -> MiB -> GiB
@@ -275,7 +282,7 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 	}
 
 	// Current section of recommendation
-	current_config, ok := data["current"].(map[string]interface{})
+	current_config, ok := recommendationJSON["current"].(map[string]interface{})
 	if !ok {
 		log.Error("current not found in JSON")
 	}
@@ -311,10 +318,10 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 	*/
 
 	// Recommendation section
-	recommendation_terms, ok := data["recommendation_terms"].(map[string]interface{})
+	recommendation_terms, ok := recommendationJSON["recommendation_terms"].(map[string]interface{})
 	if !ok {
 		log.Error("recommendation data not found in JSON")
-		return data
+		return recommendationJSON
 	}
 
 	for _, period := range []string{"short_term", "medium_term", "long_term"} {
@@ -375,5 +382,64 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 		}
 	}
 
+	return recommendationJSON
+}
+
+func filterNotifications(recommendationID string, clusterUUID string, recommendationJSON map[string]interface{}) map[string]interface{} {
+
+	deleteNotificationObject := func(recommendationSection map[string]interface{}) {
+		notificationObject, ok := recommendationSection["notifications"].(map[string]interface{})
+		if ok {
+			for key := range notificationObject {
+				_, found := NotificationsToShow[key]
+				if !found {
+					delete(recommendationSection, "notifications")
+					log.Warnf("dropped notification %s dropped from recommendation ID: %s; cluster ID: %s", key, recommendationID, clusterUUID)
+				}
+			}
+		}
+
+	}
+
+	// level 1 notifications are not stored in the database
+
+	// level 2
+	deleteNotificationObject(recommendationJSON)
+
+	recommendationTerms, ok := recommendationJSON["recommendation_terms"].(map[string]interface{})
+	if !ok {
+		log.Error("recommendation data not found in JSON")
+		return recommendationJSON
+	}
+
+	for _, term := range []string{"short_term", "medium_term", "long_term"} {
+		levelThree, ok := recommendationTerms[term].(map[string]interface{})
+		if ok {
+			deleteNotificationObject(levelThree)
+		}
+		recommendationEngineObject, ok := levelThree["recommendation_engines"].(map[string]interface{})
+		if ok {
+			for _, engine := range []string{"cost", "performance"} {
+				levelFour, ok := recommendationEngineObject[engine].(map[string]interface{})
+				if ok {
+					deleteNotificationObject(levelFour)
+				}
+			}
+		}
+	}
+	return recommendationJSON
+}
+
+func UpdateRecommendationJSON(recommendationID string, clusterUUID string, jsonData datatypes.JSON) map[string]interface{} {
+
+	var data map[string]interface{}
+	err := json.Unmarshal([]byte(jsonData), &data)
+	if err != nil {
+		log.Error("unable to unmarshall recommendation json")
+		return nil
+	}
+
+	data = transformComponentUnits(data)
+	data = filterNotifications(recommendationID, clusterUUID, data)
 	return data
 }

@@ -352,23 +352,6 @@
                 "type": "string",
                 "format": "date-time"
               },
-              "notifications": {
-                "type": "object",
-                "properties": {
-                  "type": {
-                    "type": "string",
-                    "example": "info"
-                  },
-                  "code": {
-                    "type": "integer",
-                    "example": 111101
-                  },
-                  "message": {
-                    "type": "string",
-                    "example": "Short Term Recommendations Available"
-                  }
-                }
-              },
               "recommendation_terms": {
                 "type": "object",
                 "properties": {
@@ -405,33 +388,6 @@
           "duration_in_hours": {
             "type": "number",
             "example": 24.7
-          },
-          "monitoring_start_time": {
-            "type": "string",
-            "format": "date-time",
-            "example": "0001-01-01T00:00:00Z"
-          },
-          "notifications": {
-            "type": "object",
-            "properties": {
-              "120001": {
-                "type": "object",
-                "properties": {
-                  "code": {
-                    "type": "integer",
-                    "example": 120001
-                  },
-                  "message": {
-                    "type": "string",
-                    "example": "There is not enough data available to generate a recommendation."
-                  },
-                  "type": {
-                    "type": "string",
-                    "example": "info"
-                  }
-                }
-              }
-            }
           }
         }
       },
@@ -441,33 +397,6 @@
           "duration_in_hours": {
             "type": "number",
             "example": 24.7
-          },
-          "monitoring_start_time": {
-            "type": "string",
-            "format": "date-time",
-            "example": "0001-01-01T00:00:00Z"
-          },
-          "notifications": {
-            "type": "object",
-            "properties": {
-              "120001": {
-                "type": "object",
-                "properties": {
-                  "code": {
-                    "type": "integer",
-                    "example": 120001
-                  },
-                  "message": {
-                    "type": "string",
-                    "example": "There is not enough data available to generate a recommendation."
-                  },
-                  "type": {
-                    "type": "string",
-                    "example": "info"
-                  }
-                }
-              }
-            }
           }
         }
       },
@@ -481,46 +410,7 @@
           "monitoring_start_time": {
             "type": "string",
             "format": "date-time",
-            "example": "0001-01-01T00:00:00Z"
-          },
-          "notifications": {
-            "type": "object",
-            "properties": {
-              "112101": {
-                "type": "object",
-                "properties": {
-                  "code": {
-                    "type": "integer",
-                    "example": 112101
-                  },
-                  "message": {
-                    "type": "string",
-                    "example": "Cost Recommendations Available"
-                  },
-                  "type": {
-                    "type": "string",
-                    "example": "info"
-                  }
-                }
-              },
-              "112102": {
-                "type": "object",
-                "properties": {
-                  "code": {
-                    "type": "integer",
-                    "example": 112102
-                  },
-                  "message": {
-                    "type": "string",
-                    "example": "Performance Recommendations Available"
-                  },
-                  "type": {
-                    "type": "string",
-                    "example": "info"
-                  }
-                }
-              }
-            }
+            "example": "2023-06-02T00:45:00Z"
           },
           "recommendation_engines": {
             "type": "object",
