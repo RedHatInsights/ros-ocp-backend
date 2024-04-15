@@ -2,7 +2,6 @@ package housekeeper
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strconv"
 
@@ -50,7 +49,6 @@ func sourcesListener(msg *k.Message, _ *k.Consumer) {
 			}
 			if data.Application_type_id == cost_app_id {
 				var cluster model.Cluster
-				fmt.Println(data.Source_id)
 				db.Where("source_id = ?", strconv.Itoa(data.Source_id)).First(&cluster)
 				workloads, err := model.GetWorkloadsByClusterID(cluster.ID)
 				if err != nil {
