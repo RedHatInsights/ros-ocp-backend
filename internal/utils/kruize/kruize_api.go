@@ -196,3 +196,32 @@ func Is_valid_recommendation(recommendation kruizePayload.Recommendation, experi
 		return false
 	}
 }
+
+func Delete_experiment_from_kruize(experiment_name string) {
+	url := cfg.KruizeUrl + "/createExperiment"
+	data := []map[string]string{
+		{"experiment_name": experiment_name},
+	}
+	payload, err := json.Marshal(data)
+	if err != nil {
+		log.Error("unable to marshal payload to json: ", err)
+		return
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest("DELETE", url, bytes.NewBuffer(payload))
+	if err != nil {
+		log.Error("unable to create request object ", err)
+		return
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		kruizeAPIException.WithLabelValues("/deleteExperiment").Inc()
+		log.Error("error Occured while deleting experiment: ", err)
+		return
+	}
+	defer res.Body.Close()
+	if res.StatusCode == 201 {
+		log.Infof("Experiment - %s deleted successfully", experiment_name)
+	}
+}

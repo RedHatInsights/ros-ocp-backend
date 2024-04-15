@@ -2,6 +2,7 @@ package housekeeper
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -9,10 +10,12 @@ import (
 	"github.com/labstack/gommon/log"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
 	"github.com/redhatinsights/ros-ocp-backend/internal/kafka"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils/kruize"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils/sources"
 )
 
@@ -32,6 +35,7 @@ func StartSourcesListenerService() {
 }
 
 func sourcesListener(msg *k.Message, _ *k.Consumer) {
+	db := database.GetDB()
 	headers := msg.Headers
 	for _, v := range headers {
 		if v.Key == "event_type" && string(v.Value) == "Application.destroy" {
@@ -45,9 +49,19 @@ func sourcesListener(msg *k.Message, _ *k.Consumer) {
 				return
 			}
 			if data.Application_type_id == cost_app_id {
-				cluster := model.Cluster{
-					SourceId: strconv.Itoa(data.Source_id),
+				var cluster model.Cluster
+				fmt.Println(data.Source_id)
+				db.Where("source_id = ?", strconv.Itoa(data.Source_id)).First(&cluster)
+				workloads, err := model.GetWorkloadsByClusterID(cluster.ID)
+				if err != nil {
+					log.Errorf("unable to get workloads for cluster: %v. Error: %v", cluster, err)
+					return
 				}
+
+				for _, workload := range workloads {
+					kruize.Delete_experiment_from_kruize(workload.ExperimentName)
+				}
+
 				if err := cluster.DeleteCluster(); err != nil {
 					log.Errorf("unable to delete record from clusters table: %v. Error: %v", cluster, err)
 				} else {
