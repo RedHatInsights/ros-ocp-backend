@@ -16,34 +16,6 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 )
 
-const timeLayout = "2006-01-02"
-
-var NotificationsToShow = map[string]string{
-	"323004": "NOTICE",
-	"323005": "NOTICE",
-	"324003": "NOTICE",
-	"324004": "NOTICE",
-}
-
-type Collection struct {
-	Data  []interface{} `json:"data"`
-	Meta  Metadata      `json:"meta"`
-	Links Links         `json:"links"`
-}
-
-type Metadata struct {
-	Count  int `json:"count"`
-	Limit  int `json:"limit"`
-	Offset int `json:"offset"`
-}
-
-type Links struct {
-	First    string `json:"first"`
-	Previous string `json:"previous,omitempty"`
-	Next     string `json:"next,omitempty"`
-	Last     string `json:"last"`
-}
-
 func CollectionResponse(collection []interface{}, req *http.Request, count, limit, offset int) *Collection {
 	var first, previous, next, last string
 	q := req.URL.Query()
@@ -228,12 +200,6 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 		bytes -> MiB -> GiB
 		cores -> millicores
 	*/
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(jsonData), &data)
-	if err != nil {
-		fmt.Printf("unable to unmarshall recommendation json")
-		return nil
-	}
 
 	convertMemory := func(memory map[string]interface{}) error {
 		amount, ok := memory["amount"].(float64)
