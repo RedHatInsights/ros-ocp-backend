@@ -81,6 +81,8 @@ services:
       - monitoringservice=prometheus-k8s
       - monitoringendpoint=prometheus-k8s
       - savetodb=true
+      - local=false
+      - logAllHttpReqAndResp=true
       - hibernate_dialect=org.hibernate.dialect.PostgreSQLDialect
       - hibernate_driver=org.postgresql.Driver
       - hibernate_c3p0minsize=2
