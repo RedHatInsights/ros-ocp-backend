@@ -19,7 +19,7 @@ objects:
       podSpec:
         image: ${KRUIZE_IMAGE}:${KRUIZE_IMAGE_TAG}
         command: ["sh"]
-        args: ["-c", "export DB_CONFIG_FILE=${ACG_CONFIG} && bash target/bin/Autotune"]
+        args: ["-c", "export DB_CONFIG_FILE=${ACG_CONFIG} && export KRUIZE_CONFIG_FILE=${KCW_CONFIG} && bash target/bin/Autotune"]
         machinePool: ${MACHINE_POOL_OPTION}
         resources:
           requests:
@@ -93,8 +93,6 @@ objects:
             value: "UTC"
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
-          - name: cloudwatch_logGroup
-            value: ${KRUIZE_CW_LOG_GROUP}
           - name: cloudwatch_logStream
             value: ${KRUIZE_CW_LOG_STREAM}
           - name: cloudwatch_logLevel
@@ -270,8 +268,6 @@ parameters:
   value: "info"
 - name: KRUIZE_PARTITION_INTERVAL
   value: "0 0 * * *" # Run the cronjob every day at midnight. Earlier it was set for 16th day
-- name: KRUIZE_CW_LOG_GROUP
-  value: "rosocp"
 - name: KRUIZE_CW_LOG_STREAM
   value: "kruize-stream"
 - name: KRUIZE_CW_LOGGING_LEVEL

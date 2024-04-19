@@ -1,0 +1,8 @@
+{
+  "cloudwatch": {
+    "accessKeyId": "",
+    "logGroup": "",
+    "region": "",
+    "secretAccessKey": ""
+  }
+}
