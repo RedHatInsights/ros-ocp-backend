@@ -93,6 +93,12 @@ objects:
             value: "UTC"
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
+          - name: cloudwatch_logGroup
+            value: ${KRUIZE_CW_LOG_GROUP}
+          - name: cloudwatch_logStream
+            value: ${KRUIZE_CW_LOG_STREAM}
+          - name: cloudwatch_logLevel
+            value: ${KRUIZE_CW_LOGGING_LEVEL}
     jobs:
       - name: delete-kruize-partitions
         schedule: ${KRUIZE_PARTITION_INTERVAL}
@@ -264,3 +270,9 @@ parameters:
   value: "info"
 - name: KRUIZE_PARTITION_INTERVAL
   value: "0 0 * * *" # Run the cronjob every day at midnight. Earlier it was set for 16th day
+- name: KRUIZE_CW_LOG_GROUP
+  value: "rosocp"
+- name: KRUIZE_CW_LOG_STREAM
+  value: "kruize-stream"
+- name: KRUIZE_CW_LOGGING_LEVEL
+  value: "INFO"
