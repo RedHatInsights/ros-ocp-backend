@@ -195,6 +195,10 @@ objects:
             value: "rosocp-housekeeper"
           - name: LOG_LEVEL
             value: ${LOG_LEVEL}
+          - name: KRUIZE_HOST
+            value: ${KRUIZE_HOST}
+          - name: KRUIZE_PORT
+            value: ${KRUIZE_PORT}
 
     jobs:
       - name: delete-rosocp-partitions
