@@ -6,7 +6,6 @@ Table rh_accounts {
   org_id text [not null]
   Indexes {
     id [pk]
-    account [unique, type: btree]
     org_id [unique, type: btree]
   }
 }
@@ -27,6 +26,7 @@ Table clusters {
 
 Table workloads {
   id bigint [increment]
+  org_id text [not null]
   cluster_id bigint [ref: > clusters.id]
   experiment_name text
   namespace text
@@ -43,6 +43,7 @@ Table workloads {
 
 Table workload_metrics {
   id bigint [increment]
+  org_id text [not null]
   workload_id bigint [ref: > workloads.id]
   container_name text
   interval_start datetime
@@ -70,6 +71,7 @@ Table recommendation_sets {
 
 Table historical_recommendation_sets {
   id uuid [increment]
+  org_id text [not null]
   workload_id bigint [ref: > workloads.id]
   container_name text
   monitoring_start_time datetime
