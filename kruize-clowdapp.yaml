@@ -93,9 +93,9 @@ objects:
             value: "UTC"
           - name: SSL_CERT_DIR
             value: ${SSL_CERT_DIR}
-          - name: cloudwatch_logStream
+          - name: logging_cloudwatch_logStream
             value: ${KRUIZE_CW_LOG_STREAM}
-          - name: cloudwatch_logLevel
+          - name: logging_cloudwatch_logLevel
             value: ${KRUIZE_CW_LOGGING_LEVEL}
     jobs:
       - name: delete-kruize-partitions
