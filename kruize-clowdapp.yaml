@@ -269,6 +269,6 @@ parameters:
 - name: KRUIZE_PARTITION_INTERVAL
   value: "0 0 * * *" # Run the cronjob every day at midnight. Earlier it was set for 16th day
 - name: KRUIZE_CW_LOG_STREAM
-  value: "kruize-stream"
+  value: "kruize-recommendations"
 - name: KRUIZE_CW_LOGGING_LEVEL
   value: "INFO"
