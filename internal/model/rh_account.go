@@ -6,7 +6,7 @@ import (
 
 type RHAccount struct {
 	ID      uint   `gorm:"primaryKey;not null;autoIncrement"`
-	Account string `gorm:"type:text;unique"`
+	Account string `gorm:"type:text;"`
 	OrgId   string `gorm:"type:text;not null;unique"`
 }
 
