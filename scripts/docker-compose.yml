@@ -82,7 +82,7 @@ services:
       - monitoringendpoint=prometheus-k8s
       - savetodb=true
       - local=false
-      - logAllHttpReqAndResp=true
+      - LOG_ALL_HTTP_REQ_AND_RESPONSE=true
       - hibernate_dialect=org.hibernate.dialect.PostgreSQLDialect
       - hibernate_driver=org.postgresql.Driver
       - hibernate_c3p0minsize=2

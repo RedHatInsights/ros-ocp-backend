@@ -75,7 +75,7 @@ objects:
             value: "true"
           - name: local
             value: "false"
-          - name: logAllHttpReqAndResp
+          - name: LOG_ALL_HTTP_REQ_AND_RESPONSE
             value: "true"
           - name: hibernate_dialect
             value: "org.hibernate.dialect.PostgreSQLDialect"
@@ -136,7 +136,7 @@ objects:
               value: "true"
             - name: local
               value: "false"
-            - name: logAllHttpReqAndResp
+            - name: LOG_ALL_HTTP_REQ_AND_RESPONSE
               value: "true"
             - name: hibernate_dialect
               value: "org.hibernate.dialect.PostgreSQLDialect"
@@ -193,7 +193,7 @@ objects:
               value: "true"
             - name: local
               value: "false"
-            - name: logAllHttpReqAndResp
+            - name: LOG_ALL_HTTP_REQ_AND_RESPONSE
               value: "true"
             - name: hibernate_dialect
               value: "org.hibernate.dialect.PostgreSQLDialect"
