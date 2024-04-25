@@ -2,9 +2,10 @@ package kruizePayload
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"time"
+
+	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 )
 
 type kubernetesObject struct {
@@ -209,7 +210,9 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "sum" key exists in map
 		if sum_field, ok := metricFields["sum"]; ok {
-			convertMemoryFields(metricName, sum_field, c)
+			if metricFields["format"] == "Mi" {
+				convertMemoryFields(sum_field, c)
+			}
 			// Assign the sum value returned
 			sum = AssertAndConvertToString(c[sum_field])
 		} else {
@@ -219,7 +222,9 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "avg" key exists in map
 		if avg_field, ok := metricFields["avg"]; ok {
-			convertMemoryFields(metricName, avg_field, c)
+			if metricFields["format"] == "Mi" {
+				convertMemoryFields(avg_field, c)
+			}
 			// Assign the avg value returned
 			avg = AssertAndConvertToString(c[avg_field])
 		} else {
@@ -229,7 +234,9 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "min" key exists in map
 		if min_field, ok := metricFields["min"]; ok {
-			convertMemoryFields(metricName, min_field, c)
+			if metricFields["format"] == "Mi" {
+				convertMemoryFields(min_field, c)
+			}
 			// Assign the min value returned
 			min = AssertAndConvertToString(c[min_field])
 		} else {
@@ -239,7 +246,9 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "max" key exists in map
 		if max_field, ok := metricFields["max"]; ok {
-			convertMemoryFields(metricName, max_field, c)
+			if metricFields["format"] == "Mi" {
+				convertMemoryFields(max_field, c)
+			}
 			// Assign the max value returned
 			max = AssertAndConvertToString(c[max_field])
 		} else {
@@ -282,22 +291,15 @@ func make_container_data(c map[string]interface{}) container {
 	return container_data
 }
 
-func MemBytesToMi(mem float64) float64 {
-	memoryInMi := mem / 1024 / 1024
-	truncatedMem := math.Trunc(memoryInMi*100) / 100
-	return truncatedMem
-}
-
-func isMemoryField(metricName string) bool {
-	// TO DO: In go 1.21 use slices package instead of map
-	memoryFields := map[string]string{"memoryRSS": "", "memoryUsage": "", "memoryLimit": "", "memoryRequest": ""}
-	_, keyExists := memoryFields[metricName]
-	return keyExists
-}
-
-func convertMemoryFields(metricName string, field string, c map[string]interface{}) {
-	if isMemoryField(metricName) {
-		converted_mem := MemBytesToMi(c[field].(float64))
-		c[field] = converted_mem
+func convertMemoryFields(field string, c map[string]interface{}) {
+	log := logging.GetLogger()
+	var memoryInMi float64
+	memField, ok := c[field].(float64)
+	if ok {
+		memoryInMi = memField / 1024 / 1024
+	} else {
+		log.Warn("Failed to convert field: ", field)
+		return
 	}
+	c[field] = memoryInMi
 }

@@ -196,7 +196,8 @@ func get_user_permissions(c echo.Context) map[string][]string {
 
 func transformComponentUnits(recommendationJSON map[string]interface{}) map[string]interface{} {
 	/*
-		Truncates CPU units to three decimal places
+		Truncates CPU units(cores) to three decimal places
+		Truncates Memory units(Mi) to two decimal places
 	*/
 
 	hasMoreThanThreeDecimals := func(value float64) bool {
@@ -223,6 +224,14 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 		return ok
 	}
 
+	truncateMemory := func(mem map[string]interface{}) bool {
+		memory, ok := mem["amount"].(float64)
+		if ok {
+			mem["amount"] = math.Trunc(memory*100) / 100
+		}
+		return ok
+	}
+
 	// Current section of recommendation
 	current_config, ok := recommendationJSON["current"].(map[string]interface{})
 	if !ok {
@@ -233,11 +242,20 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 
 		sectionObject, ok := current_config[section].(map[string]interface{})
 		if ok {
+			memInMi, ok := sectionObject["memory"].(map[string]interface{})
+			if ok {
+				err := truncateMemory(memInMi)
+				if !err {
+					fmt.Printf("error truncating the memory in %s: %v\n", sectionObject, err)
+					continue
+				}
+			}
+
 			cpu, ok := sectionObject["cpu"].(map[string]interface{})
 			if ok {
 				err := truncateCPU(cpu)
 				if !err {
-					fmt.Printf("error converting cpu in %s: %v\n", sectionObject, err)
+					fmt.Printf("error truncating cpu in %s: %v\n", sectionObject, err)
 					continue
 				}
 			}
@@ -292,6 +310,15 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 
 						sectionObject, ok := recommendationSection[section].(map[string]interface{})
 						if ok {
+							memInMi, ok := sectionObject["memory"].(map[string]interface{})
+							if ok {
+								err := truncateMemory(memInMi)
+								if !err {
+									fmt.Printf("error truncating the memory in %s: %v\n", period, err)
+									continue
+								}
+							}
+
 							cpu, ok := sectionObject["cpu"].(map[string]interface{})
 							if ok {
 								err := truncateCPU(cpu)
