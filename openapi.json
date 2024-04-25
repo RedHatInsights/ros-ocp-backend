@@ -387,7 +387,23 @@
         "properties": {
           "duration_in_hours": {
             "type": "number",
-            "example": 24.7
+            "example": 360
+          },
+          "monitoring_start_time": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-06-02T00:45:00Z"
+          },
+          "recommendation_engines": {
+            "type": "object",
+            "properties": {
+              "cost": {
+                "$ref": "#/components/schemas/CostRecommendation"
+              },
+              "performance": {
+                "$ref": "#/components/schemas/PerformanceRecommendation"
+              }
+            }
           }
         }
       },
@@ -396,7 +412,23 @@
         "properties": {
           "duration_in_hours": {
             "type": "number",
-            "example": 24.7
+            "example": 168
+          },
+          "monitoring_start_time": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-06-02T00:45:00Z"
+          },
+          "recommendation_engines": {
+            "type": "object",
+            "properties": {
+              "cost": {
+                "$ref": "#/components/schemas/CostRecommendation"
+              },
+              "performance": {
+                "$ref": "#/components/schemas/PerformanceRecommendation"
+              }
+            }
           }
         }
       },

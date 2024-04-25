@@ -353,6 +353,8 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 
 func filterNotifications(recommendationID string, clusterUUID string, recommendationJSON map[string]interface{}) map[string]interface{} {
 
+	var droppedNotifications []string
+
 	deleteNotificationObject := func(recommendationSection map[string]interface{}) {
 		notificationObject, ok := recommendationSection["notifications"].(map[string]interface{})
 		if ok {
@@ -360,7 +362,7 @@ func filterNotifications(recommendationID string, clusterUUID string, recommenda
 				_, found := NotificationsToShow[key]
 				if !found {
 					delete(recommendationSection, "notifications")
-					log.Warnf("dropped notification %s dropped from recommendation ID: %s; cluster ID: %s", key, recommendationID, clusterUUID)
+					droppedNotifications = append(droppedNotifications, key)
 				}
 			}
 		}
@@ -393,6 +395,9 @@ func filterNotifications(recommendationID string, clusterUUID string, recommenda
 			}
 		}
 	}
+	droppedNotificationsString := strings.Join(droppedNotifications, ", ")
+	log.Warnf("%s dropped from recommendation ID: %s; cluster ID: %s", droppedNotificationsString, recommendationID, clusterUUID)
+
 	return recommendationJSON
 }
 
