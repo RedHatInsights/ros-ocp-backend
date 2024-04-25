@@ -6,7 +6,7 @@ type KafkaMsg struct {
 	Request_id   string `validate:"required"`
 	B64_identity string `validate:"required"`
 	Metadata     struct {
-		Account       string `validate:"required"`
+		Account       string
 		Org_id        string `validate:"required"`
 		Source_id     string `validate:"required"`
 		Cluster_uuid  string `validate:"required"`

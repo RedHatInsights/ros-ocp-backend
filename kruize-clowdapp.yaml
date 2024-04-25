@@ -240,7 +240,7 @@ parameters:
 - description: Kruize image tag
   name: KRUIZE_IMAGE_TAG
   required: true
-  value: "6a63d31"
+  value: "1672d29"
 - description: Kruize server port
   name: KRUIZE_PORT
   required: true

@@ -44,3 +44,10 @@ func (w *Workload) CreateWorkload() error {
 
 	return nil
 }
+
+func GetWorkloadsByClusterID(cluster_id uint) ([]Workload, error) {
+	var workloads []Workload
+	db := database.GetDB()
+	err := db.Where("cluster_id = ?", cluster_id).Find(&workloads).Error
+	return workloads, err
+}
