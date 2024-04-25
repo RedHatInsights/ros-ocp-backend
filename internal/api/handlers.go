@@ -16,8 +16,13 @@ func GetRecommendationSetList(c echo.Context) error {
 	XRHID := c.Get("Identity").(identity.XRHID)
 	OrgID := XRHID.Identity.OrgID
 	user_permissions := get_user_permissions(c)
+	var orderHow string
+	var orderBy string
+	// Default values
+	var limit int = 10
+	var offset int = 0
 
-	orderBy := c.QueryParam("order_by")
+	orderBy = c.QueryParam("order_by")
 	if orderBy != "" {
 		var orderByOptions = map[string]string{
 			"cluster":       "clusters.cluster_alias",
@@ -37,7 +42,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		orderBy = "clusters.last_reported_at"
 	}
 
-	orderHow := c.QueryParam("order_how")
+	orderHow = c.QueryParam("order_how")
 	if orderHow != "" {
 		orderHowUpper := strings.ToUpper(orderHow)
 		if (orderHowUpper != "ASC") && (orderHowUpper != "DESC") {
@@ -51,7 +56,6 @@ func GetRecommendationSetList(c echo.Context) error {
 	orderQuery := orderBy + " " + orderHow
 
 	limitStr := c.QueryParam("limit")
-	limit := 10 // default value
 	if limitStr != "" {
 		limitInt, err := strconv.Atoi(limitStr)
 		if err == nil {
@@ -60,7 +64,7 @@ func GetRecommendationSetList(c echo.Context) error {
 	}
 
 	offsetStr := c.QueryParam("offset")
-	offset := 0 // default value
+
 	if offsetStr != "" {
 		offsetInt, err := strconv.Atoi(offsetStr)
 		if err == nil {
@@ -68,7 +72,10 @@ func GetRecommendationSetList(c echo.Context) error {
 		}
 	}
 
-	queryParams := MapQueryParameters(c)
+	queryParams, err := MapQueryParameters(c)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
+	}
 	recommendationSet := model.RecommendationSet{}
 	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams, user_permissions)
 	if error != nil {
