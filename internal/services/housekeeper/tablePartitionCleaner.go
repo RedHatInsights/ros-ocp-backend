@@ -11,7 +11,7 @@ import (
 func DeletePartitions() {
 	cfg := config.GetConfig()
 	db := database.GetDB()
-	currentTime := time.Now()
+	currentTime := time.Now().UTC()
 
 	// subtracting $cfg.DataRetentionPeriod from the currentTime
 	retentionThresholdDate := currentTime.AddDate(0, 0, -cfg.DataRetentionPeriod)
