@@ -16,27 +16,6 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 )
 
-const timeLayout = "2006-01-02"
-
-type Collection struct {
-	Data  []interface{} `json:"data"`
-	Meta  Metadata      `json:"meta"`
-	Links Links         `json:"links"`
-}
-
-type Metadata struct {
-	Count  int `json:"count"`
-	Limit  int `json:"limit"`
-	Offset int `json:"offset"`
-}
-
-type Links struct {
-	First    string `json:"first"`
-	Previous string `json:"previous,omitempty"`
-	Next     string `json:"next,omitempty"`
-	Last     string `json:"last"`
-}
-
 func CollectionResponse(collection []interface{}, req *http.Request, count, limit, offset int) *Collection {
 	var first, previous, next, last string
 	q := req.URL.Query()
@@ -215,18 +194,12 @@ func get_user_permissions(c echo.Context) map[string][]string {
 	return user_permissions
 }
 
-func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
+func transformComponentUnits(recommendationJSON map[string]interface{}) map[string]interface{} {
 	/*
 		Converts units for Memory and CPU
 		bytes -> MiB -> GiB
 		cores -> millicores
 	*/
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(jsonData), &data)
-	if err != nil {
-		fmt.Printf("unable to unmarshall recommendation json")
-		return nil
-	}
 
 	convertMemory := func(memory map[string]interface{}) error {
 		amount, ok := memory["amount"].(float64)
@@ -275,7 +248,7 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 	}
 
 	// Current section of recommendation
-	current_config, ok := data["current"].(map[string]interface{})
+	current_config, ok := recommendationJSON["current"].(map[string]interface{})
 	if !ok {
 		log.Error("current not found in JSON")
 	}
@@ -311,10 +284,10 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 	*/
 
 	// Recommendation section
-	recommendation_terms, ok := data["recommendation_terms"].(map[string]interface{})
+	recommendation_terms, ok := recommendationJSON["recommendation_terms"].(map[string]interface{})
 	if !ok {
 		log.Error("recommendation data not found in JSON")
-		return data
+		return recommendationJSON
 	}
 
 	for _, period := range []string{"short_term", "medium_term", "long_term"} {
@@ -375,5 +348,69 @@ func TransformComponentUnits(jsonData datatypes.JSON) map[string]interface{} {
 		}
 	}
 
+	return recommendationJSON
+}
+
+func filterNotifications(recommendationID string, clusterUUID string, recommendationJSON map[string]interface{}) map[string]interface{} {
+
+	var droppedNotifications []string
+
+	deleteNotificationObject := func(recommendationSection map[string]interface{}) {
+		notificationObject, ok := recommendationSection["notifications"].(map[string]interface{})
+		if ok {
+			for key := range notificationObject {
+				_, found := NotificationsToShow[key]
+				if !found {
+					delete(recommendationSection, "notifications")
+					droppedNotifications = append(droppedNotifications, key)
+				}
+			}
+		}
+
+	}
+
+	// level 1 notifications are not stored in the database
+
+	// level 2
+	deleteNotificationObject(recommendationJSON)
+
+	recommendationTerms, ok := recommendationJSON["recommendation_terms"].(map[string]interface{})
+	if !ok {
+		log.Error("recommendation data not found in JSON")
+		return recommendationJSON
+	}
+
+	for _, term := range []string{"short_term", "medium_term", "long_term"} {
+		levelThree, ok := recommendationTerms[term].(map[string]interface{})
+		if ok {
+			deleteNotificationObject(levelThree)
+		}
+		recommendationEngineObject, ok := levelThree["recommendation_engines"].(map[string]interface{})
+		if ok {
+			for _, engine := range []string{"cost", "performance"} {
+				levelFour, ok := recommendationEngineObject[engine].(map[string]interface{})
+				if ok {
+					deleteNotificationObject(levelFour)
+				}
+			}
+		}
+	}
+	droppedNotificationsString := strings.Join(droppedNotifications, ", ")
+	log.Warnf("%s dropped from recommendation ID: %s; cluster ID: %s", droppedNotificationsString, recommendationID, clusterUUID)
+
+	return recommendationJSON
+}
+
+func UpdateRecommendationJSON(recommendationID string, clusterUUID string, jsonData datatypes.JSON) map[string]interface{} {
+
+	var data map[string]interface{}
+	err := json.Unmarshal([]byte(jsonData), &data)
+	if err != nil {
+		log.Error("unable to unmarshall recommendation json")
+		return nil
+	}
+
+	data = transformComponentUnits(data)
+	data = filterNotifications(recommendationID, clusterUUID, data)
 	return data
 }

@@ -96,7 +96,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		recommendationData["workload"] = recommendation.Workload.WorkloadName
 		recommendationData["container"] = recommendation.ContainerName
 		recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
-		recommendationData["recommendations"] = TransformComponentUnits(recommendation.Recommendations)
+		recommendationData["recommendations"] = UpdateRecommendationJSON(recommendation.ID, recommendation.Workload.Cluster.ClusterUUID, recommendation.Recommendations)
 		allRecommendations = append(allRecommendations, recommendationData)
 
 	}
@@ -140,7 +140,7 @@ func GetRecommendationSet(c echo.Context) error {
 		recommendationSlice["workload"] = recommendationSet.Workload.WorkloadName
 		recommendationSlice["container"] = recommendationSet.ContainerName
 		recommendationSlice["last_reported"] = recommendationSet.Workload.Cluster.LastReportedAtStr
-		recommendationSlice["recommendations"] = TransformComponentUnits(recommendationSet.Recommendations)
+		recommendationSlice["recommendations"] = UpdateRecommendationJSON(recommendationSet.ID, recommendationSet.Workload.Cluster.ClusterUUID, recommendationSet.Recommendations)
 	}
 
 	return c.JSON(http.StatusOK, recommendationSlice)
