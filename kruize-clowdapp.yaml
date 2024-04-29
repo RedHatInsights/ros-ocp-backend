@@ -138,10 +138,6 @@ objects:
               value: "prometheus-k8s"
             - name: savetodb
               value: "true"
-            - name: local
-              value: "false"
-            - name: LOG_ALL_HTTP_REQ_AND_RESPONSE
-              value: "true"
             - name: hibernate_dialect
               value: "org.hibernate.dialect.PostgreSQLDialect"
             - name: hibernate_driver
@@ -194,10 +190,6 @@ objects:
             - name: monitoringendpoint
               value: "prometheus-k8s"
             - name: savetodb
-              value: "true"
-            - name: local
-              value: "false"
-            - name: LOG_ALL_HTTP_REQ_AND_RESPONSE
               value: "true"
             - name: hibernate_dialect
               value: "org.hibernate.dialect.PostgreSQLDialect"
