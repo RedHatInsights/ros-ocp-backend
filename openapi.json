@@ -658,7 +658,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
+                        "example": "m",
                         "nullable": true
                       }
                     }
