@@ -21,9 +21,9 @@ func DeletePartitions() {
 	// Otherwise, set $partitionTableDate to the 1st of the current month.
 	var partitionTableDate string
 	if retentionThresholdDate.Day() < 15 {
-		partitionTableDate = time.Date(retentionThresholdDate.Year(), retentionThresholdDate.Month()-1, 16, 0, 0, 0, 0, retentionThresholdDate.Location()).Format("2006-01-02")
-	} else {
 		partitionTableDate = retentionThresholdDate.AddDate(0, 0, -retentionThresholdDate.Day()+1).Format("2006-01-02")
+	} else {
+		partitionTableDate = time.Date(currentTime.Year(), currentTime.Month()-1, 16, 0, 0, 0, 0, currentTime.Location()).Format("2006-01-02")
 	}
 
 	tx := db.Exec("SELECT drop_ros_partition(?)", partitionTableDate)
