@@ -18,7 +18,7 @@ func DeletePartitions() {
 
 	// If the day of the month in $retentionThresholdDate is less than 15,
 	// set $partitionTableDate to the 1st of the month.
-	// Otherwise, set $partitionTableDate to the 16th of the perivous month.
+	// Otherwise, set $partitionTableDate to the 16th of the previous month.
 	var partitionTableDate string
 	if retentionThresholdDate.Day() < 15 {
 		partitionTableDate = retentionThresholdDate.AddDate(0, 0, -retentionThresholdDate.Day()+1).Format("2006-01-02")
