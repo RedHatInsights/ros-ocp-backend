@@ -194,10 +194,11 @@ func get_user_permissions(c echo.Context) map[string][]string {
 	return user_permissions
 }
 
-func transformComponentUnits(recommendationJSON map[string]interface{}) map[string]interface{} {
+func truncateComponentUnits(recommendationJSON map[string]interface{}) map[string]interface{} {
 	/*
 		Truncates CPU units(cores) to three decimal places
 		Truncates Memory units(Mi) to two decimal places
+		Truncates duration_in_hours to one decimal places
 	*/
 
 	hasMoreThanThreeDecimals := func(value float64) bool {
@@ -232,6 +233,14 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 		return ok
 	}
 
+	truncateDurationInHours := func(intervalData map[string]interface{}) bool {
+		durationInHours, ok := intervalData["duration_in_hours"].(float64)
+		if ok {
+			intervalData["duration_in_hours"] = math.Trunc(durationInHours*10) / 10
+		}
+		return ok
+	}
+
 	// Current section of recommendation
 	current_config, ok := recommendationJSON["current"].(map[string]interface{})
 	if !ok {
@@ -246,7 +255,7 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 			if ok {
 				err := truncateMemory(memInMi)
 				if !err {
-					fmt.Printf("error truncating the memory in %s: %v\n", sectionObject, err)
+					log.Errorf("error truncating the memory in %s\n", sectionObject)
 					continue
 				}
 			}
@@ -255,7 +264,7 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 			if ok {
 				err := truncateCPU(cpu)
 				if !err {
-					fmt.Printf("error truncating cpu in %s: %v\n", sectionObject, err)
+					log.Errorf("error truncating cpu in %s\n", sectionObject)
 					continue
 				}
 			}
@@ -292,6 +301,11 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 			delete(intervalData, "monitoring_start_time")
 		}
 
+		err := truncateDurationInHours(intervalData)
+		if !err {
+			log.Errorf("error truncating duration_in_hours in term %s\n", period)
+		}
+
 		if intervalData["recommendation_engines"] != nil {
 
 			for _, recommendationType := range []string{"cost", "performance"} {
@@ -314,7 +328,7 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 							if ok {
 								err := truncateMemory(memInMi)
 								if !err {
-									fmt.Printf("error truncating the memory in %s: %v\n", period, err)
+									log.Errorf("error truncating the memory in %s\n", period)
 									continue
 								}
 							}
@@ -323,7 +337,7 @@ func transformComponentUnits(recommendationJSON map[string]interface{}) map[stri
 							if ok {
 								err := truncateCPU(cpu)
 								if !err {
-									fmt.Printf("error truncating cpu in %s: %v\n", period, err)
+									log.Errorf("error truncating cpu in %s\n", period)
 									continue
 								}
 							}
@@ -397,7 +411,7 @@ func UpdateRecommendationJSON(recommendationID string, clusterUUID string, jsonD
 		return nil
 	}
 
-	data = transformComponentUnits(data)
+	data = truncateComponentUnits(data)
 	data = filterNotifications(recommendationID, clusterUUID, data)
 	return data
 }
