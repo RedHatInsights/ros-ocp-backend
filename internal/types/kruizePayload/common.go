@@ -78,8 +78,8 @@ type RecommendationTerm struct {
 }
 
 type Plot struct {
-	DataPoints int                  `json:"datapoints,omitempty"`
-	PlotsData  map[string]PlotsData `json:"plots_data,omitempty"`
+	DataPoints int                  `json:"datapoints"`
+	PlotsData  map[string]PlotsData `json:"plots_data"`
 }
 
 type PlotsData struct {
@@ -211,7 +211,7 @@ func make_container_data(c map[string]interface{}) container {
 		// Check if "sum" key exists in map
 		if sum_field, ok := metricFields["sum"]; ok {
 			if metricFields["format"] == "Mi" {
-				convertMemoryFields(sum_field, c)
+				convertMemoryField(sum_field, c)
 			}
 			// Assign the sum value returned
 			sum = AssertAndConvertToString(c[sum_field])
@@ -223,7 +223,7 @@ func make_container_data(c map[string]interface{}) container {
 		// Check if "avg" key exists in map
 		if avg_field, ok := metricFields["avg"]; ok {
 			if metricFields["format"] == "Mi" {
-				convertMemoryFields(avg_field, c)
+				convertMemoryField(avg_field, c)
 			}
 			// Assign the avg value returned
 			avg = AssertAndConvertToString(c[avg_field])
@@ -235,7 +235,7 @@ func make_container_data(c map[string]interface{}) container {
 		// Check if "min" key exists in map
 		if min_field, ok := metricFields["min"]; ok {
 			if metricFields["format"] == "Mi" {
-				convertMemoryFields(min_field, c)
+				convertMemoryField(min_field, c)
 			}
 			// Assign the min value returned
 			min = AssertAndConvertToString(c[min_field])
@@ -247,7 +247,7 @@ func make_container_data(c map[string]interface{}) container {
 		// Check if "max" key exists in map
 		if max_field, ok := metricFields["max"]; ok {
 			if metricFields["format"] == "Mi" {
-				convertMemoryFields(max_field, c)
+				convertMemoryField(max_field, c)
 			}
 			// Assign the max value returned
 			max = AssertAndConvertToString(c[max_field])
@@ -291,14 +291,14 @@ func make_container_data(c map[string]interface{}) container {
 	return container_data
 }
 
-func convertMemoryFields(field string, c map[string]interface{}) {
+func convertMemoryField(field string, c map[string]interface{}) {
 	log := logging.GetLogger()
 	var memoryInMi float64
 	memField, ok := c[field].(float64)
 	if ok {
 		memoryInMi = memField / 1024 / 1024
 	} else {
-		log.Warn("Failed to convert field: ", field)
+		log.Error("Failed to convert field: ", field)
 		return
 	}
 	c[field] = memoryInMi
