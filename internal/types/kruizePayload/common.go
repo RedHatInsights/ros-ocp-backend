@@ -79,21 +79,21 @@ type RecommendationTerm struct {
 
 type Plot struct {
 	DataPoints int                  `json:"datapoints"`
-	PlotsData  map[string]PlotsData `json:"plots_data"`
+	PlotsData  map[string]PlotsData `json:"plots_data,omitempty"`
 }
 
 type PlotsData struct {
-	CpuUsage    BoxPlotDetails `json:"cpuUsage,omitempty"`
-	MemoryUsage BoxPlotDetails `json:"memoryUsage,omitempty"`
+	CpuUsage    *BoxPlotDetails `json:"cpuUsage,omitempty"`
+	MemoryUsage *BoxPlotDetails `json:"memoryUsage,omitempty"`
 }
 
 type BoxPlotDetails struct {
-	Min    float64 `json:"min"`
-	Q1     float64 `json:"q1"`
-	Median float64 `json:"median"`
-	Q3     float64 `json:"q3"`
-	Max    float64 `json:"max"`
-	Format string  `json:"format"`
+	Min    float64 `json:"min,omitempty"`
+	Q1     float64 `json:"q1,omitempty"`
+	Median float64 `json:"median,omitempty"`
+	Q3     float64 `json:"q3,omitempty"`
+	Max    float64 `json:"max,omitempty"`
+	Format string  `json:"format,omitempty"`
 }
 
 type Term struct {
