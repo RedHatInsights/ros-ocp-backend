@@ -71,7 +71,10 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 			log.Errorf("Unable to read CSV from URL. Error: %s", err)
 			return
 		}
-		df := dataframe.LoadRecords(data)
+		df := dataframe.LoadRecords(
+			data,
+			dataframe.WithTypes(types.CSVColumnMapping),
+		)
 		df, err = utils.Aggregate_data(df)
 		if err != nil {
 			log.Errorf("Error: %s", err)

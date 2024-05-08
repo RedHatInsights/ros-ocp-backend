@@ -2,6 +2,7 @@ package kruizePayload
 
 import (
 	"github.com/go-gota/gota/dataframe"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
 
@@ -36,7 +37,10 @@ type ErrorData struct {
 
 func GetUpdateResultPayload(experiment_name string, containers []map[string]interface{}) []UpdateResult {
 	payload := []UpdateResult{}
-	df := dataframe.LoadMaps(containers)
+	df := dataframe.LoadMaps(
+		containers,
+		dataframe.WithTypes(types.CSVColumnMapping),
+	)
 	for _, v := range df.GroupBy("interval_end").GetGroups() {
 		k8s_object := v.Maps()
 		data := map[string]string{
