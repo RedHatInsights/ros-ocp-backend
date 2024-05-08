@@ -1568,7 +1568,10 @@
               }
             }
           },
-          "2023-04-02T00:00:00Z":{}
+          "2023-04-02T00:00:00Z":{
+            "type": "object",
+            "additionalProperties": false
+          }
         }
       },
       "cpuUsage": {
