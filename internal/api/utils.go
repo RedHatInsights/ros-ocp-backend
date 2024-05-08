@@ -199,7 +199,7 @@ func truncateComponentUnits(recommendationJSON map[string]interface{}) map[strin
 		Truncates CPU units(cores) to three decimal places
 		Truncates Memory units(Mi) to two decimal places
 		Hack: Truncates duration_in_hours to one decimal places
-		To Do: Once Kruize returns identical values for duration_in_hours
+		TODO: Once Kruize returns identical values for duration_in_hours
 		the ros-ocp should stop truncating the duration_in_hours
 	*/
 

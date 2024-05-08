@@ -387,7 +387,8 @@
         "properties": {
           "duration_in_hours": {
             "type": "number",
-            "example": 360
+            "format": "float",
+            "example": 360.2
           },
           "monitoring_start_time": {
             "type": "string",
@@ -415,7 +416,8 @@
         "properties": {
           "duration_in_hours": {
             "type": "number",
-            "example": 168
+            "format": "float",
+            "example": 168.1
           },
           "monitoring_start_time": {
             "type": "string",
@@ -443,6 +445,7 @@
         "properties": {
           "duration_in_hours": {
             "type": "number",
+            "format": "float",
             "example": 24.7
           },
           "monitoring_start_time": {
@@ -1014,7 +1017,8 @@
                       },
                       "duration_in_hours": {
                         "type": "number",
-                        "example": 361
+                        "format": "float",
+                        "example": 361.2
                       },
                       "monitoring_end_time": {
                         "type": "string",
@@ -1248,7 +1252,8 @@
                       },
                       "duration_in_hours": {
                         "type": "number",
-                        "example": 169
+                        "format": "float",
+                        "example": 169.1
                       },
                       "monitoring_end_time": {
                         "type": "string",
@@ -1482,7 +1487,8 @@
                       },
                       "duration_in_hours": {
                         "type": "number",
-                        "example": 25
+                        "format": "float",
+                        "example": 25.1
                       },
                       "monitoring_end_time": {
                         "type": "string",
@@ -1562,17 +1568,7 @@
               }
             }
           },
-          "2023-04-02T00:00:00Z":{
-            "type": "object",
-            "properties":{
-              "cpuUsage":{
-                "$ref": "#/components/schemas/cpuUsage"
-              },
-              "memoryUsage":{
-                "$ref":"#/components/schemas/memoryUsage"
-              }
-            }
-          }
+          "2023-04-02T00:00:00Z":{}
         }
       },
       "cpuUsage": {
