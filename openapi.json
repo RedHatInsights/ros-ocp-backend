@@ -387,7 +387,8 @@
         "properties": {
           "duration_in_hours": {
             "type": "number",
-            "example": 360
+            "format": "float",
+            "example": 360.2
           },
           "monitoring_start_time": {
             "type": "string",
@@ -404,6 +405,9 @@
                 "$ref": "#/components/schemas/PerformanceRecommendation"
               }
             }
+          },
+          "plots":{
+            "$ref": "#/components/schemas/PlotsData"
           }
         }
       },
@@ -412,7 +416,8 @@
         "properties": {
           "duration_in_hours": {
             "type": "number",
-            "example": 168
+            "format": "float",
+            "example": 168.1
           },
           "monitoring_start_time": {
             "type": "string",
@@ -429,6 +434,9 @@
                 "$ref": "#/components/schemas/PerformanceRecommendation"
               }
             }
+          },
+          "plots":{
+            "$ref":"#/components/schemas/PlotsData"
           }
         }
       },
@@ -437,6 +445,7 @@
         "properties": {
           "duration_in_hours": {
             "type": "number",
+            "format": "float",
             "example": 24.7
           },
           "monitoring_start_time": {
@@ -454,6 +463,9 @@
                 "$ref": "#/components/schemas/PerformanceRecommendation"
               }
             }
+          },
+          "plots":{
+            "$ref": "#/components/schemas/PlotsData"
           }
         }
       },
@@ -485,11 +497,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 6.7
+                        "example": 6700
                       },
                       "format": {
                         "type": "string",
-                        "example": "Gi"
+                        "example": "Mi"
                       }
                     }
                   }
@@ -558,11 +570,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1.7
+                        "example": 1700
                       },
                       "format": {
                         "type": "string",
-                        "example": "Gi"
+                        "example": "Mi"
                       }
                     }
                   }
@@ -622,7 +634,8 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "millicores"
+                        "example": null,
+                        "nullable": true
                       }
                     }
                   },
@@ -663,11 +676,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 6
+                        "example": 6000
                       },
                       "format": {
                         "type": "string",
-                        "example": "Gi"
+                        "example": "Mi"
                       }
                     }
                   }
@@ -736,11 +749,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1
+                        "example": 1056
                       },
                       "format": {
                         "type": "string",
-                        "example": "Gi"
+                        "example": "Mi"
                       }
                     }
                   }
@@ -982,7 +995,7 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 3.995
+                                    "example": 3000
                                   },
                                   "format": {
                                     "type": "string",
@@ -1004,7 +1017,8 @@
                       },
                       "duration_in_hours": {
                         "type": "number",
-                        "example": 361
+                        "format": "float",
+                        "example": 361.2
                       },
                       "monitoring_end_time": {
                         "type": "string",
@@ -1078,11 +1092,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 5
+                                    "example": 5000
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "Gi"
+                                    "example": "Mi"
                                   }
                                 }
                               }
@@ -1105,7 +1119,8 @@
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "millicores"
+                                    "example": null,
+                                    "nullable": true
                                   }
                                 }
                               },
@@ -1146,11 +1161,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 6
+                                    "example": 6000
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "Gi"
+                                    "example": "Mi"
                                   }
                                 }
                               }
@@ -1215,11 +1230,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 1
+                                    "example": 1000
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "Gi"
+                                    "example": "Mi"
                                   }
                                 }
                               }
@@ -1237,7 +1252,8 @@
                       },
                       "duration_in_hours": {
                         "type": "number",
-                        "example": 169
+                        "format": "float",
+                        "example": 169.1
                       },
                       "monitoring_end_time": {
                         "type": "string",
@@ -1279,11 +1295,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 5
+                                    "example": 550
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "Gi"
+                                    "example": "Mi"
                                   }
                                 }
                               }
@@ -1348,11 +1364,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 6.7
+                                    "example": 6700
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "Gi"
+                                    "example": "Mi"
                                   }
                                 }
                               }
@@ -1417,11 +1433,11 @@
                                 "properties": {
                                   "amount": {
                                     "type": "number",
-                                    "example": 1.7
+                                    "example": 1500
                                   },
                                   "format": {
                                     "type": "string",
-                                    "example": "Gi"
+                                    "example": "Mi"
                                   }
                                 }
                               }
@@ -1471,7 +1487,8 @@
                       },
                       "duration_in_hours": {
                         "type": "number",
-                        "example": 25
+                        "format": "float",
+                        "example": 25.1
                       },
                       "monitoring_end_time": {
                         "type": "string",
@@ -1502,6 +1519,119 @@
             "example": "deploymentconfig"
           }
         }
+      },
+      "PlotsData":{
+        "type": "object",
+        "properties":{
+          "datapoints":{
+            "type": "integer",
+            "example": 4
+          },
+        "plots_data":{
+          "$ref": "#/components/schemas/PlotDetails"
+          }
+        }
+      },
+      "PlotDetails": {
+        "type": "object",
+        "properties":{
+          "2023-04-01T06:00:00Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-01T12:00:00Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-01T18:00:00Z":{
+            "type": "object",
+            "properties":{
+              "cpuUsage":{
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage":{
+                "$ref":"#/components/schemas/memoryUsage"
+              }
+            }
+          },
+          "2023-04-02T00:00:00Z":{
+            "type": "object",
+            "additionalProperties": false
+          }
+        }
+      },
+      "cpuUsage": {
+        "type": "object",
+        "properties":{
+          "format":{
+            "type": "string",
+            "example": null,
+            "nullable": true
+          },
+          "max":{
+            "$ref": "#/components/schemas/cpuUsageFloatComponent"
+          },
+          "median":{
+            "$ref": "#/components/schemas/cpuUsageFloatComponent"
+          },
+          "min":{
+            "$ref": "#/components/schemas/cpuUsageFloatComponent"
+          },
+          "q1":{
+            "$ref": "#/components/schemas/cpuUsageFloatComponent"
+          },
+          "q3":{
+            "$ref": "#/components/schemas/cpuUsageFloatComponent"
+          }
+        }
+      },
+      "memoryUsage":{
+        "type": "object",
+        "properties":{
+          "format":{
+            "type": "string",
+            "example": "Mi"
+          },
+          "max":{
+            "$ref": "#/components/schemas/memoryUsageFloatComponent"
+          },
+          "median":{
+            "$ref": "#/components/schemas/memoryUsageFloatComponent"
+          },
+          "min":{
+            "$ref": "#/components/schemas/memoryUsageFloatComponent"
+          },
+          "q1":{
+            "$ref": "#/components/schemas/memoryUsageFloatComponent"
+          },
+          "q3":{
+            "$ref": "#/components/schemas/memoryUsageFloatComponent"
+          }
+        }
+      },
+      "cpuUsageFloatComponent":{
+        "type": "number",
+        "example": 0.05,
+        "format": "float"
+      },
+      "memoryUsageFloatComponent":{
+        "type": "number",
+        "example": 238.2,
+        "format": "float"
       }
     }
   }

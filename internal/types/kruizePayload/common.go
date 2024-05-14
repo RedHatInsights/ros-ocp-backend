@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 )
 
 type kubernetesObject struct {
@@ -72,6 +74,26 @@ type RecommendationTerm struct {
 		Cost        RecommendationEngineObject `json:"cost,omitempty"`
 		Performance RecommendationEngineObject `json:"performance,omitempty"`
 	} `json:"recommendation_engines,omitempty"`
+	Plots *Plot `json:"plots,omitempty"`
+}
+
+type Plot struct {
+	DataPoints int                  `json:"datapoints,omitempty"`
+	PlotsData  map[string]PlotsData `json:"plots_data,omitempty"`
+}
+
+type PlotsData struct {
+	CpuUsage    *BoxPlotDetails `json:"cpuUsage,omitempty"`
+	MemoryUsage *BoxPlotDetails `json:"memoryUsage,omitempty"`
+}
+
+type BoxPlotDetails struct {
+	Min    float64 `json:"min,omitempty"`
+	Q1     float64 `json:"q1,omitempty"`
+	Median float64 `json:"median,omitempty"`
+	Q3     float64 `json:"q3,omitempty"`
+	Max    float64 `json:"max,omitempty"`
+	Format string  `json:"format,omitempty"`
 }
 
 type Term struct {
@@ -146,13 +168,13 @@ func make_container_data(c map[string]interface{}) container {
 		"memoryRequest": {
 			"sum":    "memory_request_container_sum_SUM",
 			"avg":    "memory_request_container_avg_MEAN",
-			"format": "bytes",
+			"format": "Mi",
 		},
 		// Memory Limit
 		"memoryLimit": {
 			"sum":    "memory_limit_container_sum_SUM",
 			"avg":    "memory_limit_container_avg_MEAN",
-			"format": "bytes",
+			"format": "Mi",
 		},
 		// Memory Usage
 		"memoryUsage": {
@@ -160,7 +182,7 @@ func make_container_data(c map[string]interface{}) container {
 			"avg":    "memory_usage_container_avg_MEAN",
 			"min":    "memory_usage_container_min_MIN",
 			"max":    "memory_usage_container_max_MAX",
-			"format": "bytes",
+			"format": "Mi",
 		},
 		// Memory RSS
 		"memoryRSS": {
@@ -168,7 +190,7 @@ func make_container_data(c map[string]interface{}) container {
 			"avg":    "memory_rss_usage_container_avg_MEAN",
 			"min":    "memory_rss_usage_container_min_MIN",
 			"max":    "memory_rss_usage_container_max_MAX",
-			"format": "bytes",
+			"format": "Mi",
 		},
 	}
 
@@ -188,6 +210,9 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "sum" key exists in map
 		if sum_field, ok := metricFields["sum"]; ok {
+			if metricFields["format"] == "Mi" {
+				convertMemoryField(sum_field, c)
+			}
 			// Assign the sum value returned
 			sum = AssertAndConvertToString(c[sum_field])
 		} else {
@@ -197,6 +222,9 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "avg" key exists in map
 		if avg_field, ok := metricFields["avg"]; ok {
+			if metricFields["format"] == "Mi" {
+				convertMemoryField(avg_field, c)
+			}
 			// Assign the avg value returned
 			avg = AssertAndConvertToString(c[avg_field])
 		} else {
@@ -206,6 +234,9 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "min" key exists in map
 		if min_field, ok := metricFields["min"]; ok {
+			if metricFields["format"] == "Mi" {
+				convertMemoryField(min_field, c)
+			}
 			// Assign the min value returned
 			min = AssertAndConvertToString(c[min_field])
 		} else {
@@ -215,6 +246,9 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "max" key exists in map
 		if max_field, ok := metricFields["max"]; ok {
+			if metricFields["format"] == "Mi" {
+				convertMemoryField(max_field, c)
+			}
 			// Assign the max value returned
 			max = AssertAndConvertToString(c[max_field])
 		} else {
@@ -255,4 +289,17 @@ func make_container_data(c map[string]interface{}) container {
 	}
 
 	return container_data
+}
+
+func convertMemoryField(field string, c map[string]interface{}) {
+	log := logging.GetLogger()
+	var memoryInMi float64
+	memField, ok := c[field].(float64)
+	if ok {
+		memoryInMi = memField / 1024 / 1024
+	} else {
+		log.Error("Failed to convert field: ", field)
+		return
+	}
+	c[field] = memoryInMi
 }
