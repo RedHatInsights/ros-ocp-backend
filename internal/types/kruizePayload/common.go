@@ -74,11 +74,11 @@ type RecommendationTerm struct {
 		Cost        RecommendationEngineObject `json:"cost,omitempty"`
 		Performance RecommendationEngineObject `json:"performance,omitempty"`
 	} `json:"recommendation_engines,omitempty"`
-	Plots Plot `json:"plots,omitempty"`
+	Plots *Plot `json:"plots,omitempty"`
 }
 
 type Plot struct {
-	DataPoints int                  `json:"datapoints"`
+	DataPoints int                  `json:"datapoints,omitempty"`
 	PlotsData  map[string]PlotsData `json:"plots_data,omitempty"`
 }
 
