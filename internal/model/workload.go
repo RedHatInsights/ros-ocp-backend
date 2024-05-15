@@ -51,3 +51,10 @@ func GetWorkloadsByClusterID(cluster_id uint) ([]Workload, error) {
 	err := db.Where("cluster_id = ?", cluster_id).Find(&workloads).Error
 	return workloads, err
 }
+
+func WorkloadExistsByID(workload_id uint) bool {
+	var workload Workload
+	db := database.GetDB()
+	err := db.First(&workload, workload_id).Error
+	return err == nil
+}
