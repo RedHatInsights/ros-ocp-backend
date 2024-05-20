@@ -169,8 +169,8 @@ func check_if_all_required_columns_in_CSV(df dataframe.DataFrame) error {
 		all_required_columns = append(all_required_columns, k)
 	}
 
-	cloumns_in_csv := df.Names()
-	if !elementsMatch(all_required_columns, cloumns_in_csv) {
+	columns_in_csv := df.Names()
+	if !elementsMatch(all_required_columns, columns_in_csv) {
 		return fmt.Errorf("CSV file does not have all the required columns")
 	}
 	return nil
