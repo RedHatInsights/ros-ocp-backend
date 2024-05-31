@@ -101,8 +101,6 @@ objects:
             value: ${KRUIZE_CW_LOG_STREAM}
           - name: logging_cloudwatch_logLevel
             value: ${KRUIZE_CW_LOGGING_LEVEL}
-          - name: plots
-            value: ${PLOTS_DATA}
     jobs:
       - name: delete-kruize-partitions
         schedule: ${KRUIZE_PARTITION_INTERVAL}
@@ -278,5 +276,4 @@ parameters:
   value: "kruize-recommendations"
 - name: KRUIZE_CW_LOGGING_LEVEL
   value: "INFO"
-- name: PLOTS_DATA
-  value: "false"
+
