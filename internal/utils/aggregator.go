@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	w "github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
 )
 
@@ -163,47 +164,13 @@ func elementsMatch(listA, listB interface{}) bool {
 
 func check_if_all_required_columns_in_CSV(df dataframe.DataFrame) error {
 	// Check if all the required columns are present in CSV
-	all_required_columns := []string{
-		"report_period_start",
-		"report_period_end",
-		"interval_start",
-		"interval_end",
-		"container_name",
-		"pod",
-		"owner_name",
-		"owner_kind",
-		"workload",
-		"workload_type",
-		"namespace",
-		"image_name",
-		"node",
-		"resource_id",
-		"cpu_request_container_avg",
-		"cpu_request_container_sum",
-		"cpu_limit_container_avg",
-		"cpu_limit_container_sum",
-		"cpu_usage_container_avg",
-		"cpu_usage_container_min",
-		"cpu_usage_container_max",
-		"cpu_usage_container_sum",
-		"cpu_throttle_container_avg",
-		"cpu_throttle_container_max",
-		"cpu_throttle_container_sum",
-		"memory_request_container_avg",
-		"memory_request_container_sum",
-		"memory_limit_container_avg",
-		"memory_limit_container_sum",
-		"memory_usage_container_avg",
-		"memory_usage_container_min",
-		"memory_usage_container_max",
-		"memory_usage_container_sum",
-		"memory_rss_usage_container_avg",
-		"memory_rss_usage_container_min",
-		"memory_rss_usage_container_max",
-		"memory_rss_usage_container_sum",
+	all_required_columns := make([]string, 0, len(types.CSVColumnMapping))
+	for k := range types.CSVColumnMapping {
+		all_required_columns = append(all_required_columns, k)
 	}
-	cloumns_in_csv := df.Names()
-	if !elementsMatch(all_required_columns, cloumns_in_csv) {
+
+	columns_in_csv := df.Names()
+	if !elementsMatch(all_required_columns, columns_in_csv) {
 		return fmt.Errorf("CSV file does not have all the required columns")
 	}
 	return nil
