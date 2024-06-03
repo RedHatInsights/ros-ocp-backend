@@ -181,14 +181,14 @@
             "name": "memory-unit",
             "description": "unit preference for memory",
             "required": false,
-            "example": "GiB",
             "schema": {
               "type": "string",
               "enum": [
                 "bytes",
                 "MiB",
                 "GiB"
-              ]
+              ],
+              "default": "MiB"
             }
           },
           {
@@ -196,13 +196,13 @@
             "name": "cpu-unit",
             "description": "unit preference for cpu",
             "required": false,
-            "example": "millicores",
             "schema": {
               "type": "string",
               "enum": [
                 "millicores",
                 "cores"
-              ]
+              ],
+              "default": "cores"
             }
           }
         ],
