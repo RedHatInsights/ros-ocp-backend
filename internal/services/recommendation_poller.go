@@ -176,6 +176,9 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 				} else {
 					commitKafkaMsg(msg, consumer_object)
 				}
+			} else {
+				commitKafkaMsg(msg, consumer_object)
+				log.Warn("monitoring_end_time is set to 0001-01-01 00:00:00 +0000; recommendationID: ", recommendation_stored_in_db.ID)
 			}
 			return
 		}
