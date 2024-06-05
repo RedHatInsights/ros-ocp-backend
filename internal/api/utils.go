@@ -194,14 +194,7 @@ func get_user_permissions(c echo.Context) map[string][]string {
 	return user_permissions
 }
 
-func truncateComponentUnits(recommendationJSON map[string]interface{}) map[string]interface{} {
-	/*
-		Truncates CPU units(cores) to three decimal places
-		Truncates Memory units(Mi) to two decimal places
-		Hack: Truncates duration_in_hours to one decimal places
-		TODO: Once Kruize returns identical values for duration_in_hours
-		the ros-ocp should stop truncating the duration_in_hours
-	*/
+func convertCPUUnit(cpuUnit string, cpuValue float64) float64 {
 
 	hasMoreThanThreeDecimals := func(value float64) bool {
 		const decimalPrecision int = 3
@@ -217,23 +210,46 @@ func truncateComponentUnits(recommendationJSON map[string]interface{}) map[strin
 		}
 		return value
 	}
+	var convertedValueCPU float64
 
-	truncateCPU := func(cpu map[string]interface{}) bool {
-		cpuInCores, ok := cpu["amount"].(float64)
-		if ok {
-			cpu["amount"] = truncateToThreeDecimalPlaces(cpuInCores)
-			cpu["format"] = nil
-		}
-		return ok
+	if cpuUnit == "millicores" {
+		convertedValueCPU = math.Round(cpuValue * 1000) // millicore values don't require decimal precision
+	} else if cpuUnit == "cores" {
+		convertedValueCPU = truncateToThreeDecimalPlaces(cpuValue)
+	} else {
+		convertedValueCPU = cpuValue
 	}
 
-	truncateMemory := func(mem map[string]interface{}) bool {
-		memory, ok := mem["amount"].(float64)
-		if ok {
-			mem["amount"] = math.Trunc(memory*100) / 100
-		}
-		return ok
+	return convertedValueCPU
+
+}
+
+func convertMemoryUnit(memoryUnit string, memoryValue float64) float64 {
+
+	var convertedValueMemory float64
+
+	if memoryUnit == "MiB" {
+		memoryInMiB := memoryValue / 1024 / 1024
+		convertedValueMemory = math.Trunc(memoryInMiB*100) / 100
+	} else if memoryUnit == "GiB" {
+		memoryInGiB := memoryValue / 1024 / 1024 / 1024
+		convertedValueMemory = math.Trunc(memoryInGiB*100) / 100
+	} else if memoryUnit == "bytes" {
+		convertedValueMemory = memoryValue
 	}
+
+	return convertedValueMemory
+
+}
+
+func transformComponentUnits(unitsToTransform map[string]string, recommendationJSON map[string]interface{}) map[string]interface{} {
+	/*
+		Truncates CPU units(cores) to three decimal places
+		Truncates Memory units(Mi) to two decimal places
+		Hack: Truncates duration_in_hours to one decimal places
+		TODO: Once Kruize returns identical values for duration_in_hours
+		the ros-ocp should stop truncating the duration_in_hours
+	*/
 
 	truncateDurationInHours := func(intervalData map[string]interface{}) bool {
 		durationInHours, ok := intervalData["duration_in_hours"].(float64)
@@ -253,21 +269,23 @@ func truncateComponentUnits(recommendationJSON map[string]interface{}) map[strin
 
 		sectionObject, ok := current_config[section].(map[string]interface{})
 		if ok {
-			memInMi, ok := sectionObject["memory"].(map[string]interface{})
+			memoryObject, ok := sectionObject["memory"].(map[string]interface{})
 			if ok {
-				err := truncateMemory(memInMi)
-				if !err {
-					log.Errorf("error truncating the memory in %s\n", sectionObject)
-					continue
+				if memoryValue, ok := memoryObject["amount"].(float64); ok {
+					memoryUnit := unitsToTransform["memory"]
+					convertedMemoryValue := convertMemoryUnit(memoryUnit, memoryValue)
+					memoryObject["amount"] = convertedMemoryValue
+					memoryObject["format"] = MemoryUnitk8s[memoryUnit]
 				}
 			}
 
-			cpu, ok := sectionObject["cpu"].(map[string]interface{})
+			cpuObject, ok := sectionObject["cpu"].(map[string]interface{})
 			if ok {
-				err := truncateCPU(cpu)
-				if !err {
-					log.Errorf("error truncating cpu in %s\n", sectionObject)
-					continue
+				if cpuValue, ok := cpuObject["amount"].(float64); ok {
+					cpuUnit := unitsToTransform["cpu"]
+					convertedCPUValue := convertCPUUnit(cpuUnit, cpuValue)
+					cpuObject["amount"] = convertedCPUValue
+					cpuObject["format"] = CPUUnitk8s[cpuUnit]
 				}
 			}
 		}
@@ -308,6 +326,36 @@ func truncateComponentUnits(recommendationJSON map[string]interface{}) map[strin
 			log.Errorf("error truncating duration_in_hours in term %s\n", period)
 		}
 
+		if plotsObject, ok := intervalData["plots"].(map[string]interface{}); ok {
+			if plotsDataObject, ok := plotsObject["plots_data"].(map[string]interface{}); ok {
+				for _, value := range plotsDataObject {
+					if datapointMap, ok := value.(map[string]interface{}); ok {
+						if cpuUsage, ok := datapointMap["cpuUsage"].(map[string]interface{}); ok {
+							cpuUnit := unitsToTransform["cpu"]
+							if _, ok := cpuUsage["format"].(string); ok {
+								cpuUsage["format"] = cpuUnit
+							}
+							for _, key := range []string{"q1", "q3", "min", "max", "median"} {
+								cpuValue, _ := cpuUsage[key].(float64)
+								cpuUsage[key] = convertCPUUnit(cpuUnit, cpuValue)
+							}
+						}
+						if memoryUsage, ok := datapointMap["memoryUsage"].(map[string]interface{}); ok {
+							memoryUnit := unitsToTransform["memory"]
+							if _, ok := memoryUsage["format"].(string); ok {
+								memoryUsage["format"] = memoryUnit
+							}
+							for _, key := range []string{"q1", "q3", "min", "max", "median"} {
+								memoryValue, _ := memoryUsage[key].(float64)
+								memoryUsage[key] = convertMemoryUnit(memoryUnit, memoryValue)
+							}
+						}
+					}
+
+				}
+			}
+		}
+
 		if intervalData["recommendation_engines"] != nil {
 
 			for _, recommendationType := range []string{"cost", "performance"} {
@@ -326,22 +374,25 @@ func truncateComponentUnits(recommendationJSON map[string]interface{}) map[strin
 
 						sectionObject, ok := recommendationSection[section].(map[string]interface{})
 						if ok {
-							memInMi, ok := sectionObject["memory"].(map[string]interface{})
+							memoryObject, ok := sectionObject["memory"].(map[string]interface{})
 							if ok {
-								err := truncateMemory(memInMi)
-								if !err {
-									log.Errorf("error truncating the memory in %s\n", period)
-									continue
+								if memoryValue, ok := memoryObject["amount"].(float64); ok {
+									memoryUnit := unitsToTransform["memory"]
+									convertedMemoryValue := convertMemoryUnit(memoryUnit, memoryValue)
+									memoryObject["amount"] = convertedMemoryValue
+									memoryObject["format"] = MemoryUnitk8s[memoryUnit]
 								}
 							}
 
-							cpu, ok := sectionObject["cpu"].(map[string]interface{})
+							cpuObject, ok := sectionObject["cpu"].(map[string]interface{})
 							if ok {
-								err := truncateCPU(cpu)
-								if !err {
-									log.Errorf("error truncating cpu in %s\n", period)
-									continue
+								if cpuValue, ok := cpuObject["amount"].(float64); ok {
+									cpuUnit := unitsToTransform["cpu"]
+									convertedCPUValue := convertCPUUnit(cpuUnit, cpuValue)
+									cpuObject["amount"] = convertedCPUValue
+									cpuObject["format"] = CPUUnitk8s[cpuUnit]
 								}
+
 							}
 						}
 					}
@@ -404,7 +455,25 @@ func filterNotifications(recommendationID string, clusterUUID string, recommenda
 	return recommendationJSON
 }
 
-func UpdateRecommendationJSON(recommendationID string, clusterUUID string, jsonData datatypes.JSON) map[string]interface{} {
+func dropBoxPlotsObject(recommendationJSON map[string]interface{}) map[string]interface{} {
+
+	recommendation_terms, ok := recommendationJSON["recommendation_terms"].(map[string]interface{})
+	if !ok {
+		log.Error("recommendation data not found in JSON")
+		return recommendationJSON
+	}
+
+	for _, period := range []string{"short_term", "medium_term", "long_term"} {
+		intervalData, ok := recommendation_terms[period].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		delete(intervalData, "plots")
+	}
+	return recommendationJSON
+}
+
+func UpdateRecommendationJSON(handlerName string, recommendationID string, clusterUUID string, unitsToTransform map[string]string, jsonData datatypes.JSON) map[string]interface{} {
 
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(jsonData), &data)
@@ -413,7 +482,12 @@ func UpdateRecommendationJSON(recommendationID string, clusterUUID string, jsonD
 		return nil
 	}
 
-	data = truncateComponentUnits(data)
+	// box-plots data is not required on the list endpoint
+	if handlerName == "recommendationset-list" {
+		data = dropBoxPlotsObject(data)
+	}
+
+	data = transformComponentUnits(unitsToTransform, data) // cpu: core values require truncation
 	data = filterNotifications(recommendationID, clusterUUID, data)
 	return data
 }

@@ -16,6 +16,12 @@ func GetRecommendationSetList(c echo.Context) error {
 	XRHID := c.Get("Identity").(identity.XRHID)
 	OrgID := XRHID.Identity.OrgID
 	user_permissions := get_user_permissions(c)
+	handlerName := "recommendationset-list"
+	unitChoices := map[string]string{
+		"cpu":    "cores",
+		"memory": "bytes",
+	}
+
 	var orderHow string
 	var orderBy string
 	// Default values
@@ -96,7 +102,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		recommendationData["workload"] = recommendation.Workload.WorkloadName
 		recommendationData["container"] = recommendation.ContainerName
 		recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
-		recommendationData["recommendations"] = UpdateRecommendationJSON(recommendation.ID, recommendation.Workload.Cluster.ClusterUUID, recommendation.Recommendations)
+		recommendationData["recommendations"] = UpdateRecommendationJSON(handlerName, recommendation.ID, recommendation.Workload.Cluster.ClusterUUID, unitChoices, recommendation.Recommendations)
 		allRecommendations = append(allRecommendations, recommendationData)
 
 	}
@@ -114,11 +120,47 @@ func GetRecommendationSet(c echo.Context) error {
 	XRHID := c.Get("Identity").(identity.XRHID)
 	OrgID := XRHID.Identity.OrgID
 	user_permissions := get_user_permissions(c)
+	handlerName := "recommendationset"
 
 	RecommendationIDStr := c.Param("recommendation-id")
 	RecommendationUUID, err := uuid.Parse(RecommendationIDStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "bad recommendation_id"})
+	}
+
+	var unitChoices = make(map[string]string)
+
+	cpuUnitParam := c.QueryParam("cpu-unit")
+	var cpuUnitOptions = map[string]bool{
+		"millicores": true,
+		"cores":      true,
+	}
+
+	if cpuUnitParam != "" {
+		if !cpuUnitOptions[cpuUnitParam] {
+			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid cpu unit"})
+		} else {
+			unitChoices["cpu"] = cpuUnitParam
+		}
+	} else {
+		unitChoices["cpu"] = "cores"
+	}
+
+	memoryUnitParam := c.QueryParam("memory-unit")
+	var memoryUnitOptions = map[string]bool{
+		"bytes": true,
+		"MiB":   true,
+		"GiB":   true,
+	}
+
+	if memoryUnitParam != "" {
+		if !memoryUnitOptions[memoryUnitParam] {
+			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid memory unit"})
+		} else {
+			unitChoices["memory"] = memoryUnitParam
+		}
+	} else {
+		unitChoices["memory"] = "MiB"
 	}
 
 	recommendationSetVar := model.RecommendationSet{}
@@ -140,7 +182,7 @@ func GetRecommendationSet(c echo.Context) error {
 		recommendationSlice["workload"] = recommendationSet.Workload.WorkloadName
 		recommendationSlice["container"] = recommendationSet.ContainerName
 		recommendationSlice["last_reported"] = recommendationSet.Workload.Cluster.LastReportedAtStr
-		recommendationSlice["recommendations"] = UpdateRecommendationJSON(recommendationSet.ID, recommendationSet.Workload.Cluster.ClusterUUID, recommendationSet.Recommendations)
+		recommendationSlice["recommendations"] = UpdateRecommendationJSON(handlerName, recommendationSet.ID, recommendationSet.Workload.Cluster.ClusterUUID, unitChoices, recommendationSet.Recommendations)
 	}
 
 	return c.JSON(http.StatusOK, recommendationSlice)
