@@ -1,0 +1,1 @@
+ALTER TABLE rh_accounts DROP COLUMN created_at;
