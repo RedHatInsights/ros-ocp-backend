@@ -1,0 +1,2 @@
+ALTER TABLE rh_accounts ADD COLUMN created_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE rh_accounts ALTER COLUMN created_at SET DEFAULT now();
