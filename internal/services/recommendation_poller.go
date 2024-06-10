@@ -182,6 +182,8 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 			}
 			return
 		}
+	} else {
+		commitKafkaMsg(msg, consumer_object)
 	}
 
 }
