@@ -151,29 +151,39 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 		log.Errorf("Error while checking for recommendation_set record: %s", err)
 		return
 	}
-	recommendationFound := !reflect.ValueOf(recommendation_stored_in_db).IsZero()
+	workloadExists := model.WorkloadExistsByID(workloadID)
 
-	switch recommendationFound {
-	case false:
-		poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "New")
-		if poll_cycle_complete {
-			commitKafkaMsg(msg, consumer_object)
-		}
-		// To consume upcoming Kafka msg, explicitly
-		return
-	case true:
-		// MonitoringEndTime.UTC() defaults to 0001-01-01 00:00:00 +0000 UTC if not set
-		if !recommendation_stored_in_db.MonitoringEndTime.UTC().IsZero() {
-			duration := maxEndTimeFromReport.Sub(recommendation_stored_in_db.MonitoringEndTime.UTC())
-			if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours {
-				poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update")
-				if poll_cycle_complete {
+	if workloadExists { // Housekeeper may wipe workload record by the time poller requests for a recommendation
+		recommendationFound := !reflect.ValueOf(recommendation_stored_in_db).IsZero()
+
+		switch recommendationFound {
+		case false:
+			poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "New")
+			if poll_cycle_complete {
+				commitKafkaMsg(msg, consumer_object)
+			}
+			// To consume upcoming Kafka msg, explicitly
+			return
+		case true:
+			// MonitoringEndTime.UTC() defaults to 0001-01-01 00:00:00 +0000 UTC if not set
+			if !recommendation_stored_in_db.MonitoringEndTime.UTC().IsZero() {
+				duration := maxEndTimeFromReport.Sub(recommendation_stored_in_db.MonitoringEndTime.UTC())
+				if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours {
+					poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update")
+					if poll_cycle_complete {
+						commitKafkaMsg(msg, consumer_object)
+					}
+				} else {
 					commitKafkaMsg(msg, consumer_object)
 				}
 			} else {
 				commitKafkaMsg(msg, consumer_object)
+				log.Warn("monitoring_end_time is set to 0001-01-01 00:00:00 +0000; recommendationID: ", recommendation_stored_in_db.ID)
 			}
+			return
 		}
-		return
+	} else {
+		commitKafkaMsg(msg, consumer_object)
 	}
+
 }
