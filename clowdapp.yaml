@@ -114,7 +114,7 @@ objects:
           - name: CW_LOG_STREAM_NAME
             value: "rosocp-backend"
           - name: LOG_LEVEL
-            value: ${LOG_LEVEL}
+            value: ${RECOMMENDATION_POLLER_LOG_LEVEL}
     - name: api
       replicas: ${{API_REPLICA_COUNT}}
       webServices:
@@ -303,6 +303,8 @@ parameters:
   name: RBAC_ENABLE
   value: "true"
 - name: LOG_LEVEL
+  value: 'INFO'
+- name: RECOMMENDATION_POLLER_LOG_LEVEL
   value: 'INFO'
 - name: PARTITION_DELETE_INTERVAL
   value: "0 0 */15 * *" # Runs at 12:00 AM, every 15 days.
