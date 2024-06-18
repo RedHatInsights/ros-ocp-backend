@@ -8,3 +8,4 @@ output.csv
 .idea/
 .DS_Store
 .go/
+.prettierignore
