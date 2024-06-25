@@ -39,8 +39,6 @@ func StartConsumer(kafka_topic string, handler func(msg *kafka.Message, consumer
 			"enable.auto.commit":       auto_commit,
 			"go.logs.channel.enable":   true,
 			"allow.auto.create.topics": true,
-			"session.timeout.ms":       120000,
-			"heartbeat.interval.ms":    30000,
 		}
 
 		// As per librdkafka doc - https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md?plain=1#L73
@@ -58,6 +56,9 @@ func StartConsumer(kafka_topic string, handler func(msg *kafka.Message, consumer
 			"allow.auto.create.topics": true,
 		}
 	}
+
+	configMap["session.timeout.ms"] = 120000
+	configMap["heartbeat.interval.ms"] = 30000
 
 	consumer, err := kafka.NewConsumer(&configMap)
 	if err != nil {
