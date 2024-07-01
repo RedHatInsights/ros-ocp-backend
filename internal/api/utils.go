@@ -275,7 +275,7 @@ func transformComponentUnits(unitsToTransform map[string]string, recommendationJ
 					memoryUnit := unitsToTransform["memory"]
 					convertedMemoryValue := convertMemoryUnit(memoryUnit, memoryValue)
 					memoryObject["amount"] = convertedMemoryValue
-					memoryObject["format"] = MemoryUnitk8s[memoryUnit]
+					memoryObject["format"] = memoryUnit
 				}
 			}
 
@@ -285,7 +285,7 @@ func transformComponentUnits(unitsToTransform map[string]string, recommendationJ
 					cpuUnit := unitsToTransform["cpu"]
 					convertedCPUValue := convertCPUUnit(cpuUnit, cpuValue)
 					cpuObject["amount"] = convertedCPUValue
-					cpuObject["format"] = CPUUnitk8s[cpuUnit]
+					cpuObject["format"] = cpuUnit
 				}
 			}
 		}
@@ -380,7 +380,7 @@ func transformComponentUnits(unitsToTransform map[string]string, recommendationJ
 									memoryUnit := unitsToTransform["memory"]
 									convertedMemoryValue := convertMemoryUnit(memoryUnit, memoryValue)
 									memoryObject["amount"] = convertedMemoryValue
-									memoryObject["format"] = MemoryUnitk8s[memoryUnit]
+									memoryObject["format"] = memoryUnit
 								}
 							}
 
@@ -390,7 +390,7 @@ func transformComponentUnits(unitsToTransform map[string]string, recommendationJ
 									cpuUnit := unitsToTransform["cpu"]
 									convertedCPUValue := convertCPUUnit(cpuUnit, cpuValue)
 									cpuObject["amount"] = convertedCPUValue
-									cpuObject["format"] = CPUUnitk8s[cpuUnit]
+									cpuObject["format"] = cpuUnit
 								}
 
 							}
