@@ -166,9 +166,12 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 			return
 		case true:
 			// MonitoringEndTime.UTC() defaults to 0001-01-01 00:00:00 +0000 UTC if not set
-			if !recommendation_stored_in_db.MonitoringEndTime.UTC().IsZero() {
-				duration := maxEndTimeFromReport.Sub(recommendation_stored_in_db.MonitoringEndTime.UTC())
-				if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours {
+			last_recommendation_db_date := recommendation_stored_in_db.MonitoringEndTime.UTC()
+			if !last_recommendation_db_date.IsZero() {
+				duration := maxEndTimeFromReport.Sub(last_recommendation_db_date)
+				isMonthChanged := maxEndTimeFromReport.After(utils.EndOfMonth(last_recommendation_db_date))
+
+				if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours || isMonthChanged {
 					poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update")
 					if poll_cycle_complete {
 						commitKafkaMsg(msg, consumer_object)

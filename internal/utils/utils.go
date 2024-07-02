@@ -184,3 +184,10 @@ func Start_prometheus_server() {
 		_ = http.ListenAndServe(fmt.Sprintf(":%s", cfg.PrometheusPort), nil)
 	}
 }
+
+func EndOfMonth(date time.Time) time.Time {
+	currentYear, currentMonth, currentDay := date.Date()
+	currentLocation := date.Location()
+	lastMinuteOfDay := time.Date(currentYear, currentMonth, currentDay, 23, 59, 0, 0, currentLocation)
+	return lastMinuteOfDay.AddDate(0, 1, -lastMinuteOfDay.Day())
+}
