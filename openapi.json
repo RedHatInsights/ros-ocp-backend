@@ -580,12 +580,12 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1.24
+                        "example": 94.12,
+                        "format": "float"
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
-                        "nullable": true
+                        "example": "percentage"
                       }
                     }
                   },
@@ -594,11 +594,12 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1700
+                        "example": 40,
+                        "format": "float"
                       },
                       "format": {
                         "type": "string",
-                        "example": "Mi"
+                        "example": "percentage"
                       }
                     }
                   }
@@ -612,11 +613,12 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1.08
+                        "example": 22,
+                        "format": "float"
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
+                        "example": "percentage",
                         "nullable": true
                       }
                     }
@@ -626,11 +628,12 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 300
+                        "example": 45,
+                        "format": "float"
                       },
                       "format": {
                         "type": "string",
-                        "example": "Mi"
+                        "example": "percentage"
                       }
                     }
                   }
@@ -727,11 +730,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": -1.468
+                        "example": -94
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
+                        "example": "percentage",
                         "nullable": true
                       }
                     }
@@ -741,11 +744,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 200
+                        "example": 60
                       },
                       "format": {
                         "type": "string",
-                        "example": "Mi"
+                        "example": "percentage"
                       }
                     }
                   }
@@ -759,11 +762,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 2
+                        "example": 20
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
+                        "example": "percentage",
                         "nullable": true
                       }
                     }
@@ -773,11 +776,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1056
+                        "example": 40
                       },
                       "format": {
                         "type": "string",
-                        "example": "Mi"
+                        "example": "percentage"
                       }
                     }
                   }
