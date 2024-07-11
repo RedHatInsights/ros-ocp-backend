@@ -185,9 +185,18 @@ func Start_prometheus_server() {
 	}
 }
 
-func EndOfMonth(date time.Time) time.Time {
-	currentYear, currentMonth, currentDay := date.Date()
-	currentLocation := date.Location()
-	lastMinuteOfDay := time.Date(currentYear, currentMonth, currentDay, 23, 59, 0, 0, currentLocation)
-	return lastMinuteOfDay.AddDate(0, 1, -lastMinuteOfDay.Day())
+func NeedRecommOnFirstOfMonth(dbDate time.Time, maxEndTime time.Time) bool {
+	if isItFirstOfMonth(maxEndTime) && getDate(maxEndTime).After(getDate(dbDate)) {
+		return true
+	}
+	return false
+}
+
+func getDate(d time.Time) time.Time {
+	return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, d.Location())
+}
+
+func isItFirstOfMonth(d time.Time) bool {
+	_, _, day := d.Date()
+	return day == 1
 }

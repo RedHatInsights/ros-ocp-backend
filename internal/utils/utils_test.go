@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -61,4 +62,37 @@ func TestConvertStringToTime(t *testing.T) {
 	if result.String() != input_data {
 		t.Errorf("Output %q not equal to expected %q", result.String(), input_data)
 	}
+}
+
+func TestNeedRecommOnFirstOfMonth(t *testing.T) {
+	layout := "2006-01-02 15:04:05"
+
+	// Check condition if month change
+	dbDate, _ := time.Parse(layout, "2023-11-30 11:45:26")
+	maxEndTime, _ := time.Parse(layout, "2023-12-01 11:45:26")
+	if !NeedRecommOnFirstOfMonth(dbDate, maxEndTime) {
+		t.Errorf("NeedRecommOnFirstOfMonth fails for month change. dbDate=%s maxEndTime=%s", dbDate, maxEndTime)
+	}
+
+	// Check condition if year change
+	dbDate, _ = time.Parse(layout, "2023-12-31 11:45:26")
+	maxEndTime, _ = time.Parse(layout, "2024-01-01 11:45:26")
+	if !NeedRecommOnFirstOfMonth(dbDate, maxEndTime) {
+		t.Errorf("NeedRecommOnFirstOfMonth fails for year change. dbDate=%s maxEndTime=%s", dbDate, maxEndTime)
+	}
+
+	// Check condition if dbDate and maxEndTime both dates are first of month
+	dbDate, _ = time.Parse(layout, "2023-12-01 10:45:26")
+	maxEndTime, _ = time.Parse(layout, "2023-12-01 11:45:26")
+	if NeedRecommOnFirstOfMonth(dbDate, maxEndTime) {
+		t.Errorf("NeedRecommOnFirstOfMonth fails when both dbDate and maxEndTime date is first of month. dbDate=%s maxEndTime=%s", dbDate, maxEndTime)
+	}
+
+	// Check if it's not 1st of the month
+	dbDate, _ = time.Parse(layout, "2023-11-29 10:45:26")
+	maxEndTime, _ = time.Parse(layout, "2023-11-30 11:45:26")
+	if NeedRecommOnFirstOfMonth(dbDate, maxEndTime) {
+		t.Errorf("NeedRecommOnFirstOfMonth fails for condition maxEndTime not 1st of month. dbDate=%s maxEndTime=%s", dbDate, maxEndTime)
+	}
+
 }

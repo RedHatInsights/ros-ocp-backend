@@ -169,9 +169,8 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 			last_recommendation_db_date := recommendation_stored_in_db.MonitoringEndTime.UTC()
 			if !last_recommendation_db_date.IsZero() {
 				duration := maxEndTimeFromReport.Sub(last_recommendation_db_date)
-				isMonthChanged := maxEndTimeFromReport.After(utils.EndOfMonth(last_recommendation_db_date))
 
-				if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours || isMonthChanged {
+				if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours || utils.NeedRecommOnFirstOfMonth(last_recommendation_db_date, maxEndTimeFromReport) {
 					poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update")
 					if poll_cycle_complete {
 						commitKafkaMsg(msg, consumer_object)
