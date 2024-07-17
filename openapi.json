@@ -585,7 +585,8 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "percentage"
+                        "example": null,
+                        "nullable": true
                       }
                     }
                   },
@@ -599,7 +600,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "percentage"
+                        "example": "Mi"
                       }
                     }
                   }
@@ -618,7 +619,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "percentage",
+                        "example": null,
                         "nullable": true
                       }
                     }
@@ -633,7 +634,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "percentage"
+                        "example": "Mi"
                       }
                     }
                   }
@@ -730,11 +731,12 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": -94
+                        "example": -94,
+                        "format": "float"
                       },
                       "format": {
                         "type": "string",
-                        "example": "percentage",
+                        "example": null,
                         "nullable": true
                       }
                     }
@@ -744,11 +746,12 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 60
+                        "example": 60,
+                        "format": "float"
                       },
                       "format": {
                         "type": "string",
-                        "example": "percentage"
+                        "example": "Mi"
                       }
                     }
                   }
@@ -762,11 +765,12 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 20
+                        "example": 20,
+                        "format": "float"
                       },
                       "format": {
                         "type": "string",
-                        "example": "percentage",
+                        "example": null,
                         "nullable": true
                       }
                     }
@@ -776,11 +780,12 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 40
+                        "example": 40,
+                        "format": "float"
                       },
                       "format": {
                         "type": "string",
-                        "example": "percentage"
+                        "example": "Mi"
                       }
                     }
                   }

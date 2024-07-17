@@ -561,7 +561,6 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryRequests)
 										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
 									}
-									memoryObject["format"] = "percentage"
 								}
 							}
 
@@ -575,7 +574,6 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 										percentageCpuValue := calculatePercentage(cpuValue, currentCpuRequests)
 										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
 									}
-									cpuObject["format"] = "percentage"
 								}
 							}
 
