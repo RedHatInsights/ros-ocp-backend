@@ -163,6 +163,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 						container_usage_metrics, err := json.Marshal(container.Metrics)
 						if err != nil {
 							log.Errorf("Unable to marshal container usage data: %v", err)
+							continue
 						}
 
 						workload_metric := model.WorkloadMetrics{
