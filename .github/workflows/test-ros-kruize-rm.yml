@@ -27,9 +27,6 @@ jobs:
           
           echo "changed=$(cmp --silent /tmp/.commitsha ./autotune-builder/.commitsha && echo 'false' || echo 'true')" >> $GITHUB_OUTPUT
           
-          # Added this for testing
-          echo "changed=true" >> $GITHUB_OUTPUT          
-
       - name: Print changed variable
         run: |
          echo "changed = ${{ steps.compare_files.outputs.changed }}"
