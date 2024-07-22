@@ -54,7 +54,7 @@ type RecommendationEngineObject struct {
 	ConfidenceLevel float64                 `json:"confidence_level,omitempty"`
 	Config          ConfigObject            `json:"config,omitempty"`
 	Variation       ConfigObject            `json:"variation,omitempty"`
-	Notifications   map[string]Notification `json:"notifications,omitempty"`
+	Notifications   map[string]Notification `json:"notifications"`
 }
 
 type RecommendationData struct {

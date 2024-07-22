@@ -235,6 +235,98 @@
   },
   "components": {
     "schemas": {
+      "CPURequestOptimisedNotification": {
+        "type": "object",
+        "properties": {
+          "323004": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "integer",
+                "example": 323004
+              },
+              "message": {
+                "type": "string",
+                "example": "Workload is optimised wrt CPU REQUESTS, no changes needed"
+              },
+              "type": {
+                "type": "string",
+                "example": "notice"
+              }
+            }
+          }
+        }
+      },
+      "CPULimitOptimisedNotification": {
+        "type": "object",
+        "properties": {
+          "323005": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "integer",
+                "example": 323005
+              },
+              "message": {
+                "type": "string",
+                "example": "Workload is optimised wrt CPU LIMITS, no changes needed"
+              },
+              "type": {
+                "type": "string",
+                "example": "notice"
+              }
+            }
+          }
+        }
+      },
+      "MemoryRequestOptimisedNotification": {
+        "type": "object",
+        "properties": {
+          "324003": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "integer",
+                "example": 324003
+              },
+              "message": {
+                "type": "string",
+                "example": "Workload is optimised wrt MEMORY REQUESTS, no changes needed"
+              },
+              "type": {
+                "type": "string",
+                "example": "notice"
+              }
+            }
+          }
+        }
+      },
+      "MemoryLimitOptimisedNotification": {
+        "type": "object",
+        "properties": {
+          "324004": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "integer",
+                "example": 324004
+              },
+              "message": {
+                "type": "string",
+                "example": "Workload is optimised wrt MEMORY LIMITS, no changes needed"
+              },
+              "type": {
+                "type": "string",
+                "example": "notice"
+              }
+            }
+          }
+        }
+      },
+      "NilNotification": {
+        "type": "object",
+        "additionalProperties": false
+      },
       "RecommendationList": {
         "type": "object",
         "properties": {
@@ -565,6 +657,25 @@
               }
             }
           },
+          "notifications": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CPURequestOptimisedNotification"
+              },
+              {
+                "$ref": "#/components/schemas/CPULimitOptimisedNotification"
+              },
+              {
+                "$ref": "#/components/schemas/MemoryRequestOptimisedNotification"
+              },
+              {
+                "$ref": "#/components/schemas/MemoryLimitOptimisedNotification"
+              },
+              {
+                "$ref": "#/components/schemas/NilNotification"
+              }
+            ]
+          },
           "pods_count": {
             "type": "integer",
             "example": 1
@@ -658,7 +769,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
+                        "example": "m",
                         "nullable": true
                       }
                     }
@@ -711,6 +822,25 @@
                 }
               }
             }
+          },
+          "notifications": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CPURequestOptimisedNotification"
+              },
+              {
+                "$ref": "#/components/schemas/CPULimitOptimisedNotification"
+              },
+              {
+                "$ref": "#/components/schemas/MemoryRequestOptimisedNotification"
+              },
+              {
+                "$ref": "#/components/schemas/MemoryLimitOptimisedNotification"
+              },
+              {
+                "$ref": "#/components/schemas/NilNotification"
+              }
+            ]
           },
           "pods_count": {
             "type": "integer",
@@ -1067,8 +1197,7 @@
         "properties": {
           "format": {
             "type": "string",
-            "example": null,
-            "nullable": true
+            "example": "cores"
           },
           "max": {
             "$ref": "#/components/schemas/cpuUsageFloatComponent"
@@ -1092,7 +1221,7 @@
         "properties": {
           "format": {
             "type": "string",
-            "example": "Mi"
+            "example": "MiB"
           },
           "max": {
             "$ref": "#/components/schemas/memoryUsageFloatComponent"
