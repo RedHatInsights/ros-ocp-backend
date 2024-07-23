@@ -194,22 +194,22 @@ func get_user_permissions(c echo.Context) map[string][]string {
 	return user_permissions
 }
 
+func hasMoreThanThreeDecimals(value float64) bool {
+	const decimalPrecision int = 3
+	str := strconv.FormatFloat(value, 'f', -1, 64)
+	decimalPart := strings.Split(str, ".")
+	return (len(decimalPart) > 1) && (len(decimalPart[1]) > decimalPrecision)
+}
+
+func truncateToThreeDecimalPlaces(value float64) float64 {
+	if hasMoreThanThreeDecimals(value) {
+		truncated := math.Trunc(value * 1000) // Pushes decimal by 3 places and then truncates
+		return truncated / 1000
+	}
+	return value
+}
+
 func convertCPUUnit(cpuUnit string, cpuValue float64) float64 {
-
-	hasMoreThanThreeDecimals := func(value float64) bool {
-		const decimalPrecision int = 3
-		str := strconv.FormatFloat(value, 'f', -1, 64)
-		decimalPart := strings.Split(str, ".")
-		return (len(decimalPart) > 1) && (len(decimalPart[1]) > decimalPrecision)
-	}
-
-	truncateToThreeDecimalPlaces := func(value float64) float64 {
-		if hasMoreThanThreeDecimals(value) {
-			truncated := math.Trunc(value * 1000) // Pushes decimal by 3 places and then truncates
-			return truncated / 1000
-		}
-		return value
-	}
 	var convertedValueCPU float64
 
 	if cpuUnit == "millicores" {
@@ -473,6 +473,120 @@ func dropBoxPlotsObject(recommendationJSON map[string]interface{}) map[string]in
 	return recommendationJSON
 }
 
+func convertVariationToPercentage(recommendationJSON map[string]interface{}) map[string]interface{} {
+	var currentCpuLimits, currentMemoryLimits, currentCpuRequests, currentMemoryRequests float64
+	// Current section of recommendation
+
+	calculatePercentage := func(numerator float64, denominator float64) float64 {
+		if numerator == 0.0 || denominator == 0.0 {
+			// This block avoids below conditions and returns 0.0 instead,
+			// When numerator is 0.0 the Go returns 0.0, valid number however division can be skipped
+			// When denominator is 0.0 the Go returns Infinity(+Inf)
+			// When both numerator and denominator are 0.0 the Go returns Not A Number(NaN)
+			return 0.0
+		}
+		result := (numerator / denominator) * 100
+		return result
+	}
+
+	current_config, ok := recommendationJSON["current"].(map[string]interface{})
+	if !ok {
+		log.Error("current not found in JSON")
+	}
+
+	for _, section := range []string{"limits", "requests"} {
+
+		sectionObject, ok := current_config[section].(map[string]interface{})
+		if ok {
+			memoryObject, ok := sectionObject["memory"].(map[string]interface{})
+			if ok {
+				if memoryValue, ok := memoryObject["amount"].(float64); ok {
+					if section == "limits" {
+						currentMemoryLimits = memoryValue
+					} else if section == "requests" {
+						currentMemoryRequests = memoryValue
+					}
+				}
+			}
+
+			cpuObject, ok := sectionObject["cpu"].(map[string]interface{})
+			if ok {
+				if cpuValue, ok := cpuObject["amount"].(float64); ok {
+					if section == "limits" {
+						currentCpuLimits = cpuValue
+					} else if section == "requests" {
+						currentCpuRequests = cpuValue
+					}
+				}
+			}
+		}
+	}
+
+	recommendation_terms, ok := recommendationJSON["recommendation_terms"].(map[string]interface{})
+	if !ok {
+		log.Error("recommendation data not found in JSON")
+		return recommendationJSON
+	}
+
+	for _, period := range []string{"short_term", "medium_term", "long_term"} {
+		intervalData, ok := recommendation_terms[period].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if intervalData["recommendation_engines"] != nil {
+			for _, recommendationType := range []string{"cost", "performance"} {
+				engineData, ok := intervalData["recommendation_engines"].(map[string]interface{})[recommendationType].(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				for _, dataBlock := range []string{"variation"} {
+					recommendationSection, ok := engineData[dataBlock].(map[string]interface{})
+					if !ok {
+						continue
+					}
+
+					for _, section := range []string{"limits", "requests"} {
+
+						sectionObject, ok := recommendationSection[section].(map[string]interface{})
+						if ok {
+							memoryObject, ok := sectionObject["memory"].(map[string]interface{})
+							if ok {
+								if memoryValue, ok := memoryObject["amount"].(float64); ok {
+									if section == "limits" {
+										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryLimits)
+										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
+									} else if section == "requests" {
+										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryRequests)
+										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
+									}
+								}
+							}
+
+							cpuObject, ok := sectionObject["cpu"].(map[string]interface{})
+							if ok {
+								if cpuValue, ok := cpuObject["amount"].(float64); ok {
+									if section == "limits" {
+										percentageCpuValue := calculatePercentage(cpuValue, currentCpuLimits)
+										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
+									} else if section == "requests" {
+										percentageCpuValue := calculatePercentage(cpuValue, currentCpuRequests)
+										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
+									}
+								}
+							}
+
+						}
+					}
+				}
+
+			}
+		}
+	}
+	return recommendationJSON
+}
+
 func UpdateRecommendationJSON(handlerName string, recommendationID string, clusterUUID string, unitsToTransform map[string]string, jsonData datatypes.JSON) map[string]interface{} {
 
 	var data map[string]interface{}
@@ -489,5 +603,6 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 
 	data = transformComponentUnits(unitsToTransform, data) // cpu: core values require truncation
 	data = filterNotifications(recommendationID, clusterUUID, data)
+	data = convertVariationToPercentage(data)
 	return data
 }
