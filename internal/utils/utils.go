@@ -184,3 +184,19 @@ func Start_prometheus_server() {
 		_ = http.ListenAndServe(fmt.Sprintf(":%s", cfg.PrometheusPort), nil)
 	}
 }
+
+func NeedRecommOnFirstOfMonth(dbDate time.Time, maxEndTime time.Time) bool {
+	if isItFirstOfMonth(maxEndTime) && getDate(maxEndTime).After(getDate(dbDate)) {
+		return true
+	}
+	return false
+}
+
+func getDate(d time.Time) time.Time {
+	return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, d.Location())
+}
+
+func isItFirstOfMonth(d time.Time) bool {
+	_, _, day := d.Date()
+	return day == 1
+}
