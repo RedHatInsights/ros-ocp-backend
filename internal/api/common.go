@@ -28,13 +28,3 @@ var NotificationsToShow = map[string]string{
 	"324004": "NOTICE",
 }
 
-var MemoryUnitk8s = map[string]string{
-	"bytes": "bytes",
-	"MiB":   "Mi",
-	"GiB":   "Gi",
-}
-
-var CPUUnitk8s = map[string]string{
-	"millicores": "m",
-	"cores":     "",
-}
