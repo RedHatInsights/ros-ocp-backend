@@ -16,4 +16,12 @@ var (
 		Name: "rosocp_invalid_recommendation_total",
 		Help: "The total number of invalid recommendation send by Kruize",
 	})
+	createExperimentRequest = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "kruize_create_experiment_request_total",
+		Help: "The total number of experiments created on Kruize",
+	})
+	updateResultRequest = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "kruize_update_result_request_total",
+		Help: "The total number of requests/csvs sent to Kruize for UpdateResult",
+	})
 )

@@ -84,7 +84,7 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 			return nil, fmt.Errorf("%s", resdata["message"])
 		}
 	}
-
+	createExperimentRequest.Inc()
 	container_names := make([]string, 0, len(containers))
 	for _, value := range containers {
 		container_names = append(container_names, value["container_name"])
@@ -139,6 +139,7 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 		}
 	}
 
+	updateResultRequest.Inc()
 	return payload_data, nil
 }
 

@@ -54,6 +54,7 @@ func transactionForRecommendation(recommendationSetList []model.RecommendationSe
 			return err
 		}
 	}
+	recommendationSuccess.Inc()
 	return tx.Commit().Error
 }
 
@@ -72,6 +73,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 		log.Errorf("unable to list recommendation for: %v", err)
 		return poll_cycle_complete
 	}
+	recommendationRequest.Inc()
 
 	containers := recommendation[0].Kubernetes_objects[0].Containers
 	recommendationSetList := []model.RecommendationSet{}
