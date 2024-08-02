@@ -54,7 +54,6 @@ func transactionForRecommendation(recommendationSetList []model.RecommendationSe
 			return err
 		}
 	}
-	recommendationSuccess.Inc()
 	return tx.Commit().Error
 }
 
@@ -116,6 +115,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 		txError := transactionForRecommendation(recommendationSetList, histRecommendationSetList, experiment_name, recommendationType)
 		if txError == nil {
 			poll_cycle_complete = true
+			recommendationSuccess.Inc()
 		} else {
 			poll_cycle_complete = false
 		}
