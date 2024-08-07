@@ -54,6 +54,7 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 		kruizeAPIException.WithLabelValues("/createExperiment").Inc()
 		return nil, fmt.Errorf("error Occured while creating experiment: %v", err)
 	}
+	createExperimentRequest.Inc()
 	if res.StatusCode != 201 {
 		defer res.Body.Close()
 		body, _ := io.ReadAll(res.Body)
@@ -84,7 +85,6 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 			return nil, fmt.Errorf("%s", resdata["message"])
 		}
 	}
-
 	container_names := make([]string, 0, len(containers))
 	for _, value := range containers {
 		container_names = append(container_names, value["container_name"])
@@ -107,6 +107,7 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 		kruizeAPIException.WithLabelValues("/updateResults").Inc()
 		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
 	}
+	updateResultRequest.Inc()
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
 	log.Debugf("\n Respose from API /updateResult - %s \n", string(body))

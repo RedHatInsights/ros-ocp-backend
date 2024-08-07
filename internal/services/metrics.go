@@ -10,4 +10,12 @@ var (
 		Name: "rosocp_invalid_csv_total",
 		Help: "The total number of invalid csv send by cost-mgmt",
 	})
+	recommendationRequest = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rosocp_recommendation_request_total",
+		Help: "The total number of recommendations requested from Kruize",
+	})
+	recommendationSuccess = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rosocp_recommendation_success_total",
+		Help: "The total number of recommendations saved by ROSOCP",
+	})
 )
