@@ -22,22 +22,20 @@ type WorkloadMetrics struct {
 	UsageMetrics  datatypes.JSON
 }
 
-func (w *WorkloadMetrics) CreateWorkloadMetrics() error {
+func BatchInsertWorkloadMetrics(data []WorkloadMetrics, org_id string) error {
 	db := database.GetDB()
 	result := db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "org_id"}, {Name: "workload_id"}, {Name: "container_name"}, {Name: "interval_start"}, {Name: "interval_end"}},
 		DoNothing: true,
-	}).Create(w)
-
+	}).Create(data)
 	if result.Error != nil {
 		if strings.Contains(result.Error.Error(), "no partition") {
 			partitionMissing.With(prometheus.Labels{"resource_name": "workload_metrics"}).Inc()
 			dbError.Inc()
-			return fmt.Errorf("partition not found for resource %s with org_id %s and end_time %s", "workload_metrics", w.OrgId, w.IntervalEnd.String())
+			return fmt.Errorf("partition not found for resource %s with org_id %s", "workload_metrics", org_id)
 		}
 		dbError.Inc()
 		return result.Error
 	}
-
 	return nil
 }

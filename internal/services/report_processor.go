@@ -145,6 +145,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 					continue
 				}
 
+				workload_metric_arr := []model.WorkloadMetrics{}
 				for _, data := range usage_data_byte {
 
 					interval_start_time, err := utils.ConvertISO8601StringToTime(data.Interval_start_time)
@@ -162,6 +163,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 						container_usage_metrics, err := json.Marshal(container.Metrics)
 						if err != nil {
 							log.Errorf("Unable to marshal container usage data: %v", err)
+							continue
 						}
 
 						workload_metric := model.WorkloadMetrics{
@@ -172,12 +174,12 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 							IntervalEnd:   interval_end_time,
 							UsageMetrics:  container_usage_metrics,
 						}
-						if err := workload_metric.CreateWorkloadMetrics(); err != nil {
-							log.Errorf("unable to add record to workload_metrics table: %v. Error: %v", workload_metric, err)
-							continue
-						}
+						workload_metric_arr = append(workload_metric_arr, workload_metric)
 					}
 
+				}
+				if err := model.BatchInsertWorkloadMetrics(workload_metric_arr, rh_account.OrgId); err != nil {
+					log.Errorf("unable to batch insert to workload_metrics table. Error: %v", err)
 				}
 			}
 			// Sending recommendation request to recommendation-poller
