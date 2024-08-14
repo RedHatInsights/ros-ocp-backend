@@ -68,6 +68,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 		end_interval := utils.ConvertDateToISO8601(maxEndTimeFromReport.String())
 		if err.Error() == fmt.Sprintf("Recommendation for timestamp - \" %s \" does not exist", end_interval) {
 			log.Infof("recommendation does not exist for timestamp - \" %s \"", end_interval)
+			recommendationRequest.Inc()
 		}
 		log.Errorf("unable to list recommendation for: %v", err)
 		return poll_cycle_complete
