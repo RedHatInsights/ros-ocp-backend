@@ -23,11 +23,11 @@ objects:
         machinePool: ${MACHINE_POOL_OPTION}
         resources:
           requests:
-            cpu: ${KRUIZE_CPU_REQUEST}
-            memory: ${KRUIZE_MEMORY_REQUEST}
+            cpu: ${CPU_REQUEST_KRUIZE}
+            memory: ${MEMORY_REQUEST_KRUIZE}
           limits:
-            cpu: ${KRUIZE_CPU_LIMIT}
-            memory: ${KRUIZE_MEMORY_LIMIT}
+            cpu: ${CPU_LIMIT_KRUIZE}
+            memory: ${MEMORY_LIMIT_KRUIZE}
         livenessProbe:
           httpGet:
             path: /health
@@ -245,22 +245,22 @@ parameters:
   value: "10000"
 - description: Initial kruize cpu request.
   displayName: KRUIZE CPU Request
-  name: KRUIZE_CPU_REQUEST
+  name: CPU_REQUEST_KRUIZE
   required: true
   value: 500m
 - description: Initial amount of memory kruize container will request.
   displayName: KRUIZE Memory Request
-  name: KRUIZE_MEMORY_REQUEST
+  name: MEMORY_REQUEST_KRUIZE
   required: true
   value: 1Gi
 - description: Maximum amount of CPU kruize container can use.
   displayName: KRUIZE CPU Limit
-  name: KRUIZE_CPU_LIMIT
+  name: CPU_LIMIT_KRUIZE
   required: true
   value: '1'
 - description: Maximum amount of memory kruize container can use.
   displayName: KRUIZE Memory Limit
-  name: KRUIZE_MEMORY_LIMIT
+  name: MEMORY_LIMIT_KRUIZE
   required: true
   value: 1Gi
 - description: Replica count for kruize pod
