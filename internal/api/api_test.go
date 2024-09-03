@@ -41,7 +41,7 @@ func TestMapQueryParameters(t *testing.T) {
 			}
 			result, _ := MapQueryParameters(c)
 			if reflect.DeepEqual(result, tt.qoutputs) != true {
-				t.Errorf(tt.errmsg)
+				t.Errorf("%s", tt.errmsg)
 			}
 			for k := range c.QueryParams() {
 				delete(c.QueryParams(), k)
