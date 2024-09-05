@@ -168,7 +168,7 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 		if err := json.Unmarshal(body, &data); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal response of /updateRecommendations API %v", err)
 		}
-		return nil, fmt.Errorf(data["message"].(string))
+		return nil, fmt.Errorf("%s", data["message"].(string))
 	}
 	response := []kruizePayload.ListRecommendations{}
 	if err := json.Unmarshal(body, &response); err != nil {

@@ -128,6 +128,35 @@
               "type": "string",
               "example": "DESC"
             }
+          },
+          {
+            "in": "query",
+            "name": "memory-unit",
+            "description": "unit preference for memory",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bytes",
+                "MiB",
+                "GiB"
+              ],
+              "default": "bytes"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cpu-unit",
+            "description": "unit preference for cpu",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "millicores",
+                "cores"
+              ],
+              "default": "cores"
+            }
           }
         ],
         "responses": {

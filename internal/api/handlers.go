@@ -17,9 +17,39 @@ func GetRecommendationSetList(c echo.Context) error {
 	OrgID := XRHID.Identity.OrgID
 	user_permissions := get_user_permissions(c)
 	handlerName := "recommendationset-list"
-	unitChoices := map[string]string{
-		"cpu":    "cores",
-		"memory": "bytes",
+	var unitChoices = make(map[string]string)
+
+	cpuUnitParam := c.QueryParam("cpu-unit")
+	var cpuUnitOptions = map[string]bool{
+		"millicores": true,
+		"cores":      true,
+	}
+
+	if cpuUnitParam != "" {
+		if !cpuUnitOptions[cpuUnitParam] {
+			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid cpu unit"})
+		} else {
+			unitChoices["cpu"] = cpuUnitParam
+		}
+	} else {
+		unitChoices["cpu"] = "cores"
+	}
+
+	memoryUnitParam := c.QueryParam("memory-unit")
+	var memoryUnitOptions = map[string]bool{
+		"bytes": true,
+		"MiB":   true,
+		"GiB":   true,
+	}
+
+	if memoryUnitParam != "" {
+		if !memoryUnitOptions[memoryUnitParam] {
+			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid memory unit"})
+		} else {
+			unitChoices["memory"] = memoryUnitParam
+		}
+	} else {
+		unitChoices["memory"] = "bytes"
 	}
 
 	var orderHow string
