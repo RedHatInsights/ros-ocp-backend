@@ -23,11 +23,11 @@ objects:
         args: ["-c", "./rosocp db migrate up && ./rosocp start processor"]
         resources:
           requests:
-            cpu: ${CPU_REQUEST}
-            memory: ${MEMORY_REQUEST}
+            cpu: ${CPU_REQUEST_ROSOCP}
+            memory: ${MEMORY_REQUEST_ROSOCP}
           limits:
-            cpu: ${CPU_LIMIT}
-            memory: ${MEMORY_LIMIT}
+            cpu: ${CPU_LIMIT_ROSOCP}
+            memory: ${MEMORY_LIMIT_ROSOCP}
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -73,11 +73,11 @@ objects:
         args: ["-c", "./rosocp db migrate up && ./rosocp start recommendation-poller"]
         resources:
           requests:
-            cpu: ${CPU_REQUEST}
-            memory: ${MEMORY_REQUEST}
+            cpu: ${CPU_REQUEST_ROSOCP}
+            memory: ${MEMORY_REQUEST_ROSOCP}
           limits:
-            cpu: ${CPU_LIMIT}
-            memory: ${MEMORY_LIMIT}
+            cpu: ${CPU_LIMIT_ROSOCP}
+            memory: ${MEMORY_LIMIT_ROSOCP}
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -127,11 +127,11 @@ objects:
         args: ["-c", "./rosocp db migrate up && ./rosocp start api"]
         resources:
           requests:
-            cpu: ${CPU_REQUEST}
-            memory: ${MEMORY_REQUEST}
+            cpu: ${CPU_REQUEST_ROSOCP}
+            memory: ${MEMORY_REQUEST_ROSOCP}
           limits:
-            cpu: ${CPU_LIMIT}
-            memory: ${MEMORY_LIMIT}
+            cpu: ${CPU_LIMIT_ROSOCP}
+            memory: ${MEMORY_LIMIT_ROSOCP}
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -179,11 +179,11 @@ objects:
         args: ["-c", "./rosocp db migrate up && ./rosocp start housekeeper --sources"]
         resources:
           requests:
-            cpu: ${CPU_REQUEST}
-            memory: ${MEMORY_REQUEST}
+            cpu: ${CPU_REQUEST_ROSOCP}
+            memory: ${MEMORY_REQUEST_ROSOCP}
           limits:
-            cpu: ${CPU_LIMIT}
-            memory: ${MEMORY_LIMIT}
+            cpu: ${CPU_LIMIT_ROSOCP}
+            memory: ${MEMORY_LIMIT_ROSOCP}
         env:
           - name: CLOWDER_ENABLED
             value: ${CLOWDER_ENABLED}
@@ -262,22 +262,22 @@ parameters:
   value: "10000"
 - description: Initial cpu request.
   displayName: CPU Request
-  name: CPU_REQUEST
+  name: CPU_REQUEST_ROSOCP
   required: true
   value: 500m
 - description: Initial amount of memory the container will request.
   displayName: Memory Request
-  name: MEMORY_REQUEST
+  name: MEMORY_REQUEST_ROSOCP
   required: true
   value: 1Gi
 - description: Maximum amount of memory the container can use.
   displayName: Memory Limit
-  name: MEMORY_LIMIT
+  name: MEMORY_LIMIT_ROSOCP
   required: true
   value: 1Gi
 - description: Maximum amount of CPU the build container can use.
   displayName: CPU Limit
-  name: CPU_LIMIT
+  name: CPU_LIMIT_ROSOCP
   required: true
   value: '1'
 - description: Is clowder enabled
