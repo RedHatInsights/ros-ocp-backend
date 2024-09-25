@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	k "github.com/confluentinc/confluent-kafka-go/v2/kafka"
-	"github.com/labstack/gommon/log"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
@@ -35,6 +34,7 @@ func StartSourcesListenerService() {
 
 func sourcesListener(msg *k.Message, _ *k.Consumer) {
 	db := database.GetDB()
+	log := logging.GetLogger()
 	headers := msg.Headers
 	for _, v := range headers {
 		if v.Key == "event_type" && string(v.Value) == "Application.destroy" {
