@@ -242,7 +242,7 @@ func convertMemoryUnit(memoryUnit string, memoryValue float64) float64 {
 
 }
 
-func transformComponentUnits(unitsToTransform map[string]string, recommendationJSON map[string]interface{}) map[string]interface{} {
+func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s bool, recommendationJSON map[string]interface{}) map[string]interface{} {
 	/*
 		Truncates CPU units(cores) to three decimal places
 		Truncates Memory units(Mi) to two decimal places
@@ -275,7 +275,11 @@ func transformComponentUnits(unitsToTransform map[string]string, recommendationJ
 					memoryUnit := unitsToTransform["memory"]
 					convertedMemoryValue := convertMemoryUnit(memoryUnit, memoryValue)
 					memoryObject["amount"] = convertedMemoryValue
-					memoryObject["format"] = MemoryUnitk8s[memoryUnit]
+					if updateUnitsk8s {
+						memoryObject["format"] = MemoryUnitk8s[memoryUnit]
+					} else {
+						memoryObject["format"] = memoryUnit
+					}
 				}
 			}
 
@@ -285,7 +289,11 @@ func transformComponentUnits(unitsToTransform map[string]string, recommendationJ
 					cpuUnit := unitsToTransform["cpu"]
 					convertedCPUValue := convertCPUUnit(cpuUnit, cpuValue)
 					cpuObject["amount"] = convertedCPUValue
-					cpuObject["format"] = CPUUnitk8s[cpuUnit]
+					if updateUnitsk8s {
+						cpuObject["format"] = CPUUnitk8s[cpuUnit]
+					} else {
+						cpuObject["format"] = cpuUnit
+					}
 				}
 			}
 		}
@@ -333,7 +341,11 @@ func transformComponentUnits(unitsToTransform map[string]string, recommendationJ
 						if cpuUsage, ok := datapointMap["cpuUsage"].(map[string]interface{}); ok {
 							cpuUnit := unitsToTransform["cpu"]
 							if _, ok := cpuUsage["format"].(string); ok {
-								cpuUsage["format"] = cpuUnit
+								if updateUnitsk8s {
+									cpuUsage["format"] = CPUUnitk8s[cpuUnit]
+								} else {
+									cpuUsage["format"] = cpuUnit
+								}
 							}
 							for _, key := range []string{"q1", "q3", "min", "max", "median"} {
 								cpuValue, _ := cpuUsage[key].(float64)
@@ -343,7 +355,11 @@ func transformComponentUnits(unitsToTransform map[string]string, recommendationJ
 						if memoryUsage, ok := datapointMap["memoryUsage"].(map[string]interface{}); ok {
 							memoryUnit := unitsToTransform["memory"]
 							if _, ok := memoryUsage["format"].(string); ok {
-								memoryUsage["format"] = memoryUnit
+								if updateUnitsk8s {
+									memoryUsage["format"] = MemoryUnitk8s[memoryUnit]
+								} else {
+									memoryUsage["format"] = memoryUnit
+								}
 							}
 							for _, key := range []string{"q1", "q3", "min", "max", "median"} {
 								memoryValue, _ := memoryUsage[key].(float64)
@@ -380,7 +396,11 @@ func transformComponentUnits(unitsToTransform map[string]string, recommendationJ
 									memoryUnit := unitsToTransform["memory"]
 									convertedMemoryValue := convertMemoryUnit(memoryUnit, memoryValue)
 									memoryObject["amount"] = convertedMemoryValue
-									memoryObject["format"] = MemoryUnitk8s[memoryUnit]
+									if updateUnitsk8s {
+										memoryObject["format"] = MemoryUnitk8s[memoryUnit]
+									} else {
+										memoryObject["format"] = memoryUnit
+									}
 								}
 							}
 
@@ -390,7 +410,11 @@ func transformComponentUnits(unitsToTransform map[string]string, recommendationJ
 									cpuUnit := unitsToTransform["cpu"]
 									convertedCPUValue := convertCPUUnit(cpuUnit, cpuValue)
 									cpuObject["amount"] = convertedCPUValue
-									cpuObject["format"] = CPUUnitk8s[cpuUnit]
+									if updateUnitsk8s {
+										cpuObject["format"] = CPUUnitk8s[cpuUnit]
+									} else {
+										cpuObject["format"] = cpuUnit
+									}
 								}
 
 							}
@@ -589,7 +613,7 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 	return recommendationJSON
 }
 
-func UpdateRecommendationJSON(handlerName string, recommendationID string, clusterUUID string, unitsToTransform map[string]string, jsonData datatypes.JSON) map[string]interface{} {
+func UpdateRecommendationJSON(handlerName string, recommendationID string, clusterUUID string, unitsToTransform map[string]string, updateUnitsk8s bool, jsonData datatypes.JSON) map[string]interface{} {
 
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(jsonData), &data)
@@ -603,7 +627,7 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 		data = dropBoxPlotsObject(data)
 	}
 
-	data = transformComponentUnits(unitsToTransform, data) // cpu: core values require truncation
+	data = transformComponentUnits(unitsToTransform, updateUnitsk8s, data) // cpu: core values require truncation
 	data = filterNotifications(recommendationID, clusterUUID, data)
 	data = convertVariationToPercentage(data)
 	return data

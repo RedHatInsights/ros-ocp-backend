@@ -69,6 +69,15 @@
             }
           },
           {
+            "name": "true-units",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Shows all values in true/real-world units. Accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False."
+          },
+          {
             "name": "start_date",
             "in": "query",
             "description": "Start date",
@@ -204,6 +213,15 @@
               "type": "string"
             },
             "description": "The recommendation UUID"
+          },
+          {
+            "name": "true-units",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Shows all values in true/real-world units. Accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False."
           },
           {
             "in": "query",
