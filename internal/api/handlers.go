@@ -118,6 +118,18 @@ func GetRecommendationSetList(c echo.Context) error {
 		log.Error("unable to fetch records from database", error)
 	}
 
+	trueUnitsStr := c.QueryParam("true-units")
+	var trueUnits bool
+
+	if trueUnitsStr != "" {
+		trueUnits, err = strconv.ParseBool(trueUnitsStr)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid value for true-units"})
+		}
+	}
+	
+	setk8sUnits := !trueUnits
+
 	allRecommendations := []map[string]interface{}{}
 
 	for _, recommendation := range recommendationSets {
@@ -132,7 +144,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		recommendationData["workload"] = recommendation.Workload.WorkloadName
 		recommendationData["container"] = recommendation.ContainerName
 		recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
-		recommendationData["recommendations"] = UpdateRecommendationJSON(handlerName, recommendation.ID, recommendation.Workload.Cluster.ClusterUUID, unitChoices, recommendation.Recommendations)
+		recommendationData["recommendations"] = UpdateRecommendationJSON(handlerName, recommendation.ID, recommendation.Workload.Cluster.ClusterUUID, unitChoices, setk8sUnits, recommendation.Recommendations)
 		allRecommendations = append(allRecommendations, recommendationData)
 
 	}
@@ -159,6 +171,18 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	var unitChoices = make(map[string]string)
+
+	trueUnitsStr := c.QueryParam("true-units")
+	var trueUnits bool
+
+	if trueUnitsStr != "" {
+		trueUnits, err = strconv.ParseBool(trueUnitsStr)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid value for true-units"})
+		}
+	}
+	
+	setk8sUnits := !trueUnits
 
 	cpuUnitParam := c.QueryParam("cpu-unit")
 	var cpuUnitOptions = map[string]bool{
@@ -212,7 +236,7 @@ func GetRecommendationSet(c echo.Context) error {
 		recommendationSlice["workload"] = recommendationSet.Workload.WorkloadName
 		recommendationSlice["container"] = recommendationSet.ContainerName
 		recommendationSlice["last_reported"] = recommendationSet.Workload.Cluster.LastReportedAtStr
-		recommendationSlice["recommendations"] = UpdateRecommendationJSON(handlerName, recommendationSet.ID, recommendationSet.Workload.Cluster.ClusterUUID, unitChoices, recommendationSet.Recommendations)
+		recommendationSlice["recommendations"] = UpdateRecommendationJSON(handlerName, recommendationSet.ID, recommendationSet.Workload.Cluster.ClusterUUID, unitChoices, setk8sUnits, recommendationSet.Recommendations)
 	}
 
 	return c.JSON(http.StatusOK, recommendationSlice)
