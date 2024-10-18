@@ -248,7 +248,7 @@ parameters:
 - description: Image NAME
   name: IMAGE
   required: true
-  value: quay.io/cloudservices/ros-ocp-backend
+  value: quay.io/redhat-services-prod/insights-management-tenant/insights-ocp-resource-optimization/ros-ocp-backend
 - description: Image tag
   name: IMAGE_TAG
   required: true
