@@ -160,6 +160,8 @@ objects:
               value: "UTC"
             - name: deletepartitionsthreshold
               value: "16"
+            - name: local
+              value: "false"
       - name: create-kruize-partitions
         schedule: "0 0 25 * *" # Run on 25th of every month at midnight
         podSpec:
@@ -211,6 +213,8 @@ objects:
               value: "false"
             - name: hibernate_timezone
               value: "UTC"
+            - name: local
+              value: "false"
     database:
       name: postgres
       version: 13
