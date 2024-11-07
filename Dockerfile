@@ -8,7 +8,8 @@ RUN go get -d ./... && \
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 WORKDIR /
-RUN microdnf -y update
+RUN microdnf -y update \
+    --disableplugin=subscription-manager
 COPY --from=builder /go/src/app/rosocp ./rosocp
 COPY --from=builder /go/src/app/go_version_details ./go_version_details
 COPY migrations ./migrations
