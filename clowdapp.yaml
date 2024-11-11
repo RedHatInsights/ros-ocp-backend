@@ -297,8 +297,6 @@ parameters:
 - description: Time to wait before hitting listRecommendation API
   name: KRUIZE_WAIT_TIME
   value: "120"
-- name: MACHINE_POOL_OPTION
-  value: ''
 - description: Enable the RBAC
   name: RBAC_ENABLE
   value: "true"

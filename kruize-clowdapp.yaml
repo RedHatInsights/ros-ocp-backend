@@ -20,7 +20,6 @@ objects:
         image: ${KRUIZE_IMAGE}:${KRUIZE_IMAGE_TAG}
         command: ["sh"]
         args: ["-c", "export DB_CONFIG_FILE=${ACG_CONFIG} && export KRUIZE_CONFIG_FILE=${ACG_CONFIG} && bash target/bin/Autotune"]
-        machinePool: ${MACHINE_POOL_OPTION}
         resources:
           requests:
             cpu: ${CPU_REQUEST_KRUIZE}
@@ -270,8 +269,6 @@ parameters:
 - description: Replica count for kruize pod
   name: KRUIZE_REPLICA_COUNT
   value: "1"
-- name: MACHINE_POOL_OPTION
-  value: ''
 - name: SSL_CERT_DIR
   value: '/etc/ssl/certs:/etc/pki/tls/certs:/system/etc/security/cacerts:/cdapp/certs'
 - name: KRUIZE_LOGGING_LEVEL
