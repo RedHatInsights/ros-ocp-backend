@@ -13,3 +13,6 @@ ON DELETE CASCADE;
 
 ALTER TABLE clusters
 ADD UNIQUE (tenant_id, source_id, cluster_uuid, cluster_alias);
+
+-- GET Recommendations optimization
+CREATE INDEX IF NOT EXISTS idx_cluster_last_reported_at ON clusters (last_reported_at);

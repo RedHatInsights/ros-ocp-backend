@@ -64,16 +64,15 @@ func CollectionResponse(collection []interface{}, req *http.Request, count, limi
 	}
 }
 
-func MapQueryParameters(c echo.Context) (map[string][]string, error) {
+func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	log := logging.GetLogger()
-	queryParams := make(map[string][]string)
+	queryParams := make(map[string]interface{})
 	var startDate, endDate time.Time
 	var clusters, projects, workloadNames, workloadTypes, containers []string
 
 	now := time.Now().UTC()
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
-	dateSlice := []string{}
 	startDateStr := c.QueryParam("start_date")
 
 	if startDateStr == "" {
@@ -86,10 +85,9 @@ func MapQueryParameters(c echo.Context) (map[string][]string, error) {
 			return queryParams, err
 		}
 	}
-	startDateSlice := append(dateSlice, startDate.Format(timeLayout))
-	queryParams["DATE(recommendation_sets.monitoring_end_time) >= ?"] = startDateSlice
-	endDateStr := c.QueryParam("end_date")
+	queryParams["recommendation_sets.monitoring_end_time >= ?"] = startDate
 
+	endDateStr := c.QueryParam("end_date")
 	if endDateStr == "" {
 		endDate = now
 	} else {
@@ -100,9 +98,7 @@ func MapQueryParameters(c echo.Context) (map[string][]string, error) {
 			return queryParams, err
 		}
 	}
-	endDateSlice := append(dateSlice, endDate.Format(timeLayout))
-
-	queryParams["DATE(recommendation_sets.monitoring_end_time) <= ?"] = endDateSlice
+	queryParams["recommendation_sets.monitoring_end_time <= ?"] = endDate
 
 	clusters = c.QueryParams()["cluster"]
 	if len(clusters) > 0 {
@@ -135,15 +131,13 @@ func MapQueryParameters(c echo.Context) (map[string][]string, error) {
 	}
 
 	return queryParams, nil
-
 }
 
 func parseQueryParams(param string, values []string) (string, []string) {
-
 	parsedKeyMultipleVal := ""
 	valuesSlice := []string{}
 
-	var paramMap = map[string]string{
+	paramMap := map[string]string{
 		"cluster":       "clusters.cluster_alias ILIKE ?",
 		"workload_type": "workloads.workload_type = ?",
 		"workload":      "workloads.workload_name ILIKE ?",
@@ -180,7 +174,6 @@ func parseQueryParams(param string, values []string) (string, []string) {
 		}
 		return paramMap[param], valuesSlice
 	}
-
 }
 
 func get_user_permissions(c echo.Context) map[string][]string {
@@ -221,11 +214,9 @@ func convertCPUUnit(cpuUnit string, cpuValue float64) float64 {
 	}
 
 	return convertedValueCPU
-
 }
 
 func convertMemoryUnit(memoryUnit string, memoryValue float64) float64 {
-
 	var convertedValueMemory float64
 
 	if memoryUnit == "MiB" {
@@ -239,7 +230,6 @@ func convertMemoryUnit(memoryUnit string, memoryValue float64) float64 {
 	}
 
 	return convertedValueMemory
-
 }
 
 func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s bool, recommendationJSON map[string]interface{}) map[string]interface{} {
@@ -266,7 +256,6 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 	}
 
 	for _, section := range []string{"limits", "requests"} {
-
 		sectionObject, ok := current_config[section].(map[string]interface{})
 		if ok {
 			memoryObject, ok := sectionObject["memory"].(map[string]interface{})
@@ -367,13 +356,11 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 							}
 						}
 					}
-
 				}
 			}
 		}
 
 		if intervalData["recommendation_engines"] != nil {
-
 			for _, recommendationType := range []string{"cost", "performance"} {
 				engineData, ok := intervalData["recommendation_engines"].(map[string]interface{})[recommendationType].(map[string]interface{})
 				if !ok {
@@ -387,7 +374,6 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 					}
 
 					for _, section := range []string{"limits", "requests"} {
-
 						sectionObject, ok := recommendationSection[section].(map[string]interface{})
 						if ok {
 							memoryObject, ok := sectionObject["memory"].(map[string]interface{})
@@ -416,11 +402,9 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 										cpuObject["format"] = cpuUnit
 									}
 								}
-
 							}
 						}
 					}
-
 				}
 			}
 		}
@@ -430,7 +414,6 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 }
 
 func filterNotifications(recommendationID string, clusterUUID string, recommendationJSON map[string]interface{}) map[string]interface{} {
-
 	var droppedNotifications []string
 
 	deleteNotificationObject := func(recommendationSection map[string]interface{}) {
@@ -444,7 +427,6 @@ func filterNotifications(recommendationID string, clusterUUID string, recommenda
 				}
 			}
 		}
-
 	}
 
 	// level 1 notifications are not stored in the database
@@ -480,7 +462,6 @@ func filterNotifications(recommendationID string, clusterUUID string, recommenda
 }
 
 func dropBoxPlotsObject(recommendationJSON map[string]interface{}) map[string]interface{} {
-
 	recommendation_terms, ok := recommendationJSON["recommendation_terms"].(map[string]interface{})
 	if !ok {
 		log.Error("recommendation data not found in JSON")
@@ -519,7 +500,6 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 	}
 
 	for _, section := range []string{"limits", "requests"} {
-
 		sectionObject, ok := current_config[section].(map[string]interface{})
 		if ok {
 			memoryObject, ok := sectionObject["memory"].(map[string]interface{})
@@ -572,7 +552,6 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 					}
 
 					for _, section := range []string{"limits", "requests"} {
-
 						sectionObject, ok := recommendationSection[section].(map[string]interface{})
 						if ok {
 							memoryObject, ok := sectionObject["memory"].(map[string]interface{})
@@ -602,11 +581,9 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 									cpuObject["format"] = "percent"
 								}
 							}
-
 						}
 					}
 				}
-
 			}
 		}
 	}
@@ -614,7 +591,6 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 }
 
 func UpdateRecommendationJSON(handlerName string, recommendationID string, clusterUUID string, unitsToTransform map[string]string, updateUnitsk8s bool, jsonData datatypes.JSON) map[string]interface{} {
-
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(jsonData), &data)
 	if err != nil {

@@ -20,3 +20,6 @@ CREATE INDEX idx_workloads_containers ON workloads USING gin(containers);
 
 ALTER TABLE workloads
 ADD UNIQUE (org_id, cluster_id, experiment_name);
+
+-- GET Recommendations optimization
+CREATE INDEX IF NOT EXISTS idx_workloads_cluster_id ON workloads (cluster_id);
