@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/go-gota/gota/dataframe"
@@ -47,9 +46,36 @@ type UsageData struct {
 	Memory_rss_usage_container_sum string `dataframe:"memory_rss_usage_container_sum,float"`
 }
 
-func Test_filter_valid_k8s_object_types(t *testing.T) {
-	// Check valid k8s object type
+func Test_filter_valid_csv_records(t *testing.T) {
 	usage_data := []UsageData{
+		// k8s object with missing data
+		{
+			"2023-02-01 00:00:00 +0000 UTC", "2023-03-01 00:00:00 +0000 UTC", "2023-06-02 00:00:01 +0000 UTC", "2023-06-02 00:15:00 +0000 UTC",
+			"Yuptoo-service", "Yuptoo-app-standalone-1", "Yuptoo-app", "ReplicaSet", "testdeployment", "deployment", "Yuptoo-prod",
+			"quay.io/cloudservices/yuptoo", "ip-10-0-176-227.us-east-2.compute.internal", "i-0dfbb3fa4d0e8fc94",
+			"1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "",
+		},
+		{
+			"2023-02-01 00:00:00 +0000 UTC", "2023-03-01 00:00:00 +0000 UTC", "2023-06-02 00:00:01 +0000 UTC", "2023-06-02 00:15:00 +0000 UTC",
+			"Yuptoo-service", "Yuptoo-app-standalone-1", "Yuptoo-app", "ReplicaSet", "testdeployment", "deployment", "Yuptoo-prod",
+			"quay.io/cloudservices/yuptoo", "ip-10-0-176-227.us-east-2.compute.internal", "i-0dfbb3fa4d0e8fc94",
+			"1", "1", "1", "1", "", "", "", "", "1", "1", "1", "1", "1", "1", "1", "", "", "", "", "", "", "", "",
+		},
+		// k8s object with 0 CPU, Memory and RSS usage
+		{
+			"2023-02-01 00:00:00 +0000 UTC", "2023-03-01 00:00:00 +0000 UTC", "2023-06-02 00:00:01 +0000 UTC", "2023-06-02 00:15:00 +0000 UTC",
+			"Yuptoo-service", "Yuptoo-app-standalone-1", "Yuptoo-app", "ReplicaSet", "testdeployment", "deployment", "Yuptoo-prod",
+			"quay.io/cloudservices/yuptoo", "ip-10-0-176-227.us-east-2.compute.internal", "i-0dfbb3fa4d0e8fc94",
+			"1", "1", "1", "1", "0", "0", "0", "0", "1", "1", "1", "1", "1", "1", "1", "0", "0", "0", "0", "0", "0", "0", "0",
+		},
+	}
+	df := dataframe.LoadStructs(usage_data)
+	result, no_of_dropped_records := filter_valid_csv_records(df)
+	if result.Nrow() != 1 || no_of_dropped_records != 2 {
+		t.Error("Invalid k8s object type did not get dropped")
+	}
+
+	usage_data = []UsageData{
 		// k8s object type DaemonSet
 		{
 			"2023-02-01 00:00:00 +0000 UTC", "2023-03-01 00:00:00 +0000 UTC", "2023-06-02 00:00:01 +0000 UTC", "2023-06-02 00:15:00 +0000 UTC",
@@ -93,10 +119,8 @@ func Test_filter_valid_k8s_object_types(t *testing.T) {
 			"1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1",
 		},
 	}
-	df := dataframe.LoadStructs(usage_data)
-	df = determine_k8s_object_type(df)
-	result := filter_valid_k8s_object_types(df)
-	fmt.Println(result.Nrow())
+	df = dataframe.LoadStructs(usage_data)
+	result, _ = filter_valid_csv_records(df)
 	if result.Nrow() != 6 {
 		t.Error("Data not filtered properly. Some of the valid k8s object type got dropped")
 	}
@@ -112,43 +136,31 @@ func Test_filter_valid_k8s_object_types(t *testing.T) {
 		},
 	}
 	df = dataframe.LoadStructs(usage_data)
-	df = determine_k8s_object_type(df)
-	result = filter_valid_k8s_object_types(df)
+	result, _ = filter_valid_csv_records(df)
 	if result.Nrow() != 0 {
 		t.Error("Invalid k8s object type did not get dropped")
 	}
-}
 
-func Test_filter_valid_csv_records(t *testing.T) {
-	usage_data := []UsageData{
-		// k8s object with missing data
+	// check if empty workload_type is dropped
+	usage_data = []UsageData{
 		{
 			"2023-02-01 00:00:00 +0000 UTC", "2023-03-01 00:00:00 +0000 UTC", "2023-06-02 00:00:01 +0000 UTC", "2023-06-02 00:15:00 +0000 UTC",
-			"Yuptoo-service", "Yuptoo-app-standalone-1", "Yuptoo-app", "ReplicaSet", "testdeployment", "deployment", "Yuptoo-prod",
+			"Yuptoo-service", "Yuptoo-app-standalone-1", "Yuptoo-app", "ReplicaSet", "testdeployment", "", "Yuptoo-prod",
 			"quay.io/cloudservices/yuptoo", "ip-10-0-176-227.us-east-2.compute.internal", "i-0dfbb3fa4d0e8fc94",
-			"1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "",
+			"1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1",
 		},
 		{
 			"2023-02-01 00:00:00 +0000 UTC", "2023-03-01 00:00:00 +0000 UTC", "2023-06-02 00:00:01 +0000 UTC", "2023-06-02 00:15:00 +0000 UTC",
-			"Yuptoo-service", "Yuptoo-app-standalone-1", "Yuptoo-app", "ReplicaSet", "testdeployment", "deployment", "Yuptoo-prod",
+			"Yuptoo-service", "Yuptoo-app-standalone-1", "Yuptoo-app", "ReplicaSet", "testdeployment", "<none>", "Yuptoo-prod",
 			"quay.io/cloudservices/yuptoo", "ip-10-0-176-227.us-east-2.compute.internal", "i-0dfbb3fa4d0e8fc94",
-			"1", "1", "1", "1", "", "", "", "", "1", "1", "1", "1", "1", "1", "1", "", "", "", "", "", "", "", "",
-		},
-		// k8s object with 0 CPU, Memory and RSS usage
-		{
-			"2023-02-01 00:00:00 +0000 UTC", "2023-03-01 00:00:00 +0000 UTC", "2023-06-02 00:00:01 +0000 UTC", "2023-06-02 00:15:00 +0000 UTC",
-			"Yuptoo-service", "Yuptoo-app-standalone-1", "Yuptoo-app", "ReplicaSet", "testdeployment", "deployment", "Yuptoo-prod",
-			"quay.io/cloudservices/yuptoo", "ip-10-0-176-227.us-east-2.compute.internal", "i-0dfbb3fa4d0e8fc94",
-			"1", "1", "1", "1", "0", "0", "0", "0", "1", "1", "1", "1", "1", "1", "1", "0", "0", "0", "0", "0", "0", "0", "0",
+			"1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1",
 		},
 	}
-	df := dataframe.LoadStructs(usage_data)
-	df = determine_k8s_object_type(df)
-	result, no_of_dropped_records := filter_valid_csv_records(df)
-	if result.Nrow() != 1 || no_of_dropped_records != 2 {
+	df = dataframe.LoadStructs(usage_data)
+	result, _ = filter_valid_csv_records(df)
+	if result.Nrow() != 0 {
 		t.Error("Invalid k8s object type did not get dropped")
 	}
-
 }
 
 func Test_check_if_all_required_columns_in_CSV(t *testing.T) {
@@ -176,5 +188,16 @@ func Test_check_if_all_required_columns_in_CSV(t *testing.T) {
 	df = df.Drop([]int{5})
 	if err := check_if_all_required_columns_in_CSV(df); err == nil {
 		t.Error("Expecting error to be returned as all required column not present")
+	}
+}
+
+func TestAggregateDataNoRecords(t *testing.T) {
+	usage_data := []UsageData{}
+
+	// The function should not panic when none of the rows are valid
+	df := dataframe.LoadStructs(usage_data)
+	_, err := Aggregate_data(df)
+	if err == nil {
+		t.Error("Expecting error to be returned when all rows are invalid")
 	}
 }

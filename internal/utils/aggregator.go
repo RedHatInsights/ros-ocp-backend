@@ -31,11 +31,7 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	if df.Nrow() == 0 {
 		return df, fmt.Errorf("no valid records present in CSV to process further")
 	}
-
 	df = determine_k8s_object_type(df)
-
-	// filter out only valid workload type
-	df = filter_valid_k8s_object_types(df)
 
 	dfGroups := df.GroupBy(
 		"namespace",
@@ -85,8 +81,8 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	return df, nil
 }
 
-func filter_valid_csv_records(main_df dataframe.DataFrame) (dataframe.DataFrame, int) {
-	df := main_df.FilterAggregation(
+func filter_valid_csv_records(mainDf dataframe.DataFrame) (dataframe.DataFrame, int) {
+	df := mainDf.FilterAggregation(
 		dataframe.And,
 		dataframe.F{Colname: "memory_rss_usage_container_sum", Comparator: series.GreaterEq, Comparando: 0},
 		dataframe.F{Colname: "memory_rss_usage_container_max", Comparator: series.GreaterEq, Comparando: 0},
@@ -104,17 +100,34 @@ func filter_valid_csv_records(main_df dataframe.DataFrame) (dataframe.DataFrame,
 		dataframe.F{Colname: "owner_name", Comparator: series.Neq, Comparando: ""},
 		dataframe.F{Colname: "owner_kind", Comparator: series.Neq, Comparando: "<none>"},
 		dataframe.F{Colname: "owner_name", Comparator: series.Neq, Comparando: "<none>"},
+		dataframe.F{Colname: "workload_type", Comparator: series.Neq, Comparando: "<none>"},
+		dataframe.F{Colname: "workload_type", Comparator: series.Neq, Comparando: ""},
 	)
 
-	no_of_dropped_records := main_df.Nrow() - df.Nrow()
+	// The above filters can delete all the rows
+	if df.Nrow() == 0 {
+		return df, mainDf.Nrow()
+	}
 
-	return df, no_of_dropped_records
-}
+	// Change the case of all workload_type to lowercase
+	lcaseWorkloadTypes := df.Rapply(func(s series.Series) series.Series {
+		columns := df.Names()
+		indexOfWorkloadType := findInStringSlice("workload_type", columns)
+		workloadType := s.Elem(indexOfWorkloadType).String()
+		lcaseWorkloadType := strings.ToLower(workloadType)
+		return series.Strings([]string{lcaseWorkloadType})
+	})
 
-func filter_valid_k8s_object_types(df dataframe.DataFrame) dataframe.DataFrame {
-	return df.Filter(
+	// Delete existing workload_type column
+	df = df.Mutate(df.Col("workload_type")).Drop("workload_type")
+
+	// Rename lowercase converted column to workload_type
+	df = df.Mutate(lcaseWorkloadTypes.Col("X0")).Rename("workload_type", "X0")
+
+	df = df.FilterAggregation(
+		dataframe.And,
 		dataframe.F{
-			Colname:    "k8s_object_type",
+			Colname:    "workload_type",
 			Comparator: series.In,
 			Comparando: []string{
 				w.Daemonset.String(),
@@ -125,6 +138,10 @@ func filter_valid_k8s_object_types(df dataframe.DataFrame) dataframe.DataFrame {
 				w.Statefulset.String(),
 			}},
 	)
+
+	noOfDroppedRecords := mainDf.Nrow() - df.Nrow()
+
+	return df, noOfDroppedRecords
 }
 
 func determine_k8s_object_type(df dataframe.DataFrame) dataframe.DataFrame {
