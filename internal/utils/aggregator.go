@@ -37,6 +37,10 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	// filter out only valid workload type
 	df = filter_valid_k8s_object_types(df)
 
+	if df.Nrow() == 0 {
+		return df, fmt.Errorf("no valid k8s_object_types present in CSV to process further")
+	}
+
 	dfGroups := df.GroupBy(
 		"namespace",
 		"k8s_object_type",
