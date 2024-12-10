@@ -20,7 +20,6 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	if err := check_if_all_required_columns_in_CSV(df); err != nil {
 		return dataframe.DataFrame{}, err
 	}
-
 	// Validation to check if metrics for cpuUsage, memoryUsage and memoryRSS are missing
 	df, no_of_dropped_records := filter_valid_csv_records(df)
 	if no_of_dropped_records != 0 {
@@ -33,9 +32,6 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	}
 
 	df = determine_k8s_object_type(df)
-
-	// filter out only valid workload type
-	df = filter_valid_k8s_object_types(df)
 
 	dfGroups := df.GroupBy(
 		"namespace",
@@ -86,6 +82,37 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 }
 
 func filter_valid_csv_records(main_df dataframe.DataFrame) (dataframe.DataFrame, int) {
+
+	emptyWorkload := func() func(el series.Element) bool {
+		return func(el series.Element) bool {
+			if el.Type() == series.String {
+				if workload, ok := el.Val().(string); ok {
+					if workload == "<none>" || workload == "" {
+						return false
+					} else {
+						return true
+					}
+				}
+			}
+			return false
+		}
+	}
+
+	allowedWorkloadTypes := func() func(el series.Element) bool {
+		return func(el series.Element) bool {
+			if el.Type() == series.String {
+				if val, ok := el.Val().(string); ok {
+					for _, workloadType := range w.WorkloadTypes() {
+						if workloadType == val {
+							return true
+						}
+					}
+				}
+			}
+			return false
+		}
+	}
+
 	df := main_df.FilterAggregation(
 		dataframe.And,
 		dataframe.F{Colname: "memory_rss_usage_container_sum", Comparator: series.GreaterEq, Comparando: 0},
@@ -104,27 +131,13 @@ func filter_valid_csv_records(main_df dataframe.DataFrame) (dataframe.DataFrame,
 		dataframe.F{Colname: "owner_name", Comparator: series.Neq, Comparando: ""},
 		dataframe.F{Colname: "owner_kind", Comparator: series.Neq, Comparando: "<none>"},
 		dataframe.F{Colname: "owner_name", Comparator: series.Neq, Comparando: "<none>"},
+		dataframe.F{Colname: "workload", Comparator: series.CompFunc, Comparando: emptyWorkload()},
+		dataframe.F{Colname: "workload_type", Comparator: series.CompFunc, Comparando: allowedWorkloadTypes()},
 	)
 
 	no_of_dropped_records := main_df.Nrow() - df.Nrow()
 
 	return df, no_of_dropped_records
-}
-
-func filter_valid_k8s_object_types(df dataframe.DataFrame) dataframe.DataFrame {
-	return df.Filter(
-		dataframe.F{
-			Colname:    "k8s_object_type",
-			Comparator: series.In,
-			Comparando: []string{
-				w.Daemonset.String(),
-				w.Deployment.String(),
-				w.Deploymentconfig.String(),
-				w.Replicaset.String(),
-				w.Replicationcontroller.String(),
-				w.Statefulset.String(),
-			}},
-	)
 }
 
 func determine_k8s_object_type(df dataframe.DataFrame) dataframe.DataFrame {
@@ -139,9 +152,9 @@ func determine_k8s_object_type(df dataframe.DataFrame) dataframe.DataFrame {
 		owner_kind := s.Elem(index_of_owner_kind).String()
 		workload := s.Elem(index_of_workload).String()
 		workload_type := s.Elem(index_of_workload_type).String()
-		if strings.ToLower(owner_kind) == string(w.Replicaset) && (workload == "<none>" || workload == "") {
+		if strings.ToLower(owner_kind) == string(w.Replicaset) {
 			return series.Strings([]string{string(w.Replicaset), owner_name})
-		} else if strings.ToLower(owner_kind) == string(w.Replicationcontroller) && (workload == "<none>" || workload == "") {
+		} else if strings.ToLower(owner_kind) == string(w.Replicationcontroller) {
 			return series.Strings([]string{string(w.Replicationcontroller), owner_name})
 		} else {
 			return series.Strings([]string{workload_type, workload})

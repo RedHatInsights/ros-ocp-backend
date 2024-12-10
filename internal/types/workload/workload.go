@@ -13,6 +13,17 @@ const (
 	Statefulset           WorkloadType = "statefulset"
 )
 
+func WorkloadTypes() []string {
+	return []string{
+		Daemonset.String(),
+		Deployment.String(),
+		Deploymentconfig.String(),
+		Replicaset.String(),
+		Replicationcontroller.String(),
+		Statefulset.String(),
+	}
+}
+
 func (p *WorkloadType) Scan(value interface{}) error {
 	*p = WorkloadType(value.(string))
 	return nil
