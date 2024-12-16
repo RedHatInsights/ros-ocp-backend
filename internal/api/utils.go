@@ -67,7 +67,7 @@ func CollectionResponse(collection []interface{}, req *http.Request, count, limi
 func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	log := logging.GetLogger()
 	queryParams := make(map[string]interface{})
-	var startDate, endDate time.Time
+	var startTimestamp, endTimestamp time.Time
 	var clusters, projects, workloadNames, workloadTypes, containers []string
 
 	now := time.Now().UTC()
@@ -76,29 +76,29 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	startDateStr := c.QueryParam("start_date")
 
 	if startDateStr == "" {
-		startDate = firstOfMonth
+		startTimestamp = firstOfMonth
 	} else {
 		var err error
-		startDate, err = time.Parse(timeLayout, startDateStr)
+		startTimestamp, err = time.Parse(timeLayout, startDateStr)
 		if err != nil {
 			log.Error("error parsing start_date:", err)
 			return queryParams, err
 		}
 	}
-	queryParams["recommendation_sets.monitoring_end_time >= ?"] = startDate
+	queryParams["recommendation_sets.monitoring_end_time >= ?"] = startTimestamp.Truncate(time.Second)
 
 	endDateStr := c.QueryParam("end_date")
 	if endDateStr == "" {
-		endDate = now
+		endTimestamp = now
 	} else {
 		var err error
-		endDate, err = time.Parse(timeLayout, endDateStr)
+		endTimestamp, err = time.Parse(timeLayout, endDateStr)
 		if err != nil {
 			log.Error("error parsing end_date:", err)
 			return queryParams, err
 		}
 	}
-	queryParams["recommendation_sets.monitoring_end_time <= ?"] = endDate
+	queryParams["recommendation_sets.monitoring_end_time <= ?"] = endTimestamp.Truncate(time.Second)
 
 	clusters = c.QueryParams()["cluster"]
 	if len(clusters) > 0 {
