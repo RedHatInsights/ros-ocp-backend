@@ -87,7 +87,7 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 	var count int64 = 0
 	query.Count(&count)
 	query.Order(orderQuery)
-	err := query.Offset(offset).Limit(limit).Debug().Scan(&recommendationSets).Error
+	err := query.Offset(offset).Limit(limit).Scan(&recommendationSets).Error
 
 	return recommendationSets, int(count), err
 }
@@ -116,7 +116,7 @@ func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendatio
 		Where("recommendation_sets.id = ?", recommendationID)
 
 	add_rbac_filter(query, user_permissions)
-	err := query.Debug().First(&recommendationSet).Error
+	err := query.First(&recommendationSet).Error
 	return recommendationSet, err
 }
 
