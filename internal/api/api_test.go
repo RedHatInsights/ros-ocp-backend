@@ -68,7 +68,6 @@ func TestMapQueryParameters(t *testing.T) {
 				}
 			}()
 			result, _ := MapQueryParameters(c)
-			t.Log(result, tt.qoutputs)
 			if reflect.DeepEqual(result, tt.qoutputs) != true {
 				t.Errorf("%s", tt.errmsg)
 			}
