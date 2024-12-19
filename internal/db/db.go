@@ -25,8 +25,15 @@ func initDB() {
 		port     = cfg.DBPort
 		dbssl    = cfg.DBssl
 	)
-	rdsCA := CreateCACertFile(cfg.DBCACert)
-	dsn := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s sslrootcert=%s", user, password, dbname, host, port, dbssl, rdsCA)
+
+	dsn := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s", user, password, dbname, host, port, dbssl)
+
+	if dbssl != "disable" {
+		rdsCA := CreateCACertFile(cfg.DBCACert)
+		sslCertParam := fmt.Sprintf(" sslrootcert=%s", rdsCA)
+		dsn = fmt.Sprintf("%s %s", dsn, sslCertParam)
+
+	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
