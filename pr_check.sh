@@ -25,18 +25,38 @@ source $CICD_ROOT/build.sh
 # Deploy to an ephemeral namespace for testing
 source $CICD_ROOT/deploy_ephemeral_env.sh
 
-# Testing sleep
-echo "sleeping for 5 min"
-sleep 5m
 
 # Creating perf profile
-echo "Starting to create perf profile"
-service="kruize-recommendations"
-oc expose svc/${service} -n ${NAMESPACE}
-SERVER_IP=($(oc status --namespace=${NAMESPACE} | grep ${service} | grep port | cut -d " " -f1 | cut -d "/" -f3))
-echo "IP = $SERVER_IP"
-KRUIZE_URL="http://${SERVER_IP}"
-curl -s -H 'Accept: application/json' ${KRUIZE_URL}/createPerformanceProfile -d @./resource_optimization_openshift.json 
+retries=10
+for ((i=1; i<=retries; i++)); do
+    echo "Starting to create performance profile"
+
+    if [[ $i == "1" ]]; then
+        service="kruize-recommendations"
+        oc expose svc/${service} -n ${NAMESPACE}
+        SERVER_IP=($(oc status --namespace=${NAMESPACE} | grep ${service} | grep port | cut -d " " -f1 | cut -d "/" -f3))
+        echo "IP = $SERVER_IP"
+        KRUIZE_URL="http://${SERVER_IP}"
+    fi
+
+    http_response=$(curl -s -H 'Accept: application/json' -w "%{http_code}" -o /dev/null ${KRUIZE_URL}/createPerformanceProfile -d @./resource_optimization_openshift.json)
+
+    if [[ $http_response == "201" ]]; then
+        echo "Performance profile created successfully!"
+        break
+    elif [[ $http_response == "409" ]]; then
+        echo "Performance profile already exists!"
+        break
+    else
+        echo "Failed to create the performance profile! Waiting for 10 seconds, then retry"
+        sleep 10
+    fi
+
+    if [[ $i == $retries ]]; then
+        echo "Failed to create performance profile after 10 retries!"
+        exit 1
+    fi
+done
 
 # Run iqe-ros-ocp smoke tests with ClowdJobInvocation
 export COMPONENT_NAME="ros-ocp-backend"
