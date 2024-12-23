@@ -27,16 +27,22 @@ type RecommendationSet struct {
 }
 
 type RecommendationSetResult struct {
-	ClusterAlias    string         `gorm:"column:cluster_alias"`
-	ClusterUUID     string         `gorm:"column:cluster_uuid"`
-	Container       string         `json:"container"`
-	ID              string         `json:"id"`
-	LastReported    string         `gorm:"column:last_reported"`
-	Project         string         `gorm:"column:project"`
-	Recommendations datatypes.JSON `json:"recommendations"`
-	SourceID        string         `gorm:"column:source_id"`
-	Workload        string         `gorm:"column:workload"`
-	WorkloadType    string         `gorm:"column:workload_type"`
+	/*
+		Intended to be an API-ready struct
+		Updated recommendation data is saved to RecommendationsJSON
+		Before the API response is sent
+	*/
+	ClusterAlias        string                 `json:"cluster_alias"`
+	ClusterUUID         string                 `json:"cluster_uuid"`
+	Container           string                 `json:"container"`
+	ID                  string                 `json:"id"`
+	LastReported        string                 `json:"last_reported"`
+	Project             string                 `json:"project"`
+	Recommendations     datatypes.JSON         `json:"-"`
+	RecommendationsJSON map[string]interface{} `gorm:"-" json:"recommendations"`
+	SourceID            string                 `json:"source_id"`
+	Workload            string                 `json:"workload"`
+	WorkloadType        string                 `json:"workload_type"`
 }
 
 func (r *RecommendationSet) AfterFind(tx *gorm.DB) error {

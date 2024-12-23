@@ -129,26 +129,19 @@ func GetRecommendationSetList(c echo.Context) error {
 	}
 	setk8sUnits := !trueUnits
 
-	allRecommendations := []map[string]interface{}{}
-
-	for _, recommendation := range recommendationSets {
-		recommendationData := make(map[string]interface{})
-
-		recommendationData["id"] = recommendation.ID
-		recommendationData["source_id"] = recommendation.SourceID
-		recommendationData["cluster_uuid"] = recommendation.ClusterUUID
-		recommendationData["cluster_alias"] = recommendation.ClusterAlias
-		recommendationData["project"] = recommendation.Project
-		recommendationData["workload_type"] = recommendation.WorkloadType
-		recommendationData["workload"] = recommendation.Workload
-		recommendationData["container"] = recommendation.Container
-		recommendationData["last_reported"] = recommendation.LastReported
-		recommendationData["recommendations"] = UpdateRecommendationJSON(handlerName, recommendation.ID, recommendation.ClusterUUID, unitChoices, setk8sUnits, recommendation.Recommendations)
-		allRecommendations = append(allRecommendations, recommendationData)
+	for i := range recommendationSets {
+		recommendationSets[i].RecommendationsJSON = UpdateRecommendationJSON(
+			handlerName,
+			recommendationSets[i].ID,
+			recommendationSets[i].ClusterUUID,
+			unitChoices,
+			setk8sUnits,
+			recommendationSets[i].Recommendations,
+		)
 	}
 
-	interfaceSlice := make([]interface{}, len(allRecommendations))
-	for i, v := range allRecommendations {
+	interfaceSlice := make([]interface{}, len(recommendationSets))
+	for i, v := range recommendationSets {
 		interfaceSlice[i] = v
 	}
 	results := CollectionResponse(interfaceSlice, c.Request(), count, limit, offset)
@@ -221,21 +214,16 @@ func GetRecommendationSet(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, echo.Map{"status": "not_found", "message": "recommendation not found"})
 	}
 
-	recommendationSlice := make(map[string]interface{})
-
 	if len(recommendationSet.Recommendations) != 0 {
-		recommendationSlice["id"] = recommendationSet.ID
-		recommendationSlice["source_id"] = recommendationSet.SourceID
-		recommendationSlice["cluster_uuid"] = recommendationSet.ClusterUUID
-		recommendationSlice["cluster_alias"] = recommendationSet.ClusterAlias
-		recommendationSlice["project"] = recommendationSet.Project
-		recommendationSlice["workload_type"] = recommendationSet.WorkloadType
-		recommendationSlice["workload"] = recommendationSet.Workload
-		recommendationSlice["container"] = recommendationSet.Container
-		recommendationSlice["last_reported"] = recommendationSet.LastReported
-		recommendationSlice["recommendations"] = UpdateRecommendationJSON(handlerName, recommendationSet.ID, recommendationSet.ClusterUUID, unitChoices, setk8sUnits, recommendationSet.Recommendations)
+		recommendationSet.RecommendationsJSON = UpdateRecommendationJSON(
+			handlerName,
+			recommendationSet.ID,
+			recommendationSet.ClusterUUID,
+			unitChoices,
+			setk8sUnits,
+			recommendationSet.Recommendations)
 	}
-	return c.JSON(http.StatusOK, recommendationSlice)
+	return c.JSON(http.StatusOK, recommendationSet)
 }
 
 func GetAppStatus(c echo.Context) error {
