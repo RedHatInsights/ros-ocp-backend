@@ -40,9 +40,7 @@ type RecommendationSetResult struct {
 }
 
 func (r *RecommendationSet) AfterFind(tx *gorm.DB) error {
-	r.MonitoringStartTimeStr = r.MonitoringStartTime.Format(time.RFC3339)
 	r.MonitoringEndTimeStr = r.MonitoringEndTime.Format(time.RFC3339)
-	r.UpdatedAtStr = r.UpdatedAt.Format(time.RFC3339)
 	return nil
 }
 
