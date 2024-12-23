@@ -26,10 +26,27 @@ type RecommendationSet struct {
 	UpdatedAtStr           string    `gorm:"-"`
 }
 
+type RecommendationSetResult struct {
+	/*
+		Intended to be an API-ready struct
+		Updated recommendation data is saved to RecommendationsJSON
+		Before the API response is sent
+	*/
+	ClusterAlias        string                 `json:"cluster_alias"`
+	ClusterUUID         string                 `json:"cluster_uuid"`
+	Container           string                 `json:"container"`
+	ID                  string                 `json:"id"`
+	LastReported        string                 `json:"last_reported"`
+	Project             string                 `json:"project"`
+	Recommendations     datatypes.JSON         `json:"-"`
+	RecommendationsJSON map[string]interface{} `gorm:"-" json:"recommendations"`
+	SourceID            string                 `json:"source_id"`
+	Workload            string                 `json:"workload"`
+	WorkloadType        string                 `json:"workload_type"`
+}
+
 func (r *RecommendationSet) AfterFind(tx *gorm.DB) error {
-	r.MonitoringStartTimeStr = r.MonitoringStartTime.Format(time.RFC3339)
 	r.MonitoringEndTimeStr = r.MonitoringEndTime.Format(time.RFC3339)
-	r.UpdatedAtStr = r.UpdatedAt.Format(time.RFC3339)
 	return nil
 }
 
@@ -43,51 +60,68 @@ func GetFirstRecommendationSetsByWorkloadID(workload_id uint) (RecommendationSet
 	return recommendationSets, query.Error
 }
 
-func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string][]string, user_permissions map[string][]string) ([]RecommendationSet, int, error) {
-
-	var recommendationSets []RecommendationSet
+func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string]interface{}, user_permissions map[string][]string) ([]RecommendationSetResult, int, error) {
 	db := database.GetDB()
+	var recommendationSets []RecommendationSetResult
 
-	query := db.Table("recommendation_sets").Joins(`
+	query := db.Table("recommendation_sets").
+		Select("recommendation_sets.id, "+
+			"recommendation_sets.container_name AS container, "+
+			"workloads.namespace AS project, "+
+			"workloads.workload_name as workload, "+
+			"workloads.workload_type, "+
+			"clusters.source_id, "+
+			"clusters.cluster_uuid, "+
+			"clusters.cluster_alias, "+
+			"clusters.last_reported_at AS last_reported, "+
+			"recommendation_sets.recommendations").
+		Joins(`
 			JOIN workloads ON recommendation_sets.workload_id = workloads.id
 			JOIN clusters ON workloads.cluster_id = clusters.id
 			JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
-		`).Model(r).Preload("Workload.Cluster.RHAccount").Where("rh_accounts.org_id = ?", orgID)
+		`).Model(&RecommendationSetResult{}).
+		Where("rh_accounts.org_id = ?", orgID)
 
 	add_rbac_filter(query, user_permissions)
 
-	for key, values := range queryParams {
-		valuesInterface := make([]interface{}, len(values))
-		for i, v := range values {
-			valuesInterface[i] = v
-		}
-		query.Where(key, valuesInterface...)
+	for key, value := range queryParams {
+		query.Where(key, value)
 	}
 
 	var count int64 = 0
 	query.Count(&count)
 	query.Order(orderQuery)
-	err := query.Offset(offset).Limit(limit).Find(&recommendationSets).Error
+	err := query.Offset(offset).Limit(limit).Scan(&recommendationSets).Error
 
 	return recommendationSets, int(count), err
 }
 
-func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendationID string, user_permissions map[string][]string) (RecommendationSet, error) {
-
-	var recommendationSet RecommendationSet
+func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendationID string, user_permissions map[string][]string) (RecommendationSetResult, error) {
+	var recommendationSet RecommendationSetResult
 	db := database.GetDB()
 
-	query := db.Joins("JOIN workloads ON recommendation_sets.workload_id = workloads.id").
-		Joins("JOIN clusters ON workloads.cluster_id = clusters.id").
-		Joins("JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id").
-		Preload("Workload.Cluster.RHAccount").
+	query := db.Table("recommendation_sets").
+		Select("recommendation_sets.id, "+
+			"recommendation_sets.container_name AS container, "+
+			"workloads.namespace AS project, "+
+			"workloads.workload_name as workload, "+
+			"workloads.workload_type, "+
+			"clusters.source_id, "+
+			"clusters.cluster_uuid, "+
+			"clusters.cluster_alias, "+
+			"clusters.last_reported_at AS last_reported, "+
+			"recommendation_sets.recommendations").
+		Joins(`
+			JOIN workloads ON recommendation_sets.workload_id = workloads.id
+			JOIN clusters ON workloads.cluster_id = clusters.id
+			JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
+		`).Model(&RecommendationSetResult{}).
 		Where("rh_accounts.org_id = ?", orgID).
 		Where("recommendation_sets.id = ?", recommendationID)
 
 	add_rbac_filter(query, user_permissions)
-	query.First(&recommendationSet)
-
-	return recommendationSet, nil
+	err := query.First(&recommendationSet).Error
+	return recommendationSet, err
 }
 
 func (r *RecommendationSet) CreateRecommendationSet(tx *gorm.DB) error {
