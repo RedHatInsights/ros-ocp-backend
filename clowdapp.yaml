@@ -19,8 +19,7 @@ objects:
       replicas: ${{PROCESSOR_REPLICA_COUNT}}
       podSpec:
         image: ${IMAGE}:${IMAGE_TAG}
-        command: ["sh"]
-        args: ["-c", "./rosocp db migrate up && ./rosocp start processor"]
+        command: ["./rosocp db migrate up && rosocp start processor"]
         resources:
           requests:
             cpu: ${CPU_REQUEST_ROSOCP}
@@ -69,8 +68,7 @@ objects:
       replicas: ${{POLLER_REPLICA_COUNT}}
       podSpec:
         image: ${IMAGE}:${IMAGE_TAG}
-        command: ["sh"]
-        args: ["-c", "./rosocp db migrate up && ./rosocp start recommendation-poller"]
+        command: ["./rosocp db migrate up && rosocp start recommendation-poller"]
         resources:
           requests:
             cpu: ${CPU_REQUEST_ROSOCP}
@@ -123,8 +121,7 @@ objects:
           apiPath: cost-management
       podSpec:
         image: ${IMAGE}:${IMAGE_TAG}
-        command: ["sh"]
-        args: ["-c", "./rosocp db migrate up && ./rosocp start api"]
+        command: ["./rosocp db migrate up && rosocp start api"]
         resources:
           requests:
             cpu: ${CPU_REQUEST_ROSOCP}
@@ -175,8 +172,7 @@ objects:
       replicas: ${{HOUSEKEEPER_REPLICA_COUNT}}
       podSpec:
         image: ${IMAGE}:${IMAGE_TAG}
-        command: ["sh"]
-        args: ["-c", "./rosocp db migrate up && ./rosocp start housekeeper --sources"]
+        command: ["./rosocp db migrate up && rosocp start housekeeper --sources"]
         resources:
           requests:
             cpu: ${CPU_REQUEST_ROSOCP}
@@ -208,8 +204,7 @@ objects:
           image: ${IMAGE}:${IMAGE_TAG}
           imagePullPolicy: Always
           restartPolicy: OnFailure
-          command: ["sh"]
-          args: ["-c", "./rosocp db migrate up && ./rosocp start housekeeper --partitions"]
+          command: ["./rosocp db migrate up && rosocp start housekeeper --partitions"]
           env:
             - name: CLOWDER_ENABLED
               value: ${CLOWDER_ENABLED}
