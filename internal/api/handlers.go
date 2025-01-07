@@ -113,9 +113,15 @@ func GetRecommendationSetList(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
 	}
 	recommendationSet := model.RecommendationSet{}
-	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams, user_permissions)
+	getOptions := model.GetRecommendationOptions{
+		OrderQuery:  orderQuery,
+		Limit:       limit,
+		Offset:      offset,
+		QueryParams: queryParams,
+	}
+	recommendationSets, count, error := recommendationSet.GetRecommendationSet(OrgID, user_permissions, getOptions)
 	if error != nil {
-		log.Error("unable to fetch records from database", error)
+		log.Errorf("unable to fetch records from database; %v", error)
 	}
 
 	trueUnitsStr := c.QueryParam("true-units")
@@ -207,14 +213,18 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	recommendationSetVar := model.RecommendationSet{}
-	recommendationSet, error := recommendationSetVar.GetRecommendationSetByID(OrgID, RecommendationUUID.String(), user_permissions)
+	getOptions := model.GetRecommendationOptions{
+		RecommendationID: RecommendationUUID.String(),
+	}
+	recommendationSetList, _, error := recommendationSetVar.GetRecommendationSet(OrgID, user_permissions, getOptions)
 
 	if error != nil {
 		log.Errorf("unable to fetch recommendation %s; error %v", RecommendationIDStr, error)
-		return c.JSON(http.StatusNotFound, echo.Map{"status": "not_found", "message": "recommendation not found"})
+		return c.JSON(http.StatusNotFound, echo.Map{"status": "error", "message": "unable to fetch recommendation"})
 	}
 
-	if len(recommendationSet.Recommendations) != 0 {
+	if len(recommendationSetList) == 1 {
+		recommendationSet := recommendationSetList[0]
 		recommendationSet.RecommendationsJSON = UpdateRecommendationJSON(
 			handlerName,
 			recommendationSet.ID,
@@ -222,8 +232,10 @@ func GetRecommendationSet(c echo.Context) error {
 			unitChoices,
 			setk8sUnits,
 			recommendationSet.Recommendations)
+		return c.JSON(http.StatusOK, recommendationSet)
+	} else {
+		return c.JSON(http.StatusNotFound, echo.Map{"status": "not_found", "message": "recommendation not found"})
 	}
-	return c.JSON(http.StatusOK, recommendationSet)
 }
 
 func GetAppStatus(c echo.Context) error {
