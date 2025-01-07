@@ -23,6 +23,7 @@ func TestMapQueryParameters(t *testing.T) {
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	startTime := time.Date(2023, 3, 23, 0, 0, 0, 0, time.UTC)
 	endTime := time.Date(2023, 3, 24, 0, 0, 0, 0, time.UTC)
+	inclusiveEndTime := endTime.Add(24 * time.Hour)
 
 	all_tests := []tests{
 		{
@@ -38,7 +39,7 @@ func TestMapQueryParameters(t *testing.T) {
 			name:    "When start date and end date are provided",
 			qinputs: map[string]string{"start_date": startTime.Format("2006-01-02"), "end_date": endTime.Format("2006-01-02")},
 			qoutputs: map[string]interface{}{
-				"recommendation_sets.monitoring_end_time <= ?": endTime,
+				"recommendation_sets.monitoring_end_time <= ?": inclusiveEndTime,
 				"recommendation_sets.monitoring_end_time >= ?": startTime,
 			},
 			errmsg: `The recommendation_sets.monitoring_end_time should be less than or equal to end date!
