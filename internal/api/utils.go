@@ -97,6 +97,8 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 			log.Error("error parsing end_date:", err)
 			return queryParams, err
 		}
+		// Inclusive user-provided end_date timestamp
+		endTimestamp = endTimestamp.Add(24 * time.Hour)
 	}
 	queryParams["recommendation_sets.monitoring_end_time <= ?"] = endTimestamp
 

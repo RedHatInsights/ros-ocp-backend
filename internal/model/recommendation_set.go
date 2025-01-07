@@ -106,7 +106,7 @@ func (r *RecommendationSet) GetRecommendationSet(orgID string, user_permissions 
 		for key, values := range options.QueryParams {
 			switch v := values.(type) {
 			case []string:
-				// Convert []string to []interface{} for unpacking below
+				// Convert []string to []interface{} for unpacking multiple values
 				args := make([]interface{}, len(v))
 				for i, s := range v {
 					args[i] = s
