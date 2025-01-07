@@ -20,10 +20,9 @@ func TestMapQueryParameters(t *testing.T) {
 	}
 
 	now := time.Now().UTC().Truncate(time.Second)
-	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).Truncate(time.Second)
-
-	startTime := time.Date(2023, 3, 23, 0, 0, 0, 0, time.UTC).Truncate(time.Second)
-	endTime := time.Date(2023, 3, 24, 0, 0, 0, 0, time.UTC).Truncate(time.Second)
+	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	startTime := time.Date(2023, 3, 23, 0, 0, 0, 0, time.UTC)
+	endTime := time.Date(2023, 3, 24, 0, 0, 0, 0, time.UTC)
 
 	all_tests := []tests{
 		{

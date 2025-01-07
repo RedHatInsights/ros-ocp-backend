@@ -70,7 +70,7 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	var startTimestamp, endTimestamp time.Time
 	var clusters, projects, workloadNames, workloadTypes, containers []string
 
-	now := time.Now().UTC()
+	now := time.Now().UTC().Truncate(time.Second)
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 
 	startDateStr := c.QueryParam("start_date")
@@ -85,7 +85,7 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 			return queryParams, err
 		}
 	}
-	queryParams["recommendation_sets.monitoring_end_time >= ?"] = startTimestamp.Truncate(time.Second)
+	queryParams["recommendation_sets.monitoring_end_time >= ?"] = startTimestamp
 
 	endDateStr := c.QueryParam("end_date")
 	if endDateStr == "" {
@@ -98,7 +98,7 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 			return queryParams, err
 		}
 	}
-	queryParams["recommendation_sets.monitoring_end_time <= ?"] = endTimestamp.Truncate(time.Second)
+	queryParams["recommendation_sets.monitoring_end_time <= ?"] = endTimestamp
 
 	clusters = c.QueryParams()["cluster"]
 	if len(clusters) > 0 {
