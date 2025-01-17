@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
@@ -53,8 +54,9 @@ func StartAPIServer() {
 	v1.GET("/recommendations/openshift/:recommendation-id", GetRecommendationSet)
 
 	s := http.Server{
-		Addr:    ":" + cfg.API_PORT, //local dev server
-		Handler: app,
+		Addr:              ":" + cfg.API_PORT, // local dev server
+		Handler:           app,
+		ReadHeaderTimeout: time.Duration(cfg.ReadHeaderTimeout) * time.Second,
 	}
 	if err := s.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatal(err)

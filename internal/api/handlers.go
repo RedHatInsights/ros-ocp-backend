@@ -17,10 +17,10 @@ func GetRecommendationSetList(c echo.Context) error {
 	OrgID := XRHID.Identity.OrgID
 	user_permissions := get_user_permissions(c)
 	handlerName := "recommendationset-list"
-	var unitChoices = make(map[string]string)
+	unitChoices := make(map[string]string)
 
 	cpuUnitParam := c.QueryParam("cpu-unit")
-	var cpuUnitOptions = map[string]bool{
+	cpuUnitOptions := map[string]bool{
 		"millicores": true,
 		"cores":      true,
 	}
@@ -36,7 +36,7 @@ func GetRecommendationSetList(c echo.Context) error {
 	}
 
 	memoryUnitParam := c.QueryParam("memory-unit")
-	var memoryUnitOptions = map[string]bool{
+	memoryUnitOptions := map[string]bool{
 		"bytes": true,
 		"MiB":   true,
 		"GiB":   true,
@@ -60,7 +60,7 @@ func GetRecommendationSetList(c echo.Context) error {
 
 	orderBy = c.QueryParam("order_by")
 	if orderBy != "" {
-		var orderByOptions = map[string]string{
+		orderByOptions := map[string]string{
 			"cluster":       "clusters.cluster_alias",
 			"workload_type": "workloads.workload_type",
 			"workload":      "workloads.workload_name",
@@ -113,9 +113,15 @@ func GetRecommendationSetList(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
 	}
 	recommendationSet := model.RecommendationSet{}
-	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams, user_permissions)
+	getOptions := model.GetRecommendationOptions{
+		OrderQuery:  orderQuery,
+		Limit:       limit,
+		Offset:      offset,
+		QueryParams: queryParams,
+	}
+	recommendationSets, count, error := recommendationSet.GetRecommendationSet(OrgID, user_permissions, getOptions)
 	if error != nil {
-		log.Error("unable to fetch records from database", error)
+		log.Errorf("unable to fetch records from database; %v", error)
 	}
 
 	trueUnitsStr := c.QueryParam("true-units")
@@ -127,35 +133,25 @@ func GetRecommendationSetList(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid value for true-units"})
 		}
 	}
-	
 	setk8sUnits := !trueUnits
 
-	allRecommendations := []map[string]interface{}{}
-
-	for _, recommendation := range recommendationSets {
-		recommendationData := make(map[string]interface{})
-
-		recommendationData["id"] = recommendation.ID
-		recommendationData["source_id"] = recommendation.Workload.Cluster.SourceId
-		recommendationData["cluster_uuid"] = recommendation.Workload.Cluster.ClusterUUID
-		recommendationData["cluster_alias"] = recommendation.Workload.Cluster.ClusterAlias
-		recommendationData["project"] = recommendation.Workload.Namespace
-		recommendationData["workload_type"] = recommendation.Workload.WorkloadType
-		recommendationData["workload"] = recommendation.Workload.WorkloadName
-		recommendationData["container"] = recommendation.ContainerName
-		recommendationData["last_reported"] = recommendation.Workload.Cluster.LastReportedAtStr
-		recommendationData["recommendations"] = UpdateRecommendationJSON(handlerName, recommendation.ID, recommendation.Workload.Cluster.ClusterUUID, unitChoices, setk8sUnits, recommendation.Recommendations)
-		allRecommendations = append(allRecommendations, recommendationData)
-
+	for i := range recommendationSets {
+		recommendationSets[i].RecommendationsJSON = UpdateRecommendationJSON(
+			handlerName,
+			recommendationSets[i].ID,
+			recommendationSets[i].ClusterUUID,
+			unitChoices,
+			setk8sUnits,
+			recommendationSets[i].Recommendations,
+		)
 	}
 
-	interfaceSlice := make([]interface{}, len(allRecommendations))
-	for i, v := range allRecommendations {
+	interfaceSlice := make([]interface{}, len(recommendationSets))
+	for i, v := range recommendationSets {
 		interfaceSlice[i] = v
 	}
 	results := CollectionResponse(interfaceSlice, c.Request(), count, limit, offset)
 	return c.JSON(http.StatusOK, results)
-
 }
 
 func GetRecommendationSet(c echo.Context) error {
@@ -170,7 +166,7 @@ func GetRecommendationSet(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "bad recommendation_id"})
 	}
 
-	var unitChoices = make(map[string]string)
+	unitChoices := make(map[string]string)
 
 	trueUnitsStr := c.QueryParam("true-units")
 	var trueUnits bool
@@ -181,11 +177,10 @@ func GetRecommendationSet(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid value for true-units"})
 		}
 	}
-	
 	setk8sUnits := !trueUnits
 
 	cpuUnitParam := c.QueryParam("cpu-unit")
-	var cpuUnitOptions = map[string]bool{
+	cpuUnitOptions := map[string]bool{
 		"millicores": true,
 		"cores":      true,
 	}
@@ -201,7 +196,7 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	memoryUnitParam := c.QueryParam("memory-unit")
-	var memoryUnitOptions = map[string]bool{
+	memoryUnitOptions := map[string]bool{
 		"bytes": true,
 		"MiB":   true,
 		"GiB":   true,
@@ -218,29 +213,29 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	recommendationSetVar := model.RecommendationSet{}
-	recommendationSet, error := recommendationSetVar.GetRecommendationSetByID(OrgID, RecommendationUUID.String(), user_permissions)
+	getOptions := model.GetRecommendationOptions{
+		RecommendationID: RecommendationUUID.String(),
+	}
+	recommendationSetList, _, error := recommendationSetVar.GetRecommendationSet(OrgID, user_permissions, getOptions)
 
 	if error != nil {
-		log.Error("unable to fetch records from database", error)
+		log.Errorf("unable to fetch recommendation %s; error %v", RecommendationIDStr, error)
+		return c.JSON(http.StatusNotFound, echo.Map{"status": "error", "message": "unable to fetch recommendation"})
 	}
 
-	recommendationSlice := make(map[string]interface{})
-
-	if len(recommendationSet.Recommendations) != 0 {
-		recommendationSlice["id"] = recommendationSet.ID
-		recommendationSlice["source_id"] = recommendationSet.Workload.Cluster.SourceId
-		recommendationSlice["cluster_uuid"] = recommendationSet.Workload.Cluster.ClusterUUID
-		recommendationSlice["cluster_alias"] = recommendationSet.Workload.Cluster.ClusterAlias
-		recommendationSlice["project"] = recommendationSet.Workload.Namespace
-		recommendationSlice["workload_type"] = recommendationSet.Workload.WorkloadType
-		recommendationSlice["workload"] = recommendationSet.Workload.WorkloadName
-		recommendationSlice["container"] = recommendationSet.ContainerName
-		recommendationSlice["last_reported"] = recommendationSet.Workload.Cluster.LastReportedAtStr
-		recommendationSlice["recommendations"] = UpdateRecommendationJSON(handlerName, recommendationSet.ID, recommendationSet.Workload.Cluster.ClusterUUID, unitChoices, setk8sUnits, recommendationSet.Recommendations)
+	if len(recommendationSetList) == 1 {
+		recommendationSet := recommendationSetList[0]
+		recommendationSet.RecommendationsJSON = UpdateRecommendationJSON(
+			handlerName,
+			recommendationSet.ID,
+			recommendationSet.ClusterUUID,
+			unitChoices,
+			setk8sUnits,
+			recommendationSet.Recommendations)
+		return c.JSON(http.StatusOK, recommendationSet)
+	} else {
+		return c.JSON(http.StatusNotFound, echo.Map{"status": "not_found", "message": "recommendation not found"})
 	}
-
-	return c.JSON(http.StatusOK, recommendationSlice)
-
 }
 
 func GetAppStatus(c echo.Context) error {
