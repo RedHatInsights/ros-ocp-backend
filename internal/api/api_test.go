@@ -30,7 +30,7 @@ func TestMapQueryParameters(t *testing.T) {
 			name:    "When start date and end date are not provided",
 			qinputs: map[string]string{"start_date": "", "end_date": ""},
 			qoutputs: map[string]interface{}{
-				"recommendation_sets.monitoring_end_time <= ?": now,
+				"recommendation_sets.monitoring_end_time < ?":  now,
 				"recommendation_sets.monitoring_end_time >= ?": firstOfMonth,
 			},
 			errmsg: `The startTime should be 1st of current month. The endTime should the current time.`,
@@ -39,7 +39,7 @@ func TestMapQueryParameters(t *testing.T) {
 			name:    "When start date and end date are provided",
 			qinputs: map[string]string{"start_date": startTime.Format("2006-01-02"), "end_date": endTime.Format("2006-01-02")},
 			qoutputs: map[string]interface{}{
-				"recommendation_sets.monitoring_end_time <= ?": inclusiveEndTime,
+				"recommendation_sets.monitoring_end_time < ?":  inclusiveEndTime,
 				"recommendation_sets.monitoring_end_time >= ?": startTime,
 			},
 			errmsg: `The recommendation_sets.monitoring_end_time should be less than or equal to end date!

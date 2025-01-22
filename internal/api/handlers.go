@@ -113,13 +113,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
 	}
 	recommendationSet := model.RecommendationSet{}
-	getOptions := model.GetRecommendationOptions{
-		OrderQuery:  orderQuery,
-		Limit:       limit,
-		Offset:      offset,
-		QueryParams: queryParams,
-	}
-	recommendationSets, count, error := recommendationSet.GetRecommendationSet(OrgID, user_permissions, getOptions)
+	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams, user_permissions)
 	if error != nil {
 		log.Errorf("unable to fetch records from database; %v", error)
 	}
@@ -213,18 +207,14 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	recommendationSetVar := model.RecommendationSet{}
-	getOptions := model.GetRecommendationOptions{
-		RecommendationID: RecommendationUUID.String(),
-	}
-	recommendationSetList, _, error := recommendationSetVar.GetRecommendationSet(OrgID, user_permissions, getOptions)
+	recommendationSet, error := recommendationSetVar.GetRecommendationSetByID(OrgID, RecommendationUUID.String(), user_permissions)
 
 	if error != nil {
 		log.Errorf("unable to fetch recommendation %s; error %v", RecommendationIDStr, error)
 		return c.JSON(http.StatusNotFound, echo.Map{"status": "error", "message": "unable to fetch recommendation"})
 	}
 
-	if len(recommendationSetList) == 1 {
-		recommendationSet := recommendationSetList[0]
+	if len(recommendationSet.Recommendations) != 0 {
 		recommendationSet.RecommendationsJSON = UpdateRecommendationJSON(
 			handlerName,
 			recommendationSet.ID,

@@ -100,7 +100,7 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 		// Inclusive user-provided end_date timestamp
 		endTimestamp = endTimestamp.Add(24 * time.Hour)
 	}
-	queryParams["recommendation_sets.monitoring_end_time <= ?"] = endTimestamp
+	queryParams["recommendation_sets.monitoring_end_time < ?"] = endTimestamp
 
 	clusters = c.QueryParams()["cluster"]
 	if len(clusters) > 0 {

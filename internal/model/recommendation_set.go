@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"time"
 
 	"gorm.io/datatypes"
@@ -61,67 +60,44 @@ func GetFirstRecommendationSetsByWorkloadID(workload_id uint) (RecommendationSet
 	return recommendationSets, query.Error
 }
 
-func (r *RecommendationSet) GetRecommendationSet(orgID string, user_permissions map[string][]string, opts ...GetRecommendationOptions,
-) ([]RecommendationSetResult, int, error) {
-	db := database.GetDB()
-	var recommendationSet []RecommendationSetResult
-
-	/*
-		In case RecommendationID is provided other values are not expected
-		Other values have defaults as well
-	*/
-	var options GetRecommendationOptions
-	if len(opts) > 0 {
-		options = opts[0]
-	} else {
-		err := fmt.Errorf("missing GetRecommendationOptions")
-		return recommendationSet, 0, err
-	}
-
-	query := db.Table("recommendation_sets").
-		Select("recommendation_sets.id, "+
-			"recommendation_sets.container_name AS container, "+
-			"workloads.namespace AS project, "+
-			"workloads.workload_name as workload, "+
-			"workloads.workload_type, "+
-			"clusters.source_id, "+
-			"clusters.cluster_uuid, "+
-			"clusters.cluster_alias, "+
-			"clusters.last_reported_at AS last_reported, "+
-			"recommendation_sets.recommendations").
-		Joins(`
-			JOIN workloads ON recommendation_sets.workload_id = workloads.id
-			JOIN clusters ON workloads.cluster_id = clusters.id
-			JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
-		`).Model(&RecommendationSetResult{}).
-		Where("rh_accounts.org_id = ?", orgID)
+func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string]interface{}, user_permissions map[string][]string) ([]RecommendationSetResult, int, error) {
+	var recommendationSets []RecommendationSetResult
+	query := getRecommendationQuery(orgID)
 
 	add_rbac_filter(query, user_permissions)
 
-	if options.RecommendationID != "" {
-		query.Where("recommendation_sets.id = ?", options.RecommendationID)
-		err := query.First(&recommendationSet).Error
-		return recommendationSet, int(1), err
-	} else {
-		for key, values := range options.QueryParams {
-			switch v := values.(type) {
-			case []string:
-				// Convert []string to []interface{} for unpacking multiple values
-				args := make([]interface{}, len(v))
-				for i, s := range v {
-					args[i] = s
-				}
-				query = query.Where(key, args...)
-			default:
-				query = query.Where(key, v)
+	for key, values := range queryParams {
+		switch v := values.(type) {
+		case []string:
+			// Convert []string to []interface{} for unpacking multiple values
+			args := make([]interface{}, len(v))
+			for i, s := range v {
+				args[i] = s
 			}
+			query = query.Where(key, args...)
+		default:
+			query = query.Where(key, v)
 		}
-		var count int64 = 0
-		query.Count(&count)
-		query.Order(options.OrderQuery)
-		err := query.Offset(options.Offset).Limit(options.Limit).Scan(&recommendationSet).Error
-		return recommendationSet, int(count), err
 	}
+
+	var count int64 = 0
+	query.Count(&count)
+	query.Order(orderQuery)
+	err := query.Offset(offset).Limit(limit).Scan(&recommendationSets).Error
+
+	return recommendationSets, int(count), err
+}
+
+func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendationID string, user_permissions map[string][]string) (RecommendationSetResult, error) {
+	var recommendationSet RecommendationSetResult
+
+	query := getRecommendationQuery(orgID)
+	query.Where("recommendation_sets.id = ?", recommendationID)
+
+	add_rbac_filter(query, user_permissions)
+
+	err := query.First(&recommendationSet).Error
+	return recommendationSet, err
 }
 
 func (r *RecommendationSet) CreateRecommendationSet(tx *gorm.DB) error {
