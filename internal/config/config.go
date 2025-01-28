@@ -18,6 +18,7 @@ type Config struct {
 	LogLevel                        string `mapstructure:"LOG_LEVEL"`
 	RecommendationPollIntervalHours int    `mapstructure:"RECOMMENDATION_POLL_INTERVAL_HOURS"`
 	DataRetentionPeriod             int    `mapstructure:"DATA_RETENTION_PERIOD"`
+	ReadHeaderTimeout               int    `mapstructure:"READ_HEADER_TIMEOUT"`
 
 	// Kafka config
 	KafkaBootstrapServers string `mapstructure:"KAFKA_BOOTSTRAP_SERVERS"`
@@ -174,6 +175,7 @@ func initConfig() {
 	viper.SetDefault("KRUIZE_URL", fmt.Sprintf("http://%s:%s", viper.GetString("KRUIZE_HOST"), viper.GetString("KRUIZE_PORT")))
 	viper.SetDefault("RECOMMENDATION_POLL_INTERVAL_HOURS", 24)
 	viper.SetDefault("DATA_RETENTION_PERIOD", 15)
+	viper.SetDefault("READ_HEADER_TIMEOUT", 15)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}
