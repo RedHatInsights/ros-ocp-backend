@@ -11,7 +11,7 @@ type KafkaMsg struct {
 		Source_id     string `validate:"required"`
 		Cluster_uuid  string `validate:"required"`
 		Cluster_alias string `validate:"required"`
-	} `validate:"required,dive"`
+	} `validate:"required"`
 	Files []string `validate:"required"`
 }
 
@@ -24,5 +24,5 @@ type RecommendationMetadata struct {
 
 type RecommendationKafkaMsg struct {
 	Request_id string                 `validate:"required"`
-	Metadata   RecommendationMetadata `validate:"required,dive"`
+	Metadata   RecommendationMetadata `validate:"required"`
 }
