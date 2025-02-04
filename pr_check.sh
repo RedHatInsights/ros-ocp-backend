@@ -48,8 +48,8 @@ for ((i=1; i<=retries; i++)); do
         echo "Performance profile already exists!"
         break
     else
-        echo "Failed to create the performance profile! Waiting for 10 seconds, then retry"
-        sleep 10
+        echo "Failed to create the performance profile! Waiting for 3 seconds, then retry"
+        sleep 3
     fi
 
     if [[ $i == $retries ]]; then
