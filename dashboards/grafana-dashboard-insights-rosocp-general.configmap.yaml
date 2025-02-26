@@ -86,7 +86,7 @@ data:
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "sum(aws_kafka_sum_offset_lag_sum{topic=~\".*hccm.ros.events\", group=\"ros-ocp\"})",
+              "expr": "sum(aws_kafka_sum_offset_lag_sum{topic=~\".*hccm.ros.events\", consumer_group=\"ros-ocp\"})",
               "legendFormat": "__auto",
               "range": true,
               "refId": "A"
