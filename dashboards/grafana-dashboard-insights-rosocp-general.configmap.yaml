@@ -37,7 +37,7 @@ data:
           "dashLength": 10,
           "dashes": false,
           "datasource": {
-            "uid": "${datasource}"
+            "uid": "${cloudwatch}"
           },
           "fieldConfig": {
             "defaults": {
@@ -83,10 +83,10 @@ data:
           "targets": [
             {
               "datasource": {
-                "uid": "${datasource}"
+                "uid": "${cloudwatch}"
               },
               "editorMode": "code",
-              "expr": "sum(kafka_consumergroup_group_lag{topic=~\".*hccm.ros.events\", group=\"ros-ocp\"})",
+              "expr": "sum(aws_kafka_sum_offset_lag_sum{topic=~\".*hccm.ros.events\", consumer_group=\"ros-ocp\"})",
               "legendFormat": "__auto",
               "range": true,
               "refId": "A"
@@ -1334,6 +1334,25 @@ data:
             "queryValue": "",
             "skipUrlSync": false,
             "type": "custom"
+          },
+          {
+            "current": {
+            "selected": false,
+            "text": "aws-resources-exporter-production",
+            "value": "PCEFB875D6FD018FC"
+            },
+            "hide": 0,
+            "includeAll": false,
+            "label": "aws-cloudwatch",
+            "multi": false,
+            "name": "cloudwatch",
+            "options": [],
+            "query": "prometheus",
+            "queryValue": "",
+            "refresh": 1,
+            "regex": "/aws-resources-exporter-(production|stage)/",
+            "skipUrlSync": false,
+            "type": "datasource"
           }
         ]
       },
