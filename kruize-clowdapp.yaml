@@ -237,11 +237,11 @@ parameters:
 - description: Kruize image name
   name: KRUIZE_IMAGE
   required: true
-  value: quay.io/cloudservices/autotune
+  value: quay.io/redhat-services-prod/kruize-autotune-tenant/autotune
 - description: Kruize image tag
   name: KRUIZE_IMAGE_TAG
   required: true
-  value: "96be0e5"
+  value: "00eb18e"
 - description: Kruize server port
   name: KRUIZE_PORT
   required: true
