@@ -30,6 +30,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 		log.Errorf("Received message on kafka topic is not vaild JSON: %s", msg.Value)
 		return
 	}
+	log.Error("Test")
 	if err := json.Unmarshal(msg.Value, &kafkaMsg); err != nil {
 		log.Errorf("Unable to decode kafka message: %s", msg.Value)
 		return
