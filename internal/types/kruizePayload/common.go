@@ -50,11 +50,14 @@ type Notification struct {
 }
 
 type RecommendationEngineObject struct {
-	PodsCount       int                     `json:"pods_count,omitempty"`
-	ConfidenceLevel float64                 `json:"confidence_level,omitempty"`
-	Config          ConfigObject            `json:"config,omitempty"`
-	Variation       ConfigObject            `json:"variation,omitempty"`
-	Notifications   map[string]Notification `json:"notifications"`
+	/*
+		Following fields/features from Kruize are at their nascent stages
+		PodsCount       int                     `json:"pods_count,omitempty"`
+		ConfidenceLevel float64                 `json:"confidence_level,omitempty"`
+	*/
+	Config        ConfigObject            `json:"config,omitempty"`
+	Variation     ConfigObject            `json:"variation,omitempty"`
+	Notifications map[string]Notification `json:"notifications"`
 }
 
 type RecommendationData struct {

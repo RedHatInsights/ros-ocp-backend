@@ -723,10 +723,6 @@
               }
             ]
           },
-          "pods_count": {
-            "type": "integer",
-            "example": 1
-          },
           "variation": {
             "type": "object",
             "properties": {
@@ -891,10 +887,6 @@
                 "$ref": "#/components/schemas/NilNotification"
               }
             ]
-          },
-          "pods_count": {
-            "type": "integer",
-            "example": 1
           },
           "variation": {
             "type": "object",
