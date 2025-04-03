@@ -40,7 +40,7 @@ endif
 GOLANGCILINT := $(LOCALBIN)/golangci-lint
 GOLANGCI_URL := https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh
 start_date := 1970-01-01
-GOLANGCI_VERSION := v1.64.8 # TODO: Remove version locking once go1.23 is available from base image
+GOLANGCI_VERSION := v1.64.8 # TODO: Remove version locking after moving from go1.22 to go1.23
 
 golangci-lint: $(LOCALBIN)
 ifeq (,$(wildcard $(GOLANGCILINT)))
