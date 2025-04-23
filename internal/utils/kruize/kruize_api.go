@@ -16,9 +16,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log *logrus.Entry = logging.GetLogger()
-var cfg *config.Config = config.GetConfig()
-var experimentCreateAttempt bool = true
+var (
+	log                     *logrus.Entry  = logging.GetLogger()
+	cfg                     *config.Config = config.GetConfig()
+	experimentCreateAttempt bool           = true
+)
 
 func Create_kruize_experiments(experiment_name string, cluster_identifier string, k8s_object []map[string]interface{}) ([]string, error) {
 	// k8s_object (can) contain multiple containers of same k8s object type.
@@ -45,10 +47,6 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 	}
 	// Create experiment in kruize
 	url := cfg.KruizeUrl + "/createExperiment"
-	if err != nil {
-		return nil, fmt.Errorf("unable to marshal payload to json: %v", err)
-
-	}
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		kruizeAPIException.WithLabelValues("/createExperiment").Inc()
@@ -176,11 +174,9 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 	}
 
 	return response, nil
-
 }
 
 func Is_valid_recommendation(recommendation kruizePayload.Recommendation, experiment_name string, maxEndTime time.Time) bool {
-
 	validRecommendationCode := "111000"
 	_, recommendationIsValid := recommendation.Notifications[validRecommendationCode]
 	if recommendationIsValid {
@@ -199,7 +195,6 @@ func Is_valid_recommendation(recommendation kruizePayload.Recommendation, experi
 }
 
 func Delete_experiment_from_kruize(experiment_name string) {
-
 	deletion_err_log := func(err error) {
 		kruizeAPIException.WithLabelValues("/deleteExperiment").Inc()
 		log.Errorf("error occured while deleting experiment: %s. Error - %s", experiment_name, err)
