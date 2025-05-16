@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/go-toolset:1.23 as builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.23.6-1747333074 as builder
 WORKDIR /go/src/app
 COPY . .
 USER 0
