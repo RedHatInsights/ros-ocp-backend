@@ -16,7 +16,7 @@
           "Optimizations"
         ],
         "summary": "Get all recommendations",
-        "description": "This feature is in limited preview for select customers",
+        "description": "This feature is in limited preview for select customers. Refer to [this link](https://github.com/RedHatInsights/ros-ocp-backend/blob/main/openapi.json) if you want checkout the OpenAPI spec file.",
         "externalDocs": {
           "description": "Please refer to this blog post if you want to be included in the preview",
           "url": "https://www.redhat.com/en/blog/red-hat-insights-brings-resource-optimization-red-hat-openshift"
