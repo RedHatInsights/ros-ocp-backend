@@ -166,7 +166,7 @@ func parseQueryParams(param string, values []string) (string, []string) {
 		return parsedKeyMultipleVal, valuesSlice
 	} else {
 		if param == "cluster" {
-			paramMap[param] = paramMap[param] + " OR " + "clusters.cluster_uuid ILIKE ?"
+			paramMap[param] = paramMap[param] + " OR " + "clusters.cluster_uuid = ?"
 			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
 			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
 		} else if param == "workload_type" {
