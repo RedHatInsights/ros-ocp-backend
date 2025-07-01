@@ -616,12 +616,12 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 	return data
 }
 
-func GenerateCSVRows(recommendationSet model.RecommendationSetResult) [][]string {
+func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]string, error) {
 	rows := [][]string{}
 	var recommendationObj kruizePayload.RecommendationData
 	err := json.Unmarshal([]byte(recommendationSet.Recommendations), &recommendationObj)
 	if err != nil {
-		log.Error("unable to unmarshall recommendation json")
+		return nil, fmt.Errorf("unable to unmarshall recommendation json: %w", err)
 	}
 
 	for _, term := range []string{"short_term", "medium_term", "long_term"} {
@@ -712,7 +712,7 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) [][]string
 			}
 		}
 	}
-	return rows
+	return rows, nil
 }
 
 func GenerateAndStreamCSV(w io.Writer, recommendationSets []model.RecommendationSetResult) error {
@@ -724,7 +724,10 @@ func GenerateAndStreamCSV(w io.Writer, recommendationSets []model.Recommendation
 	}
 
 	for i := range recommendationSets {
-		CSVRows := GenerateCSVRows(recommendationSets[i])
+		CSVRows, generateRowErr := GenerateCSVRows(recommendationSets[i])
+		if generateRowErr != nil {
+			return fmt.Errorf("unable to generate rows: %w", generateRowErr)
+		}
 		for _, row := range CSVRows {
 			if err := writer.Write(row); err != nil {
 				return fmt.Errorf("unable to write row: %w", err)
