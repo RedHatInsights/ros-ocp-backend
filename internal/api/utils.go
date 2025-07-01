@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -13,7 +14,10 @@ import (
 	"gorm.io/datatypes"
 
 	"github.com/labstack/echo/v4"
+	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/ros-ocp-backend/internal/model"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
 )
 
 func CollectionResponse(collection []interface{}, req *http.Request, count, limit, offset int) *Collection {
@@ -480,21 +484,21 @@ func dropBoxPlotsObject(recommendationJSON map[string]interface{}) map[string]in
 	return recommendationJSON
 }
 
+func calculatePercentage(numerator float64, denominator float64) float64 {
+	if numerator == 0.0 || denominator == 0.0 {
+		// This block avoids below conditions and returns 0.0 instead,
+		// When numerator is 0.0 the Go returns 0.0, valid number however division can be skipped
+		// When denominator is 0.0 the Go returns Infinity(+Inf)
+		// When both numerator and denominator are 0.0 the Go returns Not A Number(NaN)
+		return 0.0
+	}
+	result := (numerator / denominator) * 100
+	return result
+}
+
 func convertVariationToPercentage(recommendationJSON map[string]interface{}) map[string]interface{} {
 	var currentCpuLimits, currentMemoryLimits, currentCpuRequests, currentMemoryRequests float64
 	// Current section of recommendation
-
-	calculatePercentage := func(numerator float64, denominator float64) float64 {
-		if numerator == 0.0 || denominator == 0.0 {
-			// This block avoids below conditions and returns 0.0 instead,
-			// When numerator is 0.0 the Go returns 0.0, valid number however division can be skipped
-			// When denominator is 0.0 the Go returns Infinity(+Inf)
-			// When both numerator and denominator are 0.0 the Go returns Not A Number(NaN)
-			return 0.0
-		}
-		result := (numerator / denominator) * 100
-		return result
-	}
 
 	current_config, ok := recommendationJSON["current"].(map[string]interface{})
 	if !ok {
@@ -609,4 +613,133 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 	data = filterNotifications(recommendationID, clusterUUID, data)
 	data = convertVariationToPercentage(data)
 	return data
+}
+
+func GenerateCSVRows(recommendationSet model.RecommendationSetResult) [][]string {
+	rows := [][]string{}
+	var recommendationObj kruizePayload.RecommendationData
+	err := json.Unmarshal([]byte(recommendationSet.Recommendations), &recommendationObj)
+	if err != nil {
+		log.Error("unable to unmarshall recommendation json")
+	}
+
+	for _, term := range []string{"short_term", "medium_term", "long_term"} {
+
+		var recommendationTerm kruizePayload.RecommendationTerm
+		switch term {
+		case "short_term":
+			recommendationTerm = recommendationObj.RecommendationTerms.Short_term
+		case "medium_term":
+			recommendationTerm = recommendationObj.RecommendationTerms.Medium_term
+		case "long_term":
+			recommendationTerm = recommendationObj.RecommendationTerms.Long_term
+		}
+
+		if recommendationTerm.RecommendationEngines != nil {
+			for _, engine := range []string{"cost", "performance"} {
+				var recommendationEngine kruizePayload.RecommendationEngineObject
+				switch engine {
+				case "cost":
+					recommendationEngine = recommendationTerm.RecommendationEngines.Cost
+				case "performance":
+					recommendationEngine = recommendationTerm.RecommendationEngines.Performance
+				}
+
+				variationCPULimitPercentage := truncateToThreeDecimalPlaces(
+					calculatePercentage(
+						recommendationEngine.Variation.Limits.Cpu.Amount,
+						recommendationObj.Current.Limits.Cpu.Amount,
+					))
+
+				variationMemoryLimitPercentage := truncateToThreeDecimalPlaces(
+					calculatePercentage(
+						recommendationEngine.Variation.Limits.Memory.Amount,
+						recommendationObj.Current.Limits.Memory.Amount,
+					))
+
+				variationCPURequestPercentage := truncateToThreeDecimalPlaces(
+					calculatePercentage(
+						recommendationEngine.Variation.Requests.Cpu.Amount,
+						recommendationObj.Current.Requests.Cpu.Amount,
+					))
+
+				variationMemoryRequestPercentage := truncateToThreeDecimalPlaces(
+					calculatePercentage(
+						recommendationEngine.Variation.Requests.Memory.Amount,
+						recommendationObj.Current.Requests.Memory.Amount,
+					))
+				rows = append(rows, []string{
+					recommendationSet.ID,
+					recommendationSet.ClusterUUID,
+					recommendationSet.ClusterAlias,
+					recommendationSet.Container,
+					recommendationSet.Project,
+					recommendationSet.Workload,
+					recommendationSet.WorkloadType,
+					recommendationSet.LastReported,
+					recommendationSet.SourceID,
+					fmt.Sprint(recommendationObj.Current.Limits.Cpu.Amount),
+					recommendationObj.Current.Limits.Cpu.Format,
+					fmt.Sprint(recommendationObj.Current.Limits.Memory.Amount),
+					recommendationObj.Current.Limits.Memory.Format,
+					fmt.Sprint(recommendationObj.Current.Requests.Cpu.Amount),
+					recommendationObj.Current.Requests.Cpu.Format,
+					fmt.Sprint(recommendationObj.Current.Requests.Memory.Amount),
+					recommendationObj.Current.Requests.Memory.Format,
+					recommendationObj.MonitoringEndTime.String(),
+					term,
+					fmt.Sprint(recommendationTerm.DurationInHours),
+					recommendationTerm.MonitoringStartTime.String(),
+					engine,
+					fmt.Sprint(recommendationEngine.Config.Limits.Cpu.Amount),
+					recommendationEngine.Config.Limits.Cpu.Format,
+					fmt.Sprint(recommendationEngine.Config.Limits.Memory.Amount),
+					recommendationEngine.Config.Limits.Memory.Format,
+					fmt.Sprint(recommendationEngine.Config.Requests.Cpu.Amount),
+					recommendationEngine.Config.Requests.Cpu.Format,
+					fmt.Sprint(recommendationEngine.Config.Requests.Memory.Amount),
+					recommendationEngine.Config.Requests.Memory.Format,
+					fmt.Sprint(variationCPULimitPercentage),
+					"percent",
+					fmt.Sprint(variationMemoryLimitPercentage),
+					"percent",
+					fmt.Sprint(variationCPURequestPercentage),
+					"percent",
+					fmt.Sprint(variationMemoryRequestPercentage),
+					"percent",
+				})
+			}
+		}
+	}
+	return rows
+}
+
+func GenerateAndStreamCSV(recommendationSets []model.RecommendationSetResult, echoResponse echo.Response) {
+	writer := csv.NewWriter(echoResponse.Writer)
+	header := FlattenedCSVHeader
+
+	if err := writer.Write(header); err != nil {
+		log.Errorf("unable to write header: %v", err)
+	}
+
+	for i := range recommendationSets {
+		CSVRows := GenerateCSVRows(recommendationSets[i])
+		for _, row := range CSVRows {
+			if err := writer.Write(row); err != nil {
+				log.Errorf("unable to write row: %v", err)
+			}
+		}
+
+		if (i+1)%config.GetConfig().CSVStreamInterval == 0 { // flush every CSVStreamInterval rows
+			writer.Flush()
+			if err := writer.Error(); err != nil {
+				log.Errorf("periodic flush error at row %d: %v", i+1, err)
+			}
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		log.Errorf("flush error: %v", err)
+	}
 }

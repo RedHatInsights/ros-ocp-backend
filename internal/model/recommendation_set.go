@@ -60,7 +60,7 @@ func GetFirstRecommendationSetsByWorkloadID(workload_id uint) (RecommendationSet
 	return recommendationSets, query.Error
 }
 
-func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, limit int, offset int, queryParams map[string]interface{}, user_permissions map[string][]string) ([]RecommendationSetResult, int, error) {
+func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, format string, limit int, offset int, queryParams map[string]interface{}, user_permissions map[string][]string) ([]RecommendationSetResult, int, error) {
 	var recommendationSets []RecommendationSetResult
 	query := getRecommendationQuery(orgID)
 
@@ -83,6 +83,15 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 	var count int64 = 0
 	query.Count(&count)
 	query.Order(orderQuery)
+
+	if format == "csv" {
+		/*
+		 each db record has short, medium, long term recommendations
+		 each such Recommendation has two sub types, cost and performance
+		 total number of CSV rows would be RowLimitCSV * 3 * 2
+		*/
+		limit = config.GetConfig().RowLimitCSV
+	}
 	err := query.Offset(offset).Limit(limit).Scan(&recommendationSets).Error
 
 	return recommendationSets, int(count), err

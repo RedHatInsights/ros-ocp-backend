@@ -1,9 +1,11 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -108,12 +110,28 @@ func GetRecommendationSetList(c echo.Context) error {
 		}
 	}
 
+	format := c.QueryParam("format")
+
+	if format == "" {
+		format = "json"
+	} else {
+		formatLower := strings.ToLower(format)
+		switch formatLower {
+		case "csv":
+			format = "csv"
+		case "json":
+			format = "json"
+		default:
+			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid value for format"})
+		}
+	}
+
 	queryParams, err := MapQueryParameters(c)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
 	}
 	recommendationSet := model.RecommendationSet{}
-	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, limit, offset, queryParams, user_permissions)
+	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, format, limit, offset, queryParams, user_permissions)
 	if error != nil {
 		log.Errorf("unable to fetch records from database; %v", error)
 	}
@@ -140,12 +158,21 @@ func GetRecommendationSetList(c echo.Context) error {
 		)
 	}
 
-	interfaceSlice := make([]interface{}, len(recommendationSets))
-	for i, v := range recommendationSets {
-		interfaceSlice[i] = v
+	switch format {
+	case "json":
+		interfaceSlice := make([]interface{}, len(recommendationSets))
+		for i, v := range recommendationSets {
+			interfaceSlice[i] = v
+		}
+		results := CollectionResponse(interfaceSlice, c.Request(), count, limit, offset)
+		return c.JSON(http.StatusOK, results)
+	case "csv":
+		filename := "recommendations-" + time.Now().Format("20060102")
+		c.Response().Header().Set(echo.HeaderContentType, "text/csv")
+		c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", filename))
+		GenerateAndStreamCSV(recommendationSets, *c.Response())
 	}
-	results := CollectionResponse(interfaceSlice, c.Request(), count, limit, offset)
-	return c.JSON(http.StatusOK, results)
+	return nil
 }
 
 func GetRecommendationSet(c echo.Context) error {
