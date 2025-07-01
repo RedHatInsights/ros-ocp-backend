@@ -26,7 +26,7 @@
           {
             "name": "format",
             "in": "query",
-            "description": "Maximum number of records is 1000 for CSV downloads. The 'offset' parameter can be used for pagination with both formats.",
+            "description": "Maximum number of records is 1000 i.e. 6000 rows for CSV downloads. The 'offset' parameter can be used for pagination with both formats.",
             "required": false,
             "schema": {
                 "type": "string",

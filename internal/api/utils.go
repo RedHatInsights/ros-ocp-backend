@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -714,32 +715,33 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) [][]string
 	return rows
 }
 
-func GenerateAndStreamCSV(recommendationSets []model.RecommendationSetResult, echoResponse echo.Response) {
-	writer := csv.NewWriter(echoResponse.Writer)
+func GenerateAndStreamCSV(w io.Writer, recommendationSets []model.RecommendationSetResult) error {
+	writer := csv.NewWriter(w)
 	header := FlattenedCSVHeader
 
 	if err := writer.Write(header); err != nil {
-		log.Errorf("unable to write header: %v", err)
+		return fmt.Errorf("unable to write header: %w", err)
 	}
 
 	for i := range recommendationSets {
 		CSVRows := GenerateCSVRows(recommendationSets[i])
 		for _, row := range CSVRows {
 			if err := writer.Write(row); err != nil {
-				log.Errorf("unable to write row: %v", err)
+				return fmt.Errorf("unable to write row: %w", err)
 			}
 		}
 
 		if (i+1)%config.GetConfig().CSVStreamInterval == 0 { // flush every CSVStreamInterval rows
 			writer.Flush()
 			if err := writer.Error(); err != nil {
-				log.Errorf("periodic flush error at row %d: %v", i+1, err)
+				return fmt.Errorf("periodic flush error at row %d: %w", i+1, err)
 			}
 		}
 	}
 
 	writer.Flush()
 	if err := writer.Error(); err != nil {
-		log.Errorf("flush error: %v", err)
+		return fmt.Errorf("flush error: %w", err)
 	}
+	return nil
 }

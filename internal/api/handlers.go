@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -131,9 +132,9 @@ func GetRecommendationSetList(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
 	}
 	recommendationSet := model.RecommendationSet{}
-	recommendationSets, count, error := recommendationSet.GetRecommendationSets(OrgID, orderQuery, format, limit, offset, queryParams, user_permissions)
-	if error != nil {
-		log.Errorf("unable to fetch records from database; %v", error)
+	recommendationSets, count, queryErr := recommendationSet.GetRecommendationSets(OrgID, orderQuery, format, limit, offset, queryParams, user_permissions)
+	if queryErr != nil {
+		log.Errorf("unable to fetch records from database; %v", queryErr)
 	}
 
 	trueUnitsStr := c.QueryParam("true-units")
@@ -170,7 +171,24 @@ func GetRecommendationSetList(c echo.Context) error {
 		filename := "recommendations-" + time.Now().Format("20060102")
 		c.Response().Header().Set(echo.HeaderContentType, "text/csv")
 		c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", filename))
-		GenerateAndStreamCSV(recommendationSets, *c.Response())
+		pipeReader, pipeWriter := io.Pipe()
+
+		go func() {
+			var generationErr error
+			defer func() {
+				if r := recover(); r != nil {
+					generationErr = fmt.Errorf("panic in CSV generation goroutine: %v", r)
+				}
+				if generationErr != nil {
+					_ = pipeWriter.CloseWithError(generationErr)
+					log.Errorf("error during CSV generation (recovered or returned): %v", generationErr)
+				} else {
+					_ = pipeWriter.Close() // graceful closure
+				}
+			}()
+			generationErr = GenerateAndStreamCSV(pipeWriter, recommendationSets)
+		}()
+		return c.Stream(http.StatusOK, "text/csv", pipeReader)
 	}
 	return nil
 }
