@@ -87,10 +87,10 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 	if format == "csv" {
 		/*
 		 each db record has short, medium, long term recommendations
-		 each such Recommendation has two sub types, cost and performance
-		 total number of CSV rows would be RowLimitCSV * 3 * 2
+		 each such term recommendation has two types, cost and performance
+		 total number of CSV rows would be RecordLimitCSV * 3 * 2
 		*/
-		limit = config.GetConfig().RowLimitCSV
+		limit = config.GetConfig().RecordLimitCSV
 	}
 	err := query.Offset(offset).Limit(limit).Scan(&recommendationSets).Error
 
