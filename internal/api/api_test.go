@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMapQueryParameters(t *testing.T) {
@@ -73,4 +74,51 @@ func TestMapQueryParameters(t *testing.T) {
 			}
 		})
 	}
+}
+
+var FlattenedCSVHeaderFixture = []string{
+	"id",
+	"cluster_uuid",
+	"cluster_alias",
+	"container",
+	"project",
+	"workload",
+	"workload_type",
+	"last_reported",
+	"source_id",
+	"current_cpu_limit_amount",
+	"current_cpu_limit_format",
+	"current_memory_limit_amount",
+	"current_memory_limit_format",
+	"current_cpu_request_amount",
+	"current_cpu_request_format",
+	"current_memory_request_amount",
+	"current_memory_request_format",
+	"monitoring_end_time",
+	"recommendation_term",
+	"duration_in_hours",
+	"monitoring_start_time",
+	"recommendation_type",
+	"config_cpu_limit_amount",
+	"config_cpu_limit_format",
+	"config_memory_limit_amount",
+	"config_memory_limit_format",
+	"config_cpu_request_amount",
+	"config_cpu_request_format",
+	"config_memory_request_amount",
+	"config_memory_request_format",
+	"variation_cpu_limit_amount",
+	"variation_cpu_limit_format",
+	"variation_memory_limit_amount",
+	"variation_memory_limit_format",
+	"variation_cpu_request_amount",
+	"variation_cpu_request_format",
+	"variation_memory_request_amount",
+	"variation_memory_request_format",
+}
+
+func TestFlattenedCSVHeader(t *testing.T) {
+	header := FlattenedCSVHeader
+	assert.Len(t, header, len(FlattenedCSVHeaderFixture), "header length mismatch")
+	assert.Equal(t, FlattenedCSVHeaderFixture, header, "header content or order is incorrect")
 }
