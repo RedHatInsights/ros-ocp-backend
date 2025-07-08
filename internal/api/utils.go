@@ -616,6 +616,12 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 	return data
 }
 
+func formatPrecisionValuesToStr(val float64) string {
+	s := fmt.Sprintf("%.3f", val)
+	s = strings.TrimRight(s, "0") // removes trailing zeros
+	return s
+}
+
 func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]string, error) {
 	rows := [][]string{}
 	variationFormat := "percent"
@@ -647,8 +653,8 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 
 			variationCPULimitPercentage := truncateToThreeDecimalPlaces(
 				calculatePercentage(
-					recommendationEngine.Variation.Limits.Cpu.Amount,
-					recommendationObj.Current.Limits.Cpu.Amount,
+					truncateToThreeDecimalPlaces(recommendationEngine.Variation.Limits.Cpu.Amount),
+					truncateToThreeDecimalPlaces(recommendationObj.Current.Limits.Cpu.Amount),
 				))
 
 			variationMemoryLimitPercentage := truncateToThreeDecimalPlaces(
@@ -659,8 +665,8 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 
 			variationCPURequestPercentage := truncateToThreeDecimalPlaces(
 				calculatePercentage(
-					recommendationEngine.Variation.Requests.Cpu.Amount,
-					recommendationObj.Current.Requests.Cpu.Amount,
+					truncateToThreeDecimalPlaces(recommendationEngine.Variation.Requests.Cpu.Amount),
+					truncateToThreeDecimalPlaces(recommendationObj.Current.Requests.Cpu.Amount),
 				))
 
 			variationMemoryRequestPercentage := truncateToThreeDecimalPlaces(
@@ -678,11 +684,11 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 				recommendationSet.WorkloadType,
 				recommendationSet.LastReported,
 				recommendationSet.SourceID,
-				fmt.Sprint(recommendationObj.Current.Limits.Cpu.Amount),
+				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationObj.Current.Limits.Cpu.Amount)),
 				recommendationObj.Current.Limits.Cpu.Format,
 				fmt.Sprint(recommendationObj.Current.Limits.Memory.Amount),
 				recommendationObj.Current.Limits.Memory.Format,
-				fmt.Sprint(recommendationObj.Current.Requests.Cpu.Amount),
+				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationObj.Current.Requests.Cpu.Amount)),
 				recommendationObj.Current.Requests.Cpu.Format,
 				fmt.Sprint(recommendationObj.Current.Requests.Memory.Amount),
 				recommendationObj.Current.Requests.Memory.Format,
@@ -691,19 +697,19 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 				fmt.Sprint(recommendationTerm.DurationInHours),
 				recommendationTerm.MonitoringStartTime.String(),
 				recommendationType,
-				fmt.Sprint(recommendationEngine.Config.Limits.Cpu.Amount),
+				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationEngine.Config.Limits.Cpu.Amount)),
 				recommendationEngine.Config.Limits.Cpu.Format,
 				fmt.Sprint(recommendationEngine.Config.Limits.Memory.Amount),
 				recommendationEngine.Config.Limits.Memory.Format,
-				fmt.Sprint(recommendationEngine.Config.Requests.Cpu.Amount),
+				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationEngine.Config.Requests.Cpu.Amount)),
 				recommendationEngine.Config.Requests.Cpu.Format,
 				fmt.Sprint(recommendationEngine.Config.Requests.Memory.Amount),
 				recommendationEngine.Config.Requests.Memory.Format,
-				fmt.Sprint(variationCPULimitPercentage),
+				formatPrecisionValuesToStr(variationCPULimitPercentage),
 				variationFormat,
 				fmt.Sprint(variationMemoryLimitPercentage),
 				variationFormat,
-				fmt.Sprint(variationCPURequestPercentage),
+				formatPrecisionValuesToStr(variationCPURequestPercentage),
 				variationFormat,
 				fmt.Sprint(variationMemoryRequestPercentage),
 				variationFormat,
