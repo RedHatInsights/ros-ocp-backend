@@ -24,6 +24,17 @@
         "operationId": "getRecommendationList",
         "parameters": [
           {
+            "name": "format",
+            "in": "query",
+            "description": "Maximum number of records is 1000 i.e. 6000 rows for CSV downloads. The 'offset' parameter can be used for pagination with both formats.",
+            "required": false,
+            "schema": {
+                "type": "string",
+                "enum": ["json", "csv"],
+                "default": "json"
+            }
+          },
+          {
             "name": "cluster",
             "in": "query",
             "description": "Cluster alias or UUID",
