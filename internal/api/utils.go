@@ -754,22 +754,29 @@ func GenerateAndStreamCSV(w io.Writer, recommendationSets []model.Recommendation
 }
 
 func resolveResponseFormat(acceptHeaderVal string, formatQueryParamVal string) (string, error) {
-	responseFormat := "json" // default format value
+	if acceptHeaderVal == "" && formatQueryParamVal == "" {
+		return "json", nil // default format
+	}
 
+	responseFormat := ""
 	switch acceptHeaderVal {
 	case "text/csv":
 		responseFormat = "csv"
 	case "application/json":
-		break
+		responseFormat = "json"
 	}
 
-	switch formatQueryParamVal {
-	case "", "json":
-		break
-	case "csv":
-		responseFormat = "csv"
-	default:
-		return "", fmt.Errorf("invalid value for format: %q", formatQueryParamVal)
+	if responseFormat != "" {
+		return responseFormat, nil // preferring header value
+	} else {
+		switch formatQueryParamVal {
+		case "", "json":
+			responseFormat = "json"
+		case "csv":
+			responseFormat = "csv"
+		default:
+			return "", fmt.Errorf("invalid value for format: %q", formatQueryParamVal)
+		}
 	}
 
 	return responseFormat, nil
