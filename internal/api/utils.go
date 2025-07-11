@@ -617,8 +617,13 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 }
 
 func formatPrecisionValuesToStr(val float64) string {
-	s := fmt.Sprintf("%.3f", val)
-	s = strings.TrimRight(s, "0") // removes trailing zeros
+	// avoid un-necessary rounding by sprintf 104.939886 -> -104.940
+	multiplier := 1000.0
+	truncatedVal := math.Trunc(val*multiplier) / multiplier
+
+	s := fmt.Sprintf("%.3f", truncatedVal)
+	s = strings.TrimRight(s, "0")  // removes trailing zeros
+	s = strings.TrimSuffix(s, ".") // removes trailing "." for instance 10.0
 	return s
 }
 
