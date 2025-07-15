@@ -26,7 +26,7 @@
           {
             "name": "format",
             "in": "query",
-            "description": "Ignored when 'Accept' header is present and valid.  \nMaximum number of records is 1000 i.e. 6000 rows for CSV downloads.  \nThe 'offset' parameter can be used for pagination with both formats.",
+            "description": "Used as a fallback when the 'Accept' header is missing or specifies an unsupported media type.  \nMaximum number of records is 1000 i.e. 6000 rows for CSV downloads.  \nThe 'offset' parameter can be used for pagination with both formats.",
             "required": false,
             "schema": {
                 "type": "string",
