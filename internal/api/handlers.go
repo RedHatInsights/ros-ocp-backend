@@ -111,20 +111,18 @@ func GetRecommendationSetList(c echo.Context) error {
 		}
 	}
 
-	format := c.QueryParam("format")
+	acceptHeaderValue := c.Request().Header.Get("Accept")
+	formatParam := c.QueryParam("format")
+	formatLower := ""
+	if formatParam != "" {
+		formatLower = strings.ToLower(formatParam)
+	}
 
-	if format == "" {
-		format = "json"
-	} else {
-		formatLower := strings.ToLower(format)
-		switch formatLower {
-		case "csv":
-			format = "csv"
-		case "json":
-			format = "json"
-		default:
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid value for format"})
-		}
+	format, formatErr := resolveResponseFormat(acceptHeaderValue, formatLower)
+	if formatErr != nil {
+		return c.JSON(http.StatusBadRequest,
+			echo.Map{"status": "error", "message": formatErr.Error()},
+		)
 	}
 
 	queryParams, err := MapQueryParameters(c)
