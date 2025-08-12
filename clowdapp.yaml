@@ -12,7 +12,6 @@ objects:
     envName: ${ENV_NAME}
     dependencies:
     - ingress
-    - rbac
     - sources-api
     deployments:
     - name: processor
