@@ -136,31 +136,32 @@ func initConfig() {
 	} else {
 		viper.SetDefault("LogFormater", "text")
 
-		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
-		viper.SetDefault("UPLOAD_TOPIC", "hccm.ros.events")
-		viper.SetDefault("RECOMMENDATION_TOPIC", "rosocp.kruize.recommendations")
-		viper.SetDefault("SOURCES_EVENT_TOPIC", "platform.sources.event-stream")
+		// Kafka Config - read from environment variables first, fallback to defaults
+		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", getEnvWithDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092"))
+		viper.SetDefault("UPLOAD_TOPIC", getEnvWithDefault("UPLOAD_TOPIC", "hccm.ros.events"))
+		viper.SetDefault("RECOMMENDATION_TOPIC", getEnvWithDefault("RECOMMENDATION_TOPIC", "rosocp.kruize.recommendations"))
+		viper.SetDefault("SOURCES_EVENT_TOPIC", getEnvWithDefault("SOURCES_EVENT_TOPIC", "platform.sources.event-stream"))
 
-		// default DB Config
-		viper.SetDefault("DBName", "postgres")
-		viper.SetDefault("DBUser", "postgres")
-		viper.SetDefault("DBPassword", "postgres")
-		viper.SetDefault("DBHost", "localhost")
-		viper.SetDefault("DBPort", "15432")
-		viper.SetDefault("DBssl", "disable")
+		// DB Config - read from environment variables first, fallback to defaults
+		viper.SetDefault("DBHost", getEnvWithDefault("DB_HOST", "localhost"))
+		viper.SetDefault("DBPort", getEnvWithDefault("DB_PORT", "15432"))
+		viper.SetDefault("DBName", getEnvWithDefault("DB_NAME", "postgres"))
+		viper.SetDefault("DBUser", getEnvWithDefault("DB_USER", "postgres"))
+		viper.SetDefault("DBPassword", getEnvWithDefault("DB_PASSWORD", "postgres"))
+		viper.SetDefault("DBssl", getEnvWithDefault("DB_SSL", "disable"))
 		viper.SetDefault("DBCACert", "")
 
-		// default RBAC Config
-		viper.SetDefault("RBACHost", "localhost")
-		viper.SetDefault("RBACPort", "9080")
+		// RBAC Config - read from environment variables first, fallback to defaults
+		viper.SetDefault("RBACHost", getEnvWithDefault("RBAC_HOST", "localhost"))
+		viper.SetDefault("RBACPort", getEnvWithDefault("RBAC_PORT", "9080"))
 		viper.SetDefault("RBACProtocol", "http")
 		viper.SetDefault("RBAC_ENABLE", false)
 
-		// prometheus config
-		viper.SetDefault("PROMETHEUS_PORT", "5005")
+		// Prometheus config - read from environment variables first, fallback to defaults
+		viper.SetDefault("PROMETHEUS_PORT", getEnvWithDefault("PROMETHEUS_PORT", "5005"))
 
-		// Sources-api-go
-		viper.SetDefault("SOURCES_API_BASE_URL", "http://127.0.0.1:8002")
+		// Sources-api-go config - read from environment variables first, fallback to defaults
+		viper.SetDefault("SOURCES_API_BASE_URL", getEnvWithDefault("SOURCES_API_BASE_URL", "http://127.0.0.1:8002"))
 
 	}
 
@@ -204,4 +205,13 @@ func GetConfig() *Config {
 		fmt.Println("Config initialized")
 	}
 	return cfg
+}
+
+// getEnvWithDefault returns the value of the environment variable with the given key,
+// or the default value if the environment variable is not set or is empty.
+func getEnvWithDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
