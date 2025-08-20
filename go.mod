@@ -20,7 +20,7 @@ require (
 	github.com/onsi/gomega v1.38.0
 	github.com/prometheus/client_golang v1.23.0
 	github.com/redhatinsights/app-common-go v1.6.8
-	github.com/redhatinsights/platform-go-middlewares v1.0.0
+	github.com/redhatinsights/platform-go-middlewares/v2 v2.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
@@ -87,7 +87,6 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
-	github.com/redhatinsights/platform-go-middlewares/v2 v2.0.0 // indirect
 	github.com/sagikazarmark/locafero v0.10.0 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.14.0 // indirect
@@ -124,4 +123,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/redhatinsights/platform-go-middlewares => ../platform-go-middlewares
+replace github.com/redhatinsights/platform-go-middlewares/v2 => github.com/insights-onprem/platform-go-middlewares/v2 v2.0.0-20250820193405-cc00d90f7ad5

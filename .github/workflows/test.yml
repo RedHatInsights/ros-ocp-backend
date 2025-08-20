@@ -1,4 +1,4 @@
-name: Test Suite
+name: CI/CD Sanity Checks
 
 on:
   pull_request:

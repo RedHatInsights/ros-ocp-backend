@@ -15,7 +15,7 @@ import (
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/testing"
 
-	"github.com/redhatinsights/platform-go-middlewares/identity"
+	"github.com/redhatinsights/platform-go-middlewares/v2/identity"
 	"github.com/redhatinsights/ros-ocp-backend/internal/api/middleware"
 )
 
