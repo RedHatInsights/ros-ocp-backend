@@ -2,7 +2,6 @@ package logging
 
 import (
 	"os"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -43,11 +42,11 @@ func initLogger() {
 	if cfg.CwAccessKey != "" {
 		cred := credentials.NewStaticCredentials(cfg.CwAccessKey, cfg.CwSecretKey, "")
 		awsconf := aws.NewConfig().WithRegion(cfg.CwRegion).WithCredentials(cred)
-		hook, err := lc.NewBatchingHook(cfg.CwLogGroup, cfg.CwLogStream, awsconf, 10*time.Second)
+		hook, err := lc.NewBatchWriter(cfg.CwLogGroup, cfg.CwLogStream, awsconf)
 		if err != nil {
 			logger.Info(err)
 		}
-		logger.Hooks.Add(hook)
+		logger.Hooks.Add(lc.NewLogrusHook(hook))
 	}
 	log = logger.WithField("service", cfg.ServiceName)
 }

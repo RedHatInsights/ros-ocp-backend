@@ -16,8 +16,15 @@ import (
 )
 
 func GetRecommendationSetList(c echo.Context) error {
-	XRHID := c.Get("Identity").(identity.XRHID)
-	OrgID := XRHID.Identity.OrgID
+	idToken := c.Get("Identity").(identity.OrganizationIDProvider)
+	if idToken == nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"status": "error", "message": "unauthorized"})
+	}
+	orgID := idToken.GetOrganizationID()
+	if orgID == "" {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"status": "error", "message": "unauthorized"})
+	}
+
 	user_permissions := get_user_permissions(c)
 	handlerName := "recommendationset-list"
 	unitChoices := make(map[string]string)
@@ -130,7 +137,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
 	}
 	recommendationSet := model.RecommendationSet{}
-	recommendationSets, count, queryErr := recommendationSet.GetRecommendationSets(OrgID, orderQuery, format, limit, offset, queryParams, user_permissions)
+	recommendationSets, count, queryErr := recommendationSet.GetRecommendationSets(orgID, orderQuery, format, limit, offset, queryParams, user_permissions)
 	if queryErr != nil {
 		log.Errorf("unable to fetch records from database; %v", queryErr)
 	}

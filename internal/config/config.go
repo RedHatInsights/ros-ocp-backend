@@ -49,6 +49,9 @@ type Config struct {
 	DBssl      string
 	DBCACert   string
 
+	// ID Provider config
+	ID_Provider string `mapstructure:"ID_PROVIDER"`
+
 	// RBAC config
 	RBACHost     string
 	RBACPort     string
@@ -180,6 +183,8 @@ func initConfig() {
 	viper.SetDefault("READ_HEADER_TIMEOUT", 15)
 	viper.SetDefault("RECORD_LIMIT_CSV", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
+	// ID Provider Config
+	viper.SetDefault("ID_Provider", "rhsso")
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}
