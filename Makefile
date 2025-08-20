@@ -18,6 +18,7 @@ CSVfile_name_tuple := $(subst /, ,$(CSVfile:%=%))
 CSVfile_name := $(word 4,$(CSVfile_name_tuple))
 INGRESS_PORT ?= 3000
 
+GINKGO_ARGS=-mod=mod
 ifdef env
 	short_env=$(shell echo '${env}' | cut -d'-' -f2)
 	server=$(shell oc get clowdenvironments env-ephemeral-${short_env} -o=jsonpath='{.status.hostname}')
@@ -116,7 +117,7 @@ lint: golangci-lint
 
 .PHONY: test
 test: setup-envtest ginkgo
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_BIN_DIR) -p path)" $(GINKGO) -v ./...
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_BIN_DIR) -p path)" $(GINKGO) $(GINKGO_ARGS) -v ./...
 
 .PHONY: clean-test-binaries
 clean-test-binaries:
