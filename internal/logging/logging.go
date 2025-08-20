@@ -2,11 +2,10 @@ package logging
 
 import (
 	"os"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	lc "github.com/redhatinsights/platform-go-middlewares/logging/cloudwatch"
+	lc "github.com/redhatinsights/platform-go-middlewares/v2/logging/cloudwatch"
 	"github.com/sirupsen/logrus"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
@@ -43,11 +42,11 @@ func initLogger() {
 	if cfg.CwAccessKey != "" {
 		cred := credentials.NewStaticCredentials(cfg.CwAccessKey, cfg.CwSecretKey, "")
 		awsconf := aws.NewConfig().WithRegion(cfg.CwRegion).WithCredentials(cred)
-		hook, err := lc.NewBatchingHook(cfg.CwLogGroup, cfg.CwLogStream, awsconf, 10*time.Second)
+		hook, err := lc.NewBatchWriter(cfg.CwLogGroup, cfg.CwLogStream, awsconf)
 		if err != nil {
 			logger.Info(err)
 		}
-		logger.Hooks.Add(hook)
+		logger.Hooks.Add(lc.NewLogrusHook(hook))
 	}
 	log = logger.WithField("service", cfg.ServiceName)
 }

@@ -46,8 +46,13 @@ func StartAPIServer() {
 	app.File("/api/cost-management/v1/recommendations/openshift/openapi.json", "openapi.json")
 
 	v1 := app.Group("/api/cost-management/v1")
-	v1.Use(ros_middleware.Identity)
-	if cfg.RBACEnabled {
+	hf, err := ros_middleware.GetIdentityProviderHandlerFunction(cfg.IDProvider)
+	if err != nil {
+		log.Fatal(err)
+	}
+	v1.Use(hf)
+	// Ensure that RBAC is only enabled for non-oauth provider
+	if cfg.RBACEnabled && cfg.IDProvider != ros_middleware.OAuthIdentityHeader {
 		v1.Use(ros_middleware.Rbac)
 	}
 	v1.GET("/recommendations/openshift", GetRecommendationSetList)
