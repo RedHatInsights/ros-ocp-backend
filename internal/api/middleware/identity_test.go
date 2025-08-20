@@ -2,6 +2,7 @@ package middleware_test
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -254,6 +255,37 @@ var _ = Describe("Identity Middleware", func() {
 				// This is a basic test - the actual RHSSO functionality would need more complex testing
 				handler := rhssoProvider.GetHandlerFunction()
 				Expect(handler).ToNot(BeNil())
+			})
+
+			It("should store identity that implements OrganizationIDProvider interface", func() {
+				// Create a valid XRHID structure
+				xrhid := identity.XRHID{
+					Identity: identity.Identity{
+						OrgID: "test-org-123",
+						Type:  "User",
+					},
+				}
+
+				// Marshal and encode the XRHID
+				j, err := json.Marshal(xrhid)
+				Expect(err).NotTo(HaveOccurred())
+				encodedXRHID := base64.StdEncoding.EncodeToString(j)
+
+				req := httptest.NewRequest(http.MethodGet, "/test", nil)
+				req.Header.Set("X-Rh-Identity", encodedXRHID)
+				testHandler := func(c echo.Context) error {
+					// Retrieve identity from context
+					id := c.Get("Identity").(identity.OrganizationIDProvider)
+					// Verify the interface method works correctly
+					Expect(id.GetOrganizationID()).To(Equal("test-org-123"), "XRHID should return the correct organization ID")
+					return c.String(http.StatusOK, "success")
+				}
+
+				c := e.NewContext(req, rec)
+				middlewareFunc := rhssoProvider.GetHandlerFunction()
+				err = middlewareFunc(testHandler)(c)
+
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})
