@@ -308,5 +308,5 @@ parameters:
   value: 'INFO'
 - name: PARTITION_DELETE_INTERVAL
   value: "0 0 */15 * *" # Runs at 12:00 AM, every 15 days.
-- name: ID_PROVIDER
+- name: ID_PROVIDER # Captures the ID provider used to authenticate the REST API calls. For console.redhat.com it uses rhsso (default value). For on-prem it uses oauth.
   value: "rhsso"
