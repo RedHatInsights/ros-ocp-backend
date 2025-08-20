@@ -199,8 +199,11 @@ func GetRecommendationSetList(c echo.Context) error {
 }
 
 func GetRecommendationSet(c echo.Context) error {
-	XRHID := c.Get("Identity").(identity.XRHID)
-	OrgID := XRHID.Identity.OrgID
+	id := c.Get("Identity").(identity.OrganizationIDProvider)
+	orgID := id.GetOrganizationID()
+	if orgID == "" {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"status": "error", "message": "unauthorized"})
+	}
 	user_permissions := get_user_permissions(c)
 	handlerName := "recommendationset"
 
@@ -257,7 +260,7 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 
 	recommendationSetVar := model.RecommendationSet{}
-	recommendationSet, error := recommendationSetVar.GetRecommendationSetByID(OrgID, RecommendationUUID.String(), user_permissions)
+	recommendationSet, error := recommendationSetVar.GetRecommendationSetByID(orgID, RecommendationUUID.String(), user_permissions)
 
 	if error != nil {
 		log.Errorf("unable to fetch recommendation %s; error %v", RecommendationIDStr, error)

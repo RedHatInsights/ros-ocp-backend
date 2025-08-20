@@ -48,10 +48,7 @@ func (o *OAuthIdentityProvider) oauthIdentityHandlerFunction(next echo.HandlerFu
 		if err != nil {
 			return err
 		}
-		token, err := identity.NewOAuthFromHeader(decodedIdentity)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("Unable to marshal %s into struct", OAuthIdentityHeader))
-		}
+		token := string(decodedIdentity)
 		if token == "" {
 			return echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("Missing %s", OAuthIdentityHeader))
 		}
@@ -64,7 +61,7 @@ func (o *OAuthIdentityProvider) oauthIdentityHandlerFunction(next echo.HandlerFu
 			return echo.NewHTTPError(http.StatusUnauthorized, "User information is missing from TokenReview API")
 		}
 
-		c.Set("Identity", *userInfo)
+		c.Set("Identity", identity.OAuthID(*userInfo))
 		return next(c)
 	}
 }

@@ -14,6 +14,7 @@ import (
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/testing"
 
+	"github.com/redhatinsights/platform-go-middlewares/identity"
 	"github.com/redhatinsights/ros-ocp-backend/internal/api/middleware"
 )
 
@@ -68,8 +69,8 @@ var _ = Describe("Identity Middleware", func() {
 					testHandler := func(c echo.Context) error {
 						handlerCalled = true
 						// Verify identity is set in context
-						identity := c.Get("Identity")
-						Expect(identity).To(Equal(userInfo))
+						id := c.Get("Identity").(identity.OrganizationIDProvider)
+						Expect(id).To(BeEquivalentTo(userInfo))
 						return c.String(http.StatusOK, "success")
 					}
 
