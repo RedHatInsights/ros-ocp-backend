@@ -1,10 +1,10 @@
 # Docker Compose Override for Insights On-Premise Dependencies
 # This file overrides the original docker-compose.yml to use quay.io/insights-onprem images
-# 
+#
 # Usage:
 # 1. Copy this file to your ros-ocp-backend/scripts/ directory
 # 2. Run: docker-compose up -d
-# 
+#
 # Docker Compose will automatically merge this with docker-compose.yml
 
 version: "3.8"
@@ -65,16 +65,14 @@ services:
         done;
         /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} || exit 1;
         /usr/bin/mc mb --ignore-existing myminio/insights-upload-perma;
+        /usr/bin/mc mb --ignore-existing myminio/insights-upload-perm;
+        /usr/bin/mc mb --ignore-existing myminio/koku-bucket;
+        /usr/bin/mc mb --ignore-existing myminio/ros-data;
         /usr/bin/mc anonymous set public myminio/insights-upload-perma;
+        /usr/bin/mc anonymous set public myminio/insights-upload-perm;
+        /usr/bin/mc anonymous set public myminio/koku-bucket;
+        /usr/bin/mc anonymous set public myminio/ros-data;
         echo 'MinIO bucket setup completed successfully';
-
-  # Override Insights Ingress to use insights-onprem image
-  ingress:
-    image: quay.io/insights-onprem/insights-ingress:latest
-    # All other configuration remains the same
-    depends_on:
-      - minio-createbucket
-      - kafka
 
   # Override Sources API Go to use insights-onprem image
   sources-api-go:
@@ -90,11 +88,11 @@ services:
       - REDIS_CACHE_PORT=6379
       - BYPASS_RBAC=true
       - QUEUE_HOST=kafka
-      - QUEUE_PORT=29092    
+      - QUEUE_PORT=29092
       - ENCRYPTION_KEY=YWFhYWFhYWFhYWFhYWFhYQ
       - SOURCES_ENV=prod
     # All other configuration remains the same
-    
+
   # For Zookeeper mode, we need to use the 7.5.3 Kafka image
   kafka:
     healthcheck:
@@ -105,6 +103,24 @@ services:
       start_period: 30s
     image: confluentinc/cp-kafka:7.5.3
 
+  kafka-create-topics:
+    image: confluentinc/cp-kafka
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub kafka-ready -b kafka:29092 1 20 && \
+                       kafka-topics --create --if-not-exists --topic hccm.ros.events --bootstrap-server kafka:29092 && \
+                       kafka-topics --create --if-not-exists --topic platform.sources.event-stream --bootstrap-server kafka:29092 && \
+                       kafka-topics --create --if-not-exists --topic rosocp.kruize.recommendations --bootstrap-server kafka:29092'"
+    depends_on:
+      - kafka
+
+  # Override Insights Ingress to use insights-onprem image
+  ingress:
+    image: quay.io/insights-onprem/insights-ingress:latest
+    # All other configuration remains the same
+    depends_on:
+      - minio
+      - kafka
+
   # Add health check for kruize-autotune service
   kruize-autotune:
     healthcheck:
@@ -113,9 +129,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
-
-  kafka-create-topics:
-    image: confluentinc/cp-kafka:7.5.3
 
   # Override Sources DB Setup to use insights-onprem image
   # Disabled since database is already initialized
@@ -134,7 +147,7 @@ services:
       - REDIS_CACHE_PORT=6379
       - BYPASS_RBAC=true
       - QUEUE_HOST=kafka
-      - QUEUE_PORT=29092        
+      - QUEUE_PORT=29092
       - ENCRYPTION_KEY=YWFhYWFhYWFhYWFhYWFhYQ
       - SOURCES_ENV=prod
     # All other configuration remains the same
@@ -173,7 +186,7 @@ services:
       retries: 3
       start_period: 30s
 
-  # 2. Recommendation Poller Service  
+  # 2. Recommendation Poller Service
   rosocp-recommendation-poller:
     image: quay.io/insights-onprem/ros-ocp-backend:latest
     command: ["sh", "-c", "echo 'Waiting for dependencies (Kafka, Kruize) to be ready...' && sleep 60 && echo 'Starting recommendation-poller...' && ./rosocp db migrate up && ./rosocp start recommendation-poller"]
