@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-ingress
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/name: ingress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ros-ocp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: ingress
+      app.kubernetes.io/name: ingress
+  template:
+    metadata:
+      labels:
+        {{- include "ros-ocp.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ingress
+        app.kubernetes.io/name: ingress
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-minio
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - |
+              until nc -z {{ include "ros-ocp.fullname" . }}-minio {{ .Values.minio.ports.api }}; do
+                echo "Waiting for MinIO..."
+                sleep 5
+              done
+              echo "MinIO is ready"
+        - name: wait-for-kafka
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - |
+              until nc -z {{ include "ros-ocp.fullname" . }}-kafka {{ .Values.kafka.broker.port }}; do
+                echo "Waiting for Kafka..."
+                sleep 5
+              done
+              echo "Kafka is ready"
+      containers:
+        - name: ingress
+          image: "{{ .Values.ingress.image.repository }}:{{ .Values.ingress.image.tag }}"
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.ingress.port }}
+              protocol: TCP
+          env:
+            - name: INGRESS_VALIDTOPICS
+              value: {{ .Values.ingress.env.INGRESS_VALIDTOPICS | quote }}
+            - name: INGRESS_STAGEBUCKET
+              value: {{ .Values.ingress.env.INGRESS_STAGEBUCKET | quote }}
+            - name: OPENSHIFT_BUILD_COMMIT
+              value: {{ .Values.ingress.env.OPENSHIFT_BUILD_COMMIT | quote }}
+            - name: INGRESS_MAXSIZE
+              value: {{ .Values.ingress.env.INGRESS_MAXSIZE | quote }}
+            - name: INGRESS_MINIODEV
+              value: {{ .Values.ingress.env.INGRESS_MINIODEV | quote }}
+            - name: INGRESS_MINIOACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ros-ocp.fullname" . }}-minio-credentials
+                  key: access-key
+            - name: INGRESS_MINIOSECRETKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ros-ocp.fullname" . }}-minio-credentials
+                  key: secret-key
+            - name: INGRESS_MINIOENDPOINT
+              value: {{ include "ros-ocp.fullname" . }}-minio:{{ .Values.minio.ports.api }}
+          livenessProbe:
+            httpGet:
+              path: /api/ingress/v1/version
+              port: {{ .Values.ingress.port }}
+            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /api/ingress/v1/version
+              port: {{ .Values.ingress.port }}
+            initialDelaySeconds: 10
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources.application | nindent 12 }}

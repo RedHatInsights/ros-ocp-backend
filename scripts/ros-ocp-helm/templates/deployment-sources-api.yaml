@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-sources-api
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+    app.kubernetes.io/name: sources-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ros-ocp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+      app.kubernetes.io/name: sources-api
+  template:
+    metadata:
+      labels:
+        {{- include "ros-ocp.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+        app.kubernetes.io/name: sources-api
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-db-sources
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - |
+              until nc -z {{ include "ros-ocp.fullname" . }}-db-sources {{ .Values.database.sources.port }}; do
+                echo "Waiting for Sources database..."
+                sleep 5
+              done
+              echo "Sources database is ready"
+        - name: wait-for-kafka
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - |
+              until nc -z {{ include "ros-ocp.fullname" . }}-kafka {{ .Values.kafka.broker.port }}; do
+                echo "Waiting for Kafka..."
+                sleep 5
+              done
+              echo "Kafka is ready"
+        - name: wait-for-redis
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - |
+              until nc -z {{ include "ros-ocp.fullname" . }}-redis {{ .Values.redis.port }}; do
+                echo "Waiting for Redis..."
+                sleep 5
+              done
+              echo "Redis is ready"
+      containers:
+        - name: sources-api
+          image: "{{ .Values.sourcesApi.image.repository }}:{{ .Values.sourcesApi.image.tag }}"
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.sourcesApi.port }}
+              protocol: TCP
+          env:
+            - name: DATABASE_USER
+              value: {{ .Values.sourcesApi.env.DATABASE_USER | quote }}
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ros-ocp.fullname" . }}-db-credentials
+                  key: sources-password
+            - name: DATABASE_HOST
+              value: {{ include "ros-ocp.fullname" . }}-db-sources
+            - name: DATABASE_PORT
+              value: {{ .Values.sourcesApi.env.DATABASE_PORT | quote }}
+            - name: DATABASE_NAME
+              value: {{ .Values.sourcesApi.env.DATABASE_NAME | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.sourcesApi.env.LOG_LEVEL | quote }}
+            - name: REDIS_CACHE_HOST
+              value: {{ include "ros-ocp.fullname" . }}-redis
+            - name: REDIS_CACHE_PORT
+              value: {{ .Values.sourcesApi.env.REDIS_CACHE_PORT | quote }}
+            - name: BYPASS_RBAC
+              value: {{ .Values.sourcesApi.env.BYPASS_RBAC | quote }}
+            - name: QUEUE_HOST
+              value: {{ include "ros-ocp.fullname" . }}-kafka
+            - name: QUEUE_PORT
+              value: {{ .Values.sourcesApi.env.QUEUE_PORT | quote }}
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ros-ocp.fullname" . }}-sources-credentials
+                  key: encryption-key
+            - name: SOURCES_ENV
+              value: {{ .Values.sourcesApi.env.SOURCES_ENV | quote }}
+          livenessProbe:
+            httpGet:
+              path: /api/sources/v1.0/source_types
+              port: {{ .Values.sourcesApi.port }}
+            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /api/sources/v1.0/source_types
+              port: {{ .Values.sourcesApi.port }}
+            initialDelaySeconds: 15
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources.application | nindent 12 }}

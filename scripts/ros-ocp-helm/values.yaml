@@ -1,0 +1,348 @@
+# Default values for ros-ocp-helm
+# This is a YAML-formatted file.
+
+global:
+  # Storage class for persistent volumes
+  storageClass: "standard"
+  # Pull policy for images
+  pullPolicy: IfNotPresent
+  # Pull secrets for private registries
+  imagePullSecrets: []
+
+# Database configurations
+database:
+  ros:
+    enabled: true
+    image:
+      repository: postgres
+      tag: "16"
+    storage:
+      size: 10Gi
+    env:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    port: 5432
+
+  kruize:
+    enabled: true
+    image:
+      repository: postgres
+      tag: "16"
+    storage:
+      size: 10Gi
+    env:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    port: 5432
+
+  sources:
+    enabled: true
+    image:
+      repository: postgres
+      tag: "16"
+    storage:
+      size: 10Gi
+    env:
+      POSTGRES_DB: sources_api_development
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    port: 5432
+
+# Kafka and Zookeeper
+kafka:
+  enabled: true
+  zookeeper:
+    image:
+      repository: confluentinc/cp-zookeeper
+      tag: "7.4.10"
+    env:
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_SERVER_ID: 1
+    storage:
+      size: 5Gi
+  
+  broker:
+    image:
+      repository: confluentinc/cp-kafka
+      tag: "7.5.3"
+    env:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      KAFKA_BROKER_ID: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+    storage:
+      size: 10Gi
+    port: 29092
+
+# Redis
+redis:
+  enabled: true
+  image:
+    repository: quay.io/insights-onprem/redis-ephemeral
+    tag: "6"
+  env:
+    REDIS_MAXMEMORY: 512mb
+    REDIS_MAXMEMORY_POLICY: allkeys-lru
+  port: 6379
+
+# MinIO
+minio:
+  enabled: true
+  image:
+    repository: minio/minio
+    tag: "RELEASE.2025-07-23T15-54-02Z"
+  storage:
+    size: 20Gi
+  env:
+    MINIO_ROOT_USER: minioaccesskey
+    MINIO_ROOT_PASSWORD: miniosecretkey
+  ports:
+    api: 9000
+    console: 9990
+  buckets:
+    - insights-upload-perma
+    - koku-bucket
+    - ros-data
+
+# Nginx
+nginx:
+  enabled: true
+  image:
+    repository: nginx
+    tag: "stable-alpine-perl"
+  port: 80
+
+# Ingress Service
+ingress:
+  enabled: true
+  image:
+    repository: quay.io/insights-onprem/insights-ingress
+    tag: "latest"
+  port: 3000
+  env:
+    INGRESS_VALIDTOPICS: hccm,rosocp
+    INGRESS_STAGEBUCKET: insights-upload-perma
+    OPENSHIFT_BUILD_COMMIT: somestring
+    INGRESS_MAXSIZE: 104857600
+    INGRESS_MINIODEV: true
+    INGRESS_MINIOENDPOINT: minio:9000
+
+# Sources API
+sourcesApi:
+  enabled: true
+  image:
+    repository: quay.io/insights-onprem/sources-api-go
+    tag: "latest"
+  port: 8000
+  env:
+    DATABASE_USER: postgres
+    DATABASE_PASSWORD: postgres
+    DATABASE_HOST: db-sources
+    DATABASE_PORT: 5432
+    DATABASE_NAME: sources_api_development
+    LOG_LEVEL: DEBUG
+    REDIS_CACHE_HOST: redis
+    REDIS_CACHE_PORT: 6379
+    BYPASS_RBAC: true
+    QUEUE_HOST: kafka
+    QUEUE_PORT: 29092
+    ENCRYPTION_KEY: YWFhYWFhYWFhYWFhYWFhYQ
+    SOURCES_ENV: prod
+
+# Kruize Autotune
+kruize:
+  enabled: true
+  image:
+    repository: quay.io/redhat-services-prod/kruize-autotune-tenant/autotune
+    tag: "d0b4337"
+  port: 8080
+  env:
+    LOGGING_LEVEL: debug
+    ROOT_LOGGING_LEVEL: error
+    DB_CONFIG_FILE: /tmp/cdappconfig.json
+    dbdriver: "jdbc:postgresql://"
+    database_name: postgres
+    clustertype: kubernetes
+    k8stype: openshift
+    authtype: ""
+    monitoringagent: prometheus
+    monitoringservice: prometheus-k8s
+    monitoringendpoint: prometheus-k8s
+    savetodb: true
+    local: false
+    LOG_ALL_HTTP_REQ_AND_RESPONSE: true
+    hibernate_dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate_driver: org.postgresql.Driver
+    hibernate_c3p0minsize: 2
+    hibernate_c3p0maxsize: 5
+    hibernate_c3p0timeout: 300
+    hibernate_c3p0maxstatements: 100
+    hibernate_hbm2ddlauto: none
+    hibernate_showsql: false
+    hibernate_timezone: UTC
+    plots: true
+
+# ROS-OCP Backend Services
+rosocp:
+  processor:
+    enabled: true
+    image:
+      repository: quay.io/insights-onprem/ros-ocp-backend
+      tag: "latest"
+    env:
+      CLOWDER_ENABLED: false
+      DB_HOST: db-ros
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_CONSUMER_GROUP_ID: rosocp-processor
+      KAFKA_AUTO_COMMIT: true
+      UPLOAD_TOPIC: hccm.ros.events
+      KRUIZE_HOST: kruize-autotune
+      KRUIZE_PORT: 8080
+      KRUIZE_WAIT_TIME: 120
+      SERVICE_NAME: rosocp-processor
+      LOG_LEVEL: INFO
+      SOURCES_API_BASE_URL: http://sources-api-go:8000
+
+  recommendationPoller:
+    enabled: true
+    image:
+      repository: quay.io/insights-onprem/ros-ocp-backend
+      tag: "latest"
+    env:
+      CLOWDER_ENABLED: false
+      KRUIZE_HOST: kruize-autotune
+      KRUIZE_PORT: 8080
+      KRUIZE_WAIT_TIME: 120
+      SERVICE_NAME: rosocp-recommendation-poller
+      LOG_LEVEL: INFO
+      DB_HOST: db-ros
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DATABASE_URL: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_CONSUMER_GROUP_ID: rosocp-recommendation-poller
+      KAFKA_AUTO_COMMIT: false
+      RECOMMENDATION_TOPIC: rosocp.kruize.recommendations
+
+  api:
+    enabled: true
+    image:
+      repository: quay.io/insights-onprem/ros-ocp-backend
+      tag: "latest"
+    port: 8000
+    metricsPort: 9000
+    env:
+      PATH_PREFIX: /api
+      CLOWDER_ENABLED: false
+      RBAC_ENABLE: false
+      DB_POOL_SIZE: 10
+      DB_MAX_OVERFLOW: 20
+      SERVICE_NAME: rosocp-api
+      LOG_LEVEL: INFO
+      DB_HOST: db-ros
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DATABASE_URL: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+
+  housekeeper:
+    enabled: true
+    image:
+      repository: quay.io/insights-onprem/ros-ocp-backend
+      tag: "latest"
+    env:
+      CLOWDER_ENABLED: false
+      KRUIZE_HOST: kruize-autotune
+      KRUIZE_PORT: 8080
+      SERVICE_NAME: rosocp-housekeeper-sources
+      LOG_LEVEL: INFO
+      DB_HOST: db-ros
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DATABASE_URL: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SOURCES_API_BASE_URL: http://sources-api-go:8000
+
+# Service configuration
+service:
+  type: ClusterIP
+  annotations: {}
+
+# Ingress configuration for external access
+serviceIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: ros-ocp.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource limits and requests
+resources:
+  # PostgreSQL minimum: ~128Mi memory, can run with 256Mi for development
+  database:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  # Kafka minimum: ~512Mi memory, Zookeeper needs ~256Mi
+  kafka:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  
+  zookeeper:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "250m"
+  
+  # Regular application services
+  application:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "300m"
+  
+  # Kruize is memory-intensive (Java/ML workload)
+  kruize:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+# Startup and readiness probe configuration
+probes:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
