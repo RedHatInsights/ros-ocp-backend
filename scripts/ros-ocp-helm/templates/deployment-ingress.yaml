@@ -76,6 +76,16 @@ spec:
                   key: secret-key
             - name: INGRESS_MINIOENDPOINT
               value: {{ include "ros-ocp.fullname" . }}-minio:{{ .Values.minio.ports.api }}
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}
+            - name: KAFKA_BROKERS
+              value: {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}
+            - name: KAFKA_SERVERS
+              value: {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}
+            - name: QUEUE_HOST
+              value: {{ include "ros-ocp.fullname" . }}-kafka
+            - name: QUEUE_PORT
+              value: {{ .Values.kafka.broker.port | quote }}
           livenessProbe:
             httpGet:
               path: /api/ingress/v1/version
