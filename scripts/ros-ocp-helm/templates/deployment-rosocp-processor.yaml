@@ -67,6 +67,14 @@ spec:
               echo 'Starting processor...'
               ./rosocp db migrate up
               ./rosocp start processor
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.rosocp.processor.metricsPort }}
+              protocol: TCP
+          volumeMounts:
+            - name: cdapp-config
+              mountPath: /cdapp
+              readOnly: true
           env:
             - name: CLOWDER_ENABLED
               value: {{ .Values.rosocp.processor.env.CLOWDER_ENABLED | quote }}
@@ -103,21 +111,28 @@ spec:
               value: {{ .Values.rosocp.processor.env.LOG_LEVEL | quote }}
             - name: SOURCES_API_BASE_URL
               value: http://{{ include "ros-ocp.fullname" . }}-sources-api:{{ .Values.sourcesApi.port }}
+            - name: PROMETHEUS_PORT
+              value: {{ .Values.rosocp.processor.env.PROMETHEUS_PORT | quote }}
+          # Re-enable probes now that PROMETHEUS_PORT environment variable is correctly set
           livenessProbe:
             httpGet:
               path: /metrics
               port: 9000
-            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.periodSeconds }}
-            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
-            failureThreshold: {{ .Values.probes.failureThreshold }}
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /metrics
               port: 9000
-            initialDelaySeconds: 15
-            periodSeconds: {{ .Values.probes.periodSeconds }}
-            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
-            failureThreshold: {{ .Values.probes.failureThreshold }}
+            initialDelaySeconds: 90
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
           resources:
             {{- toYaml .Values.resources.application | nindent 12 }}
+      volumes:
+        - name: cdapp-config
+          configMap:
+            name: {{ include "ros-ocp.fullname" . }}-cdapp-config

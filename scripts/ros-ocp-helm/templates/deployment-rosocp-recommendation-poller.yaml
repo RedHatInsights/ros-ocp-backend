@@ -67,6 +67,14 @@ spec:
               echo 'Starting recommendation-poller...'
               ./rosocp db migrate up
               ./rosocp start recommendation-poller
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.rosocp.recommendationPoller.metricsPort }}
+              protocol: TCP
+          volumeMounts:
+            - name: cdapp-config
+              mountPath: /cdapp
+              readOnly: true
           env:
             - name: CLOWDER_ENABLED
               value: {{ .Values.rosocp.recommendationPoller.env.CLOWDER_ENABLED | quote }}
@@ -103,21 +111,28 @@ spec:
               value: {{ .Values.rosocp.recommendationPoller.env.KAFKA_AUTO_COMMIT | quote }}
             - name: RECOMMENDATION_TOPIC
               value: {{ .Values.rosocp.recommendationPoller.env.RECOMMENDATION_TOPIC | quote }}
+            - name: PROMETHEUS_PORT
+              value: {{ .Values.rosocp.recommendationPoller.env.PROMETHEUS_PORT | quote }}
+          # Re-enable probes now that PROMETHEUS_PORT environment variable is correctly set
           livenessProbe:
             httpGet:
               path: /metrics
               port: 9000
-            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.periodSeconds }}
-            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
-            failureThreshold: {{ .Values.probes.failureThreshold }}
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /metrics
               port: 9000
-            initialDelaySeconds: 15
-            periodSeconds: {{ .Values.probes.periodSeconds }}
-            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
-            failureThreshold: {{ .Values.probes.failureThreshold }}
+            initialDelaySeconds: 90
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
           resources:
             {{- toYaml .Values.resources.application | nindent 12 }}
+      volumes:
+        - name: cdapp-config
+          configMap:
+            name: {{ include "ros-ocp.fullname" . }}-cdapp-config

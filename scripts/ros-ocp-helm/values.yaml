@@ -192,6 +192,7 @@ rosocp:
     image:
       repository: quay.io/insights-onprem/ros-ocp-backend
       tag: "latest"
+    metricsPort: 9000
     env:
       CLOWDER_ENABLED: false
       DB_HOST: db-ros
@@ -209,12 +210,14 @@ rosocp:
       SERVICE_NAME: rosocp-processor
       LOG_LEVEL: INFO
       SOURCES_API_BASE_URL: http://sources-api-go:8000
+      PROMETHEUS_PORT: 9000
 
   recommendationPoller:
     enabled: true
     image:
       repository: quay.io/insights-onprem/ros-ocp-backend
       tag: "latest"
+    metricsPort: 9000
     env:
       CLOWDER_ENABLED: false
       KRUIZE_HOST: kruize-autotune
@@ -232,6 +235,7 @@ rosocp:
       KAFKA_CONSUMER_GROUP_ID: rosocp-recommendation-poller
       KAFKA_AUTO_COMMIT: false
       RECOMMENDATION_TOPIC: rosocp.kruize.recommendations
+      PROMETHEUS_PORT: 9000
 
   api:
     enabled: true
