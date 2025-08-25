@@ -9,6 +9,19 @@
 
 version: "3.8"
 services:
+
+  db-ros:
+    image: postgres:16
+
+  db-kruize:
+    image: postgres:16
+
+  db-sources:
+    image: postgres:16
+
+  nginx:
+    image: nginx:stable-alpine-perl
+
   # Override Redis to use insights-onprem image
   redis:
     image: quay.io/insights-onprem/redis-ephemeral:6
@@ -23,7 +36,7 @@ services:
       start_period: 5s
 
   minio:
-    image: minio/minio
+    image: minio/minio:RELEASE.2025-07-23T15-54-02Z
     command: server --address 0.0.0.0:9000 --console-address 0.0.0.0:9990 /data
     volumes:
       - './minio-data:/data:z'
@@ -41,7 +54,7 @@ services:
       start_period: 10s
 
   minio-createbucket:
-    image: minio/mc
+    image: minio/mc:RELEASE.2025-07-21T05-28-08Z
     depends_on:
       minio:
         condition: service_healthy
@@ -65,11 +78,9 @@ services:
         done;
         /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} || exit 1;
         /usr/bin/mc mb --ignore-existing myminio/insights-upload-perma;
-        /usr/bin/mc mb --ignore-existing myminio/insights-upload-perm;
         /usr/bin/mc mb --ignore-existing myminio/koku-bucket;
         /usr/bin/mc mb --ignore-existing myminio/ros-data;
         /usr/bin/mc anonymous set public myminio/insights-upload-perma;
-        /usr/bin/mc anonymous set public myminio/insights-upload-perm;
         /usr/bin/mc anonymous set public myminio/koku-bucket;
         /usr/bin/mc anonymous set public myminio/ros-data;
         echo 'MinIO bucket setup completed successfully';
@@ -93,6 +104,9 @@ services:
       - SOURCES_ENV=prod
     # All other configuration remains the same
 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.10
+
   # For Zookeeper mode, we need to use the 7.5.3 Kafka image
   kafka:
     healthcheck:
@@ -104,7 +118,7 @@ services:
     image: confluentinc/cp-kafka:7.5.3
 
   kafka-create-topics:
-    image: confluentinc/cp-kafka
+    image: confluentinc/cp-kafka:7.5.3
     command: "bash -c 'echo Waiting for Kafka to be ready... && \
                        cub kafka-ready -b kafka:29092 1 20 && \
                        kafka-topics --create --if-not-exists --topic hccm.ros.events --bootstrap-server kafka:29092 && \
