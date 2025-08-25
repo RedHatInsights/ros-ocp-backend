@@ -54,8 +54,8 @@ spec:
               containerPort: {{ .Values.ingress.port }}
               protocol: TCP
           env:
-            - name: INGRESS_VALIDTOPICS
-              value: {{ .Values.ingress.env.INGRESS_VALIDTOPICS | quote }}
+            - name: INGRESS_VALID_UPLOAD_TYPES
+              value: {{ .Values.ingress.env.INGRESS_VALID_UPLOAD_TYPES | quote }}
             - name: INGRESS_STAGEBUCKET
               value: {{ .Values.ingress.env.INGRESS_STAGEBUCKET | quote }}
             - name: OPENSHIFT_BUILD_COMMIT

@@ -123,7 +123,7 @@ ingress:
     tag: "latest"
   port: 3000
   env:
-    INGRESS_VALIDTOPICS: hccm,rosocp
+    INGRESS_VALID_UPLOAD_TYPES: hccm,rosocp
     INGRESS_STAGEBUCKET: insights-upload-perma
     OPENSHIFT_BUILD_COMMIT: somestring
     INGRESS_MAXSIZE: 104857600

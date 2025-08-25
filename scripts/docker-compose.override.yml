@@ -134,6 +134,8 @@ services:
     depends_on:
       - minio
       - kafka
+    environment:
+      - INGRESS_VALID_UPLOAD_TYPES=hccm,rosocp
 
   # Add health check for kruize-autotune service
   kruize-autotune:
