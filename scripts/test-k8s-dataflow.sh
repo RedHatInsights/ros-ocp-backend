@@ -238,7 +238,7 @@ simulate_koku_processing() {
         echo_success "Kafka message published successfully"
         echo_info "File UUID: $file_uuid"
         echo_info "CSV file: $csv_filename"
-        echo_info "Accessible at: http://${HELM_RELEASE_NAME}-minio:9000/ros-data/$csv_filename"
+        echo_info "Accessible at: http://localhost:30099/browser/ros-data/$csv_filename"
     else
         echo_error "Failed to publish Kafka message"
         return 1
