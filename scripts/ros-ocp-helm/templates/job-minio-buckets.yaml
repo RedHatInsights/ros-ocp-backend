@@ -47,7 +47,7 @@ spec:
           args:
             - |
               echo 'Waiting for MinIO to be ready...'
-              for i in 1 2 3 4 5 6 7 8 9 10; do
+              for i in {1..10}; do
                 if /usr/bin/mc alias set myminio http://{{ include "ros-ocp.fullname" . }}-minio:{{ .Values.minio.ports.api }} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} >/dev/null 2>&1; then
                   echo 'MinIO is ready!'
                   break

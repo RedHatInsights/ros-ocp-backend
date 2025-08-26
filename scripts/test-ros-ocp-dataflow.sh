@@ -18,8 +18,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INGRESS_PORT=${INGRESS_PORT:-3000}
 MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioaccesskey}
 MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-miniosecretkey}
-TEST_TIMEOUT=300  # 5 minutes timeout for service startup
-UPLOAD_TIMEOUT=60   # 1 minute timeout for upload test
 
 # Export environment variables for docker-compose
 export INGRESS_PORT
@@ -79,8 +77,8 @@ ensure_uuidgen() {
             brew install util-linux 2>/dev/null || true
         elif command_exists apt-get; then
             sudo apt-get update && sudo apt-get install -y uuid-runtime 2>/dev/null || true
-        elif command_exists yum; then
-            sudo yum install -y util-linux 2>/dev/null || true
+        elif command_exists dnf; then
+            sudo dnf install -y util-linux 2>/dev/null || true
         fi
 
         if ! command_exists uuidgen; then
