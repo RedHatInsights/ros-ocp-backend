@@ -100,8 +100,8 @@ create_test_data() {
     local test_csv=$(mktemp)
     cat > "$test_csv" << 'EOF'
 report_period_start,report_period_end,interval_start,interval_end,container_name,pod,owner_name,owner_kind,workload,workload_type,namespace,image_name,node,resource_id,cpu_request_container_avg,cpu_request_container_sum,cpu_limit_container_avg,cpu_limit_container_sum,cpu_usage_container_avg,cpu_usage_container_min,cpu_usage_container_max,cpu_usage_container_sum,cpu_throttle_container_avg,cpu_throttle_container_max,cpu_throttle_container_sum,memory_request_container_avg,memory_request_container_sum,memory_limit_container_avg,memory_limit_container_sum,memory_usage_container_avg,memory_usage_container_min,memory_usage_container_max,memory_usage_container_sum,memory_rss_usage_container_avg,memory_rss_usage_container_min,memory_rss_usage_container_max,memory_rss_usage_container_sum
-2024-01-01,2024-01-02,2024-01-01T00:00:00Z,2024-01-01T01:00:00Z,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,100,100,200,200,50,10,90,50,0,0,0,512,512,1024,1024,256,128,384,256,200,100,300,200
-2024-01-01,2024-01-02,2024-01-01T01:00:00Z,2024-01-01T02:00:00Z,test-container-2,test-pod-456,test-deployment-2,Deployment,test-workload-2,deployment,test-namespace-2,quay.io/test/image2:latest,worker-node-2,resource-456,150,150,300,300,75,20,120,75,5,10,5,768,768,1536,1536,384,192,576,384,300,150,450,300
+2024-01-01,2024-01-02,2024-01-01 00:00:00 +0000 UTC,2024-01-01 01:00:00 +0000 UTC,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,100,100,200,200,50,10,90,50,0,0,0,512,512,1024,1024,256,128,384,256,200,100,300,200
+2024-01-01,2024-01-02,2024-01-01 01:00:00 +0000 UTC,2024-01-01 02:00:00 +0000 UTC,test-container-2,test-pod-456,test-deployment-2,Deployment,test-workload-2,deployment,test-namespace-2,quay.io/test/image2:latest,worker-node-2,resource-456,150,150,300,300,75,20,120,75,5,10,5,768,768,1536,1536,384,192,576,384,300,150,450,300
 EOF
     
     echo "$test_csv"
@@ -112,12 +112,22 @@ upload_test_data() {
     echo_info "=== STEP 1: Upload Test Data ===="
     
     local test_csv=$(create_test_data)
+    local test_dir=$(mktemp -d)
+    local csv_filename="openshift_usage_report.csv"
+    local tar_filename="cost-mgmt.tar.gz"
     
-    echo_info "Uploading test CSV file..."
+    # Copy CSV to temporary directory with expected filename
+    cp "$test_csv" "$test_dir/$csv_filename"
     
-    # Upload the file using curl with proper headers
+    # Create tar.gz file
+    echo_info "Creating tar.gz archive..."
+    (cd "$test_dir" && tar -czf "$tar_filename" "$csv_filename")
+
+    echo_info "Uploading tar.gz file..."
+
+    # Upload the tar.gz file using curl with proper headers and content-type
     local response=$(curl -s -w "%{http_code}" \
-        -F "file=@${test_csv}" \
+        -F "file=@${test_dir}/${tar_filename};type=application/vnd.redhat.hccm.filename+tgz" \
         -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K" \
         -H "x-rh-request-id: test-request-$(date +%s)" \
         http://localhost:${INGRESS_PORT}/api/ingress/v1/upload)
@@ -125,7 +135,9 @@ upload_test_data() {
     local http_code="${response: -3}"
     local response_body="${response%???}"
     
+    # Cleanup
     rm -f "$test_csv"
+    rm -rf "$test_dir"
     
     if [ "$http_code" != "202" ]; then
         echo_error "Upload failed! HTTP $http_code"
@@ -159,7 +171,7 @@ simulate_koku_processing() {
     
     # Create test CSV content
     local csv_content='report_period_start,report_period_end,interval_start,interval_end,container_name,pod,owner_name,owner_kind,workload,workload_type,namespace,image_name,node,resource_id,cpu_request_container_avg,cpu_request_container_sum,cpu_limit_container_avg,cpu_limit_container_sum,cpu_usage_container_avg,cpu_usage_container_min,cpu_usage_container_max,cpu_usage_container_sum,cpu_throttle_container_avg,cpu_throttle_container_max,cpu_throttle_container_sum,memory_request_container_avg,memory_request_container_sum,memory_limit_container_avg,memory_limit_container_sum,memory_usage_container_avg,memory_usage_container_min,memory_usage_container_max,memory_usage_container_sum,memory_rss_usage_container_avg,memory_rss_usage_container_min,memory_rss_usage_container_max,memory_rss_usage_container_sum
-2024-01-01,2024-01-02,2024-01-01T00:00:00Z,2024-01-01T01:00:00Z,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,100,100,200,200,50,10,90,50,0,0,0,512,512,1024,1024,256,128,384,256,200,100,300,200'
+2024-01-01,2024-01-02,2024-01-01 00:00:00 +0000 UTC,2024-01-01 01:00:00 +0000 UTC,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,100,100,200,200,50,10,90,50,0,0,0,512,512,1024,1024,256,128,384,256,200,100,300,200'
     
     # Copy CSV data to ros-data bucket via MinIO pod
     echo_info "Copying CSV to ros-data bucket..."
@@ -204,24 +216,8 @@ simulate_koku_processing() {
     
     echo_info "=== STEP 3: Publish Kafka Event ===="
     
-    # Create Kafka message with container network URL
-    local kafka_message=$(cat <<EOF
-{
-  "request_id": "test-request-$(date +%s)",
-  "b64_identity": "eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K",
-  "metadata": {
-    "account": "12345",
-    "org_id": "12345",
-    "source_id": "test-source-id",
-    "cluster_uuid": "1b77b73f-1d3e-43c6-9f55-bcd9fb6d1a0c",
-    "cluster_alias": "test-cluster"
-  },
-  "files": [
-    "http://${HELM_RELEASE_NAME}-minio:9000/ros-data/$csv_filename"
-  ]
-}
-EOF
-)
+    # Create Kafka message with container network URL (compact JSON)
+    local kafka_message="{\"request_id\":\"test-request-$(date +%s)\",\"b64_identity\":\"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K\",\"metadata\":{\"account\":\"12345\",\"org_id\":\"12345\",\"source_id\":\"test-source-id\",\"cluster_uuid\":\"1b77b73f-1d3e-43c6-9f55-bcd9fb6d1a0c\",\"cluster_alias\":\"test-cluster\"},\"files\":[\"http://${HELM_RELEASE_NAME}-minio:9000/ros-data/$csv_filename\"]}"
     
     echo_info "Publishing Kafka message to hccm.ros.events topic"
     echo_info "Message content: $kafka_message"
