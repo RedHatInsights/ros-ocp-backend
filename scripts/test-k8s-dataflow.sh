@@ -100,8 +100,8 @@ create_test_data() {
     local test_csv=$(mktemp)
     cat > "$test_csv" << 'EOF'
 report_period_start,report_period_end,interval_start,interval_end,container_name,pod,owner_name,owner_kind,workload,workload_type,namespace,image_name,node,resource_id,cpu_request_container_avg,cpu_request_container_sum,cpu_limit_container_avg,cpu_limit_container_sum,cpu_usage_container_avg,cpu_usage_container_min,cpu_usage_container_max,cpu_usage_container_sum,cpu_throttle_container_avg,cpu_throttle_container_max,cpu_throttle_container_sum,memory_request_container_avg,memory_request_container_sum,memory_limit_container_avg,memory_limit_container_sum,memory_usage_container_avg,memory_usage_container_min,memory_usage_container_max,memory_usage_container_sum,memory_rss_usage_container_avg,memory_rss_usage_container_min,memory_rss_usage_container_max,memory_rss_usage_container_sum
-2024-01-01,2024-01-02,2024-01-01 00:00:00 -0000 UTC,2024-01-01 01:00:00 -0000 UTC,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,100,100,200,200,50,10,90,50,0,0,0,512,512,1024,1024,256,128,384,256,200,100,300,200
-2024-01-01,2024-01-02,2024-01-01 01:00:00 -0000 UTC,2024-01-01 02:00:00 -0000 UTC,test-container-2,test-pod-456,test-deployment-2,Deployment,test-workload-2,deployment,test-namespace-2,quay.io/test/image2:latest,worker-node-2,resource-456,150,150,300,300,75,20,120,75,5,10,5,768,768,1536,1536,384,192,576,384,300,150,450,300
+2024-01-01,2024-01-01,2024-01-01 00:00:00 -0000 UTC,2024-01-01 00:15:00 -0000 UTC,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,100,100,200,200,50,10,90,50,0,0,0,512,512,1024,1024,256,128,384,256,200,100,300,200
+2024-01-01,2024-01-01,2024-01-01 00:15:00 -0000 UTC,2024-01-01 00:30:00 -0000 UTC,test-container-2,test-pod-456,test-deployment-2,Deployment,test-workload-2,deployment,test-namespace-2,quay.io/test/image2:latest,worker-node-2,resource-456,150,150,300,300,75,20,120,75,5,10,5,768,768,1536,1536,384,192,576,384,300,150,450,300
 EOF
 
     echo "$test_csv"
@@ -197,7 +197,7 @@ simulate_koku_processing() {
 
     # Create test CSV content
     local csv_content='report_period_start,report_period_end,interval_start,interval_end,container_name,pod,owner_name,owner_kind,workload,workload_type,namespace,image_name,node,resource_id,cpu_request_container_avg,cpu_request_container_sum,cpu_limit_container_avg,cpu_limit_container_sum,cpu_usage_container_avg,cpu_usage_container_min,cpu_usage_container_max,cpu_usage_container_sum,cpu_throttle_container_avg,cpu_throttle_container_max,cpu_throttle_container_sum,memory_request_container_avg,memory_request_container_sum,memory_limit_container_avg,memory_limit_container_sum,memory_usage_container_avg,memory_usage_container_min,memory_usage_container_max,memory_usage_container_sum,memory_rss_usage_container_avg,memory_rss_usage_container_min,memory_rss_usage_container_max,memory_rss_usage_container_sum
-2024-01-01,2024-01-02,2024-01-01 00:00:00 -0000 UTC,2024-01-01 01:00:00 -0000 UTC,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,100,100,200,200,50,10,90,50,0,0,0,512,512,1024,1024,256,128,384,256,200,100,300,200'
+2024-01-01,2024-01-01,2024-01-01 00:00:00 -0000 UTC,2024-01-01 00:15:00 -0000 UTC,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,100,100,200,200,50,10,90,50,0,0,0,512,512,1024,1024,256,128,384,256,200,100,300,200'
 
     # Copy CSV data to ros-data bucket via MinIO pod
     echo_info "Copying CSV to ros-data bucket..."
@@ -210,9 +210,10 @@ simulate_koku_processing() {
     fi
 
     # Create CSV file in MinIO pod and copy to bucket
-    kubectl exec -n "$NAMESPACE" "$minio_pod" -- sh -c "
-        echo '$csv_content' > /tmp/$csv_filename
-        /usr/bin/mc alias set myminio http://localhost:9000 minioaccesskey miniosecretkey
+    # Use stdin redirection to avoid websocket stream issues with large content
+    echo "$csv_content" | kubectl exec -i -n "$NAMESPACE" "$minio_pod" -- sh -c "
+        cat > /tmp/$csv_filename
+        /usr/bin/mc alias set myminio http://localhost:9000 minioaccesskey miniosecretkey 2>/dev/null
         /usr/bin/mc cp /tmp/$csv_filename myminio/ros-data/$csv_filename
         rm /tmp/$csv_filename
     "
@@ -276,7 +277,7 @@ verify_processing() {
     echo_info "=== STEP 4: Verify Data Processing ===="
 
     echo_info "Waiting for data processing (60 seconds)..."
-    sleep 60
+    sleep 20
 
     # Check processor logs
     echo_info "Checking processor logs..."
