@@ -147,6 +147,12 @@ nodes:
   - containerPort: 30090
     hostPort: 30090
     protocol: TCP
+  - containerPort: 30091
+    hostPort: 30091
+    protocol: TCP
+  - containerPort: 30099
+    hostPort: 30099
+    protocol: TCP
 - role: worker
 - role: worker
 EOF
@@ -263,9 +269,14 @@ create_nodeport_services() {
     kubectl patch service "${HELM_RELEASE_NAME}-kruize" -n "$NAMESPACE" \
         -p '{"spec":{"type":"NodePort","ports":[{"port":8080,"nodePort":30090,"targetPort":"http","protocol":"TCP","name":"http"}]}}'
     
-    # MinIO console service
+    # MinIO service (API and Console)
     kubectl patch service "${HELM_RELEASE_NAME}-minio" -n "$NAMESPACE" \
-        -p '{"spec":{"ports":[{"port":9000,"targetPort":"api","protocol":"TCP","name":"api"},{"port":9990,"nodePort":30099,"targetPort":"console","protocol":"TCP","name":"console"}],"type":"NodePort"}}'
+        --type='json' \
+        -p='[
+          {"op": "replace", "path": "/spec/type", "value": "NodePort"},
+          {"op": "add", "path": "/spec/ports/0/nodePort", "value": 30091},
+          {"op": "add", "path": "/spec/ports/1/nodePort", "value": 30099}
+        ]'
     
     echo_success "NodePort services created"
 }
@@ -296,7 +307,8 @@ show_status() {
     echo_info "  - Ingress API: http://localhost:30080/api/ingress/v1/version"
     echo_info "  - ROS-OCP API: http://localhost:30081/status"
     echo_info "  - Kruize API: http://localhost:30090/listPerformanceProfiles"
-    echo_info "  - MinIO Console: http://localhost:30099 (admin UI)"
+    echo_info "  - MinIO API: http://localhost:30091 (S3 API)"
+    echo_info "  - MinIO Console: http://localhost:30099 (Web UI - minioaccesskey/miniosecretkey)"
     echo ""
     
     echo_info "Useful Commands:"
@@ -334,6 +346,14 @@ run_health_checks() {
         echo_success "Kruize API is accessible"
     else
         echo_error "Kruize API is not accessible"
+        failed_checks=$((failed_checks + 1))
+    fi
+
+    # Check if MinIO console is accessible
+    if curl -f -s http://localhost:30099/ >/dev/null; then
+        echo_success "MinIO console is accessible"
+    else
+        echo_error "MinIO console is not accessible"
         failed_checks=$((failed_checks + 1))
     fi
     

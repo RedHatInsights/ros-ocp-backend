@@ -65,14 +65,11 @@ The script will:
 
 **Expected Output:**
 ```
-[INFO] ROS-OCP Kubernetes Deployment for KIND
-=======================================
-[SUCCESS] All prerequisites are installed
-[SUCCESS] KIND cluster 'ros-ocp-cluster' created successfully
-[SUCCESS] Storage provisioner configured
-[SUCCESS] NGINX Ingress Controller installed and ready
-[SUCCESS] Helm chart deployed successfully
-[SUCCESS] All pods are ready
+[INFO] Running health checks...
+[SUCCESS] Ingress API is accessible
+[SUCCESS] ROS-OCP API is accessible
+[SUCCESS] Kruize API is accessible
+[SUCCESS] MinIO console is accessible
 [SUCCESS] All health checks passed!
 ```
 
