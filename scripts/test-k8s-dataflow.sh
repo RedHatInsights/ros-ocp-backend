@@ -309,18 +309,27 @@ verify_processing() {
         fi
     fi
 
-    # Check Kruize experiments
-    echo_info "Checking Kruize experiments..."
-    if curl -f -s http://localhost:${KRUIZE_PORT}/listExperiments 2>/dev/null; then
-        local experiments=$(curl -s http://localhost:${KRUIZE_PORT}/listExperiments 2>/dev/null)
-        if [ -n "$experiments" ] && [ "$experiments" != "[]" ]; then
-            echo_success "Kruize experiments found"
-            echo_info "Experiments: $experiments"
+    # Check Kruize experiments via database (listExperiments API has known issue with KruizeLMExperimentEntry)
+    echo_info "Checking Kruize experiments via database..."
+    local db_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=db-kruize" -o jsonpath='{.items[0].metadata.name}')
+    
+    if [ -n "$db_pod" ]; then
+        local exp_count=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM kruize_experiments;" 2>/dev/null | tr -d ' ' || echo "0")
+        
+        if [ "$exp_count" -gt 0 ]; then
+            echo_success "Found $exp_count Kruize experiment(s) in database"
+            
+            # Show experiment details
+            echo_info "Recent experiment details:"
+            kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+                psql -U postgres -d postgres -c \
+                "SELECT experiment_name, status, mode FROM kruize_experiments ORDER BY experiment_id DESC LIMIT 1;" 2>/dev/null || true
         else
-            echo_warning "No Kruize experiments found yet"
+            echo_warning "No Kruize experiments found in database yet"
         fi
     else
-        echo_warning "Could not access Kruize API"
+        echo_warning "Could not access Kruize database"
     fi
 }
 

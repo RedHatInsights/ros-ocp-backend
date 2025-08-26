@@ -239,6 +239,16 @@ EOF
 helm upgrade ros-ocp ./ros-ocp-helm -n ros-ocp -f low-resource-values.yaml
 ```
 
+**Kruize listExperiments API error:**
+
+The Kruize `/listExperiments` endpoint may show errors related to missing `KruizeLMExperimentEntry` entity. This is a known issue with the current Kruize image version, but experiments are still being created and processed correctly in the database.
+
+```bash
+# Workaround: Check experiments directly in database
+kubectl exec -n ros-ocp ros-ocp-db-kruize-0 -- \
+  psql -U postgres -d postgres -c "SELECT experiment_name, status FROM kruize_experiments;"
+```
+
 **Kafka connectivity issues (Connection refused errors):**
 
 This is a common issue affecting multiple services (processor, recommendation-poller, housekeeper).
