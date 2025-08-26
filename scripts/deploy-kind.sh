@@ -108,9 +108,11 @@ create_kind_cluster() {
     
     # Check if cluster already exists
     if kind get clusters | grep -q "^${KIND_CLUSTER_NAME}$"; then
-        echo_warning "KIND cluster '$KIND_CLUSTER_NAME' already exists"
-        echo_info "Use 'kind delete cluster --name $KIND_CLUSTER_NAME' to delete it first"
-        return 0
+        echo_error "KIND cluster '$KIND_CLUSTER_NAME' already exists"
+        echo_info "Please delete the existing cluster first with:"
+        echo_info "  kind delete cluster --name $KIND_CLUSTER_NAME"
+        echo_info "Or use a different cluster name by setting KIND_CLUSTER_NAME environment variable"
+        exit 1
     fi
     
     # Create KIND cluster configuration
