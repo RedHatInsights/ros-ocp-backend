@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-zookeeper
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: zookeeper
+    app.kubernetes.io/name: zookeeper
+spec:
+  serviceName: {{ include "ros-ocp.fullname" . }}-zookeeper
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ros-ocp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: zookeeper
+      app.kubernetes.io/name: zookeeper
+  template:
+    metadata:
+      labels:
+        {{- include "ros-ocp.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: zookeeper
+        app.kubernetes.io/name: zookeeper
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: zookeeper
+          image: "{{ .Values.kafka.zookeeper.image.repository }}:{{ .Values.kafka.zookeeper.image.tag }}"
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          ports:
+            - name: client
+              containerPort: 32181
+              protocol: TCP
+          env:
+            - name: ZOOKEEPER_CLIENT_PORT
+              value: {{ .Values.kafka.zookeeper.env.ZOOKEEPER_CLIENT_PORT | quote }}
+            - name: ZOOKEEPER_SERVER_ID
+              value: {{ .Values.kafka.zookeeper.env.ZOOKEEPER_SERVER_ID | quote }}
+          volumeMounts:
+            - name: zookeeper-storage
+              mountPath: /var/lib/zookeeper/data
+          resources:
+            {{- toYaml .Values.resources.zookeeper | nindent 12 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: zookeeper-storage
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: {{ .Values.global.storageClass }}
+        resources:
+          requests:
+            storage: {{ .Values.kafka.zookeeper.storage.size }}

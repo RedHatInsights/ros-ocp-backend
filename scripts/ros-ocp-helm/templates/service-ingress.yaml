@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-ingress
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/name: ingress
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.ingress.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "ros-ocp.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/name: ingress

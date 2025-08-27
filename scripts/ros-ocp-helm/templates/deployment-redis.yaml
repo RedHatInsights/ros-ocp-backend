@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-redis
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ros-ocp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: cache
+      app.kubernetes.io/name: redis
+  template:
+    metadata:
+      labels:
+        {{- include "ros-ocp.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: cache
+        app.kubernetes.io/name: redis
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          ports:
+            - name: redis
+              containerPort: {{ .Values.redis.port }}
+              protocol: TCP
+          env:
+            - name: REDIS_MAXMEMORY
+              value: {{ .Values.redis.env.REDIS_MAXMEMORY | quote }}
+            - name: REDIS_MAXMEMORY_POLICY
+              value: {{ .Values.redis.env.REDIS_MAXMEMORY_POLICY | quote }}
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources.application | nindent 12 }}

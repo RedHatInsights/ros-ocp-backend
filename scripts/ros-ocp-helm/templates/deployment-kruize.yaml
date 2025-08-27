@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-kruize
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: optimization
+    app.kubernetes.io/name: kruize
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ros-ocp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: optimization
+      app.kubernetes.io/name: kruize
+  template:
+    metadata:
+      labels:
+        {{- include "ros-ocp.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: optimization
+        app.kubernetes.io/name: kruize
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-db-kruize
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - |
+              until nc -z {{ include "ros-ocp.fullname" . }}-db-kruize {{ .Values.database.kruize.port }}; do
+                echo "Waiting for Kruize database..."
+                sleep 5
+              done
+              echo "Kruize database is ready"
+      containers:
+        - name: kruize
+          image: "{{ .Values.kruize.image.repository }}:{{ .Values.kruize.image.tag }}"
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.kruize.port }}
+              protocol: TCP
+          env:
+            - name: LOGGING_LEVEL
+              value: {{ .Values.kruize.env.LOGGING_LEVEL | quote }}
+            - name: ROOT_LOGGING_LEVEL
+              value: {{ .Values.kruize.env.ROOT_LOGGING_LEVEL | quote }}
+            - name: DB_CONFIG_FILE
+              value: {{ .Values.kruize.env.DB_CONFIG_FILE | quote }}
+            - name: dbdriver
+              value: {{ .Values.kruize.env.dbdriver | quote }}
+            - name: database_name
+              value: {{ .Values.kruize.env.database_name | quote }}
+            - name: clustertype
+              value: {{ .Values.kruize.env.clustertype | quote }}
+            - name: k8stype
+              value: {{ .Values.kruize.env.k8stype | quote }}
+            - name: authtype
+              value: {{ .Values.kruize.env.authtype | quote }}
+            - name: monitoringagent
+              value: {{ .Values.kruize.env.monitoringagent | quote }}
+            - name: monitoringservice
+              value: {{ .Values.kruize.env.monitoringservice | quote }}
+            - name: monitoringendpoint
+              value: {{ .Values.kruize.env.monitoringendpoint | quote }}
+            - name: savetodb
+              value: {{ .Values.kruize.env.savetodb | quote }}
+            - name: local
+              value: {{ .Values.kruize.env.local | quote }}
+            - name: LOG_ALL_HTTP_REQ_AND_RESPONSE
+              value: {{ .Values.kruize.env.LOG_ALL_HTTP_REQ_AND_RESPONSE | quote }}
+            - name: hibernate_dialect
+              value: {{ .Values.kruize.env.hibernate_dialect | quote }}
+            - name: hibernate_driver
+              value: {{ .Values.kruize.env.hibernate_driver | quote }}
+            - name: hibernate_c3p0minsize
+              value: {{ .Values.kruize.env.hibernate_c3p0minsize | quote }}
+            - name: hibernate_c3p0maxsize
+              value: {{ .Values.kruize.env.hibernate_c3p0maxsize | quote }}
+            - name: hibernate_c3p0timeout
+              value: {{ .Values.kruize.env.hibernate_c3p0timeout | quote }}
+            - name: hibernate_c3p0maxstatements
+              value: {{ .Values.kruize.env.hibernate_c3p0maxstatements | quote }}
+            - name: hibernate_hbm2ddlauto
+              value: {{ .Values.kruize.env.hibernate_hbm2ddlauto | quote }}
+            - name: hibernate_showsql
+              value: {{ .Values.kruize.env.hibernate_showsql | quote }}
+            - name: hibernate_timezone
+              value: {{ .Values.kruize.env.hibernate_timezone | quote }}
+            - name: plots
+              value: {{ .Values.kruize.env.plots | quote }}
+          volumeMounts:
+            - name: kruize-config
+              mountPath: /tmp/cdappconfig.json
+              subPath: cdappconfig.json
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /listPerformanceProfiles
+              port: {{ .Values.kruize.port }}
+            initialDelaySeconds: 60
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /listPerformanceProfiles
+              port: {{ .Values.kruize.port }}
+            initialDelaySeconds: 30
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources.kruize | nindent 12 }}
+      volumes:
+        - name: kruize-config
+          configMap:
+            name: {{ include "ros-ocp.fullname" . }}-kruize-config

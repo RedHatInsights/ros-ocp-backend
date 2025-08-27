@@ -1,0 +1,138 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-rosocp-recommendation-poller
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: poller
+    app.kubernetes.io/name: rosocp-recommendation-poller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ros-ocp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: poller
+      app.kubernetes.io/name: rosocp-recommendation-poller
+  template:
+    metadata:
+      labels:
+        {{- include "ros-ocp.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: poller
+        app.kubernetes.io/name: rosocp-recommendation-poller
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-db-ros
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - |
+              until nc -z {{ include "ros-ocp.fullname" . }}-db-ros {{ .Values.database.ros.port }}; do
+                echo "Waiting for ROS database..."
+                sleep 5
+              done
+              echo "ROS database is ready"
+        - name: wait-for-kafka
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - |
+              until nc -z {{ include "ros-ocp.fullname" . }}-kafka {{ .Values.kafka.broker.port }}; do
+                echo "Waiting for Kafka..."
+                sleep 5
+              done
+              echo "Kafka is ready"
+        - name: wait-for-kruize
+          image: busybox:1.35
+          command: ['sh', '-c']
+          args:
+            - |
+              until nc -z {{ include "ros-ocp.fullname" . }}-kruize {{ .Values.kruize.port }}; do
+                echo "Waiting for Kruize..."
+                sleep 5
+              done
+              echo "Kruize is ready"
+      containers:
+        - name: rosocp-recommendation-poller
+          image: "{{ .Values.rosocp.recommendationPoller.image.repository }}:{{ .Values.rosocp.recommendationPoller.image.tag }}"
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo 'Waiting for dependencies (Kafka, Kruize) to be ready...'
+              sleep 60
+              echo 'Starting recommendation-poller...'
+              ./rosocp db migrate up
+              ./rosocp start recommendation-poller
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.rosocp.recommendationPoller.metricsPort }}
+              protocol: TCP
+          volumeMounts:
+            - name: cdapp-config
+              mountPath: /cdapp
+              readOnly: true
+          env:
+            - name: CLOWDER_ENABLED
+              value: {{ .Values.rosocp.recommendationPoller.env.CLOWDER_ENABLED | quote }}
+            - name: KRUIZE_HOST
+              value: {{ include "ros-ocp.fullname" . }}-kruize
+            - name: KRUIZE_PORT
+              value: {{ .Values.rosocp.recommendationPoller.env.KRUIZE_PORT | quote }}
+            - name: KRUIZE_WAIT_TIME
+              value: {{ .Values.rosocp.recommendationPoller.env.KRUIZE_WAIT_TIME | quote }}
+            - name: SERVICE_NAME
+              value: {{ .Values.rosocp.recommendationPoller.env.SERVICE_NAME | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.rosocp.recommendationPoller.env.LOG_LEVEL | quote }}
+            - name: DB_HOST
+              value: {{ include "ros-ocp.fullname" . }}-db-ros
+            - name: DB_PORT
+              value: {{ .Values.rosocp.recommendationPoller.env.DB_PORT | quote }}
+            - name: DB_NAME
+              value: {{ .Values.rosocp.recommendationPoller.env.DB_NAME | quote }}
+            - name: DB_USER
+              value: {{ .Values.rosocp.recommendationPoller.env.DB_USER | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ros-ocp.fullname" . }}-db-credentials
+                  key: ros-password
+            - name: DATABASE_URL
+              value: postgresql://postgres:$(DB_PASSWORD)@{{ include "ros-ocp.fullname" . }}-db-ros:{{ .Values.database.ros.port }}/postgres?sslmode=disable
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}
+            - name: KAFKA_CONSUMER_GROUP_ID
+              value: {{ .Values.rosocp.recommendationPoller.env.KAFKA_CONSUMER_GROUP_ID | quote }}
+            - name: KAFKA_AUTO_COMMIT
+              value: {{ .Values.rosocp.recommendationPoller.env.KAFKA_AUTO_COMMIT | quote }}
+            - name: RECOMMENDATION_TOPIC
+              value: {{ .Values.rosocp.recommendationPoller.env.RECOMMENDATION_TOPIC | quote }}
+            - name: PROMETHEUS_PORT
+              value: {{ .Values.rosocp.recommendationPoller.env.PROMETHEUS_PORT | quote }}
+          # Re-enable probes now that PROMETHEUS_PORT environment variable is correctly set
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 9000
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 9000
+            initialDelaySeconds: 90
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
+          resources:
+            {{- toYaml .Values.resources.application | nindent 12 }}
+      volumes:
+        - name: cdapp-config
+          configMap:
+            name: {{ include "ros-ocp.fullname" . }}-cdapp-config

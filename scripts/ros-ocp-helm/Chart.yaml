@@ -1,0 +1,22 @@
+apiVersion: v2
+name: ros-ocp
+description: A Helm chart for ROS-OCP Backend services
+type: application
+version: 0.1.0
+appVersion: "latest"
+
+keywords:
+  - insights
+  - ros
+  - ocp
+  - cost-management
+  - optimization
+
+maintainers:
+  - name: Insights On-Premise Team
+
+dependencies: []
+
+annotations:
+  # Enable Helm hooks
+  "helm.sh/hook-weight": "1"

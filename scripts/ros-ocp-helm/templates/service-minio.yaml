@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-minio
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/name: minio
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.minio.ports.api }}
+      targetPort: api
+      protocol: TCP
+      name: api
+    - port: {{ .Values.minio.ports.console }}
+      targetPort: console
+      protocol: TCP
+      name: console
+  selector:
+    {{- include "ros-ocp.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/name: minio

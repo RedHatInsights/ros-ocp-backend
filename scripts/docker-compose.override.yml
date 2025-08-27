@@ -1,0 +1,295 @@
+# Docker Compose Override for Insights On-Premise Dependencies
+# This file overrides the original docker-compose.yml to use quay.io/insights-onprem images
+#
+# Usage:
+# 1. Copy this file to your ros-ocp-backend/scripts/ directory
+# 2. Run: docker-compose up -d
+#
+# Docker Compose will automatically merge this with docker-compose.yml
+
+version: "3.8"
+services:
+
+  db-ros:
+    image: postgres:16
+
+  db-kruize:
+    image: postgres:16
+
+  db-sources:
+    image: postgres:16
+
+  nginx:
+    image: nginx:stable-alpine-perl
+
+  # Override Redis to use insights-onprem image
+  redis:
+    image: quay.io/insights-onprem/redis-ephemeral:6
+    environment:
+      - REDIS_MAXMEMORY=512mb
+      - REDIS_MAXMEMORY_POLICY=allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  minio:
+    image: minio/minio:RELEASE.2025-07-23T15-54-02Z
+    command: server --address 0.0.0.0:9000 --console-address 0.0.0.0:9990 /data
+    volumes:
+      - './minio-data:/data:z'
+    ports:
+      - 9000:9000
+      - 9990:9990
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  minio-createbucket:
+    image: minio/mc:RELEASE.2025-07-21T05-28-08Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo 'Waiting for MinIO to be ready...';
+        for i in {1..10}; do
+          if /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} >/dev/null 2>&1; then
+            echo 'MinIO is ready!';
+            break;
+          else
+            echo "MinIO not ready, waiting... (attempt $$i/10)";
+            sleep 3;
+          fi;
+        done;
+        /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} || exit 1;
+        /usr/bin/mc mb --ignore-existing myminio/insights-upload-perma;
+        /usr/bin/mc mb --ignore-existing myminio/koku-bucket;
+        /usr/bin/mc mb --ignore-existing myminio/ros-data;
+        /usr/bin/mc anonymous set public myminio/insights-upload-perma;
+        /usr/bin/mc anonymous set public myminio/koku-bucket;
+        /usr/bin/mc anonymous set public myminio/ros-data;
+        echo 'MinIO bucket setup completed successfully';
+
+  # Override Sources API Go to use insights-onprem image
+  sources-api-go:
+    image: quay.io/insights-onprem/sources-api-go:latest
+    environment:
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_HOST=db-sources
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sources_api_development
+      - LOG_LEVEL=DEBUG
+      - REDIS_CACHE_HOST=redis
+      - REDIS_CACHE_PORT=6379
+      - BYPASS_RBAC=true
+      - QUEUE_HOST=kafka
+      - QUEUE_PORT=29092
+      - ENCRYPTION_KEY=YWFhYWFhYWFhYWFhYWFhYQ
+      - SOURCES_ENV=prod
+    # All other configuration remains the same
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.10
+
+  # For Zookeeper mode, we need to use the 7.5.3 Kafka image
+  kafka:
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:29092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    image: confluentinc/cp-kafka:7.5.3
+
+  kafka-create-topics:
+    image: confluentinc/cp-kafka:7.5.3
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub kafka-ready -b kafka:29092 1 20 && \
+                       kafka-topics --create --if-not-exists --topic hccm.ros.events --bootstrap-server kafka:29092 && \
+                       kafka-topics --create --if-not-exists --topic platform.sources.event-stream --bootstrap-server kafka:29092 && \
+                       kafka-topics --create --if-not-exists --topic rosocp.kruize.recommendations --bootstrap-server kafka:29092'"
+    depends_on:
+      - kafka
+
+  # Override Insights Ingress to use insights-onprem image
+  ingress:
+    image: quay.io/insights-onprem/insights-ingress:latest
+    # All other configuration remains the same
+    depends_on:
+      - minio
+      - kafka
+    environment:
+      - INGRESS_VALID_UPLOAD_TYPES=hccm,rosocp
+
+  # Add health check for kruize-autotune service
+  kruize-autotune:
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/listPerformanceProfiles || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # Override Sources DB Setup to use insights-onprem image
+  # Disabled since database is already initialized
+  sources-db-setup:
+    image: quay.io/insights-onprem/sources-api-go:latest
+    restart: "no"
+    command: "echo 'Database already initialized, skipping setup'"
+    environment:
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_HOST=db-sources
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sources_api_development
+      - LOG_LEVEL=DEBUG
+      - REDIS_CACHE_HOST=redis
+      - REDIS_CACHE_PORT=6379
+      - BYPASS_RBAC=true
+      - QUEUE_HOST=kafka
+      - QUEUE_PORT=29092
+      - ENCRYPTION_KEY=YWFhYWFhYWFhYWFhYWFhYQ
+      - SOURCES_ENV=prod
+    # All other configuration remains the same
+
+  # ROS-OCP-Backend Services
+  # 1. Processor Service
+  rosocp-processor:
+    image: quay.io/insights-onprem/ros-ocp-backend:latest
+    command: ["sh", "-c", "echo 'Waiting for dependencies (Kafka, Kruize) to be ready...' && sleep 60 && echo 'Starting processor...' && ./rosocp db migrate up && ./rosocp start processor"]
+    restart: always
+    environment:
+      - CLOWDER_ENABLED=false
+      - DB_HOST=db-ros
+      - DB_PORT=5432
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_CONSUMER_GROUP_ID=rosocp-processor
+      - KAFKA_AUTO_COMMIT=true
+      - UPLOAD_TOPIC=hccm.ros.events
+      - KRUIZE_HOST=kruize-autotune
+      - KRUIZE_PORT=8080
+      - KRUIZE_WAIT_TIME=120
+      - SERVICE_NAME=rosocp-processor
+      - LOG_LEVEL=INFO
+      - SOURCES_API_BASE_URL=http://sources-api-go:8000
+    depends_on:
+      - db-ros
+      - kafka
+      - kruize-autotune
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/metrics"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+  # 2. Recommendation Poller Service
+  rosocp-recommendation-poller:
+    image: quay.io/insights-onprem/ros-ocp-backend:latest
+    command: ["sh", "-c", "echo 'Waiting for dependencies (Kafka, Kruize) to be ready...' && sleep 60 && echo 'Starting recommendation-poller...' && ./rosocp db migrate up && ./rosocp start recommendation-poller"]
+    restart: always
+    environment:
+      - CLOWDER_ENABLED=false
+      - KRUIZE_HOST=kruize-autotune
+      - KRUIZE_PORT=8080
+      - KRUIZE_WAIT_TIME=120
+      - SERVICE_NAME=rosocp-recommendation-poller
+      - LOG_LEVEL=INFO
+      - DB_HOST=db-ros
+      - DB_PORT=5432
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DATABASE_URL=postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_CONSUMER_GROUP_ID=rosocp-recommendation-poller
+      - KAFKA_AUTO_COMMIT=false
+      - RECOMMENDATION_TOPIC=rosocp.kruize.recommendations
+    depends_on:
+      - db-ros
+      - kafka
+      - kruize-autotune
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/metrics"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+  # 3. API Service
+  rosocp-api:
+    image: quay.io/insights-onprem/ros-ocp-backend:latest
+    command: ["sh", "-c", "./rosocp db migrate up && ./rosocp start api"]
+    restart: always
+    ports:
+      - "8001:8000"  # API port
+      - "9001:9000"  # Metrics port
+    environment:
+      - PATH_PREFIX=/api
+      - CLOWDER_ENABLED=false
+      - RBAC_ENABLE=false
+      - DB_POOL_SIZE=10
+      - DB_MAX_OVERFLOW=20
+      - SERVICE_NAME=rosocp-api
+      - LOG_LEVEL=INFO
+      - DB_HOST=db-ros
+      - DB_PORT=5432
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DATABASE_URL=postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      - db-ros
+      - kafka
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/status"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+  # 4. Housekeeper Service
+  rosocp-housekeeper:
+    image: quay.io/insights-onprem/ros-ocp-backend:latest
+    command: ["sh", "-c", "echo 'Waiting for dependencies (Kafka) to be ready...' && sleep 60 && echo 'Starting housekeeper...' && ./rosocp db migrate up && ./rosocp start housekeeper --sources"]
+    restart: always
+    environment:
+      - CLOWDER_ENABLED=false
+      - KRUIZE_HOST=kruize-autotune
+      - KRUIZE_PORT=8080
+      - SERVICE_NAME=rosocp-housekeeper-sources
+      - LOG_LEVEL=INFO
+      - DB_HOST=db-ros
+      - DB_PORT=5432
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DATABASE_URL=postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - SOURCES_API_BASE_URL=http://sources-api-go:8000
+    depends_on:
+      - db-ros
+      - kafka
+      - kruize-autotune
+      - sources-api-go
+
