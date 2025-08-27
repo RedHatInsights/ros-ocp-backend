@@ -448,6 +448,8 @@ main() {
     wait_for_service "Kruize" "curl -f http://localhost:8080/listPerformanceProfiles" 180
     wait_for_service "Sources API" "curl -f http://localhost:8002/api/sources/v1.0/source_types" 120
     wait_for_service "ROS-OCP API" "curl -f http://localhost:8001/status" 180
+    wait_for_service "ROS-OCP Processor" "podman logs rosocp-processor_1 2>/dev/null | grep -q 'Starting processor'" 180
+    wait_for_service "ROS-OCP Recommendation Poller" "podman logs rosocp-recommendation-poller_1 2>/dev/null | grep -q 'Starting recommendation-poller'" 180
 
     echo ""
     echo_success "All services are ready!"
