@@ -36,7 +36,7 @@ ros-ocp/
 - **Kafka + Zookeeper**: Message streaming with persistent storage
 - **MinIO**: Object storage with persistent volumes
 
-### Application Services  
+### Application Services
 - **Ingress**: File upload API
 - **ROS-OCP API**: Main REST API
 - **ROS-OCP Processor**: Data processing service
@@ -63,7 +63,7 @@ resources:
       memory: "2Gi"
       cpu: "1000m"
     limits:
-      memory: "4Gi" 
+      memory: "4Gi"
       cpu: "2000m"
 ```
 
@@ -78,7 +78,7 @@ Minimum recommended resources:
 After deployment with NodePort services:
 
 - **Ingress API**: http://localhost:30080
-- **ROS-OCP API**: http://localhost:30081  
+- **ROS-OCP API**: http://localhost:30081
 - **Kruize API**: http://localhost:30090
 - **MinIO Console**: http://localhost:30099
 

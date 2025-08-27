@@ -26,8 +26,10 @@ Comprehensive end-to-end testing for Kubernetes deployment.
 ./test-k8s-dataflow.sh logs kruize
 ```
 
-### `test-ros-ocp-dataflow.sh`
-Comprehensive end-to-end testing for Docker Compose deployment.
+### Docker Compose Testing
+For Docker Compose deployment testing, use the script located alongside the compose files:
+
+**Location:** `../../deployment/docker-compose/test-ros-ocp-dataflow.sh`
 
 **Features:**
 - Tests complete data flow using podman-compose
@@ -37,6 +39,9 @@ Comprehensive end-to-end testing for Docker Compose deployment.
 
 **Usage:**
 ```bash
+# Navigate to deployment directory
+cd ../../deployment/docker-compose/
+
 # Run complete test with service management
 ./test-ros-ocp-dataflow.sh
 
@@ -56,7 +61,7 @@ Both scripts test the complete ROS-OCP data processing pipeline:
 
 ```
 1. Upload → Ingress API receives tar.gz file
-2. Storage → File stored in MinIO bucket  
+2. Storage → File stored in MinIO bucket
 3. Event → Kafka event published to hccm.ros.events
 4. Processing → ROS-OCP processor downloads and processes data
 5. Integration → Data sent to Kruize for optimization analysis
@@ -70,12 +75,12 @@ Both scripts test the complete ROS-OCP data processing pipeline:
 - ✅ All pods ready and healthy
 - ✅ File uploaded via Ingress API (HTTP 202)
 - ✅ CSV file accessible from processor pod
-- ✅ Kafka message published successfully  
+- ✅ Kafka message published successfully
 - ✅ Workload data found in database
 - ✅ Kruize experiments created (verified via database)
 - ✅ All API endpoints accessible
 
-### Docker Compose (`test-ros-ocp-dataflow.sh`)
+### Docker Compose (`deployment/docker-compose/test-ros-ocp-dataflow.sh`)
 - ✅ All services started and healthy
 - ✅ File upload via Ingress API
 - ✅ File stored in MinIO bucket
@@ -113,7 +118,7 @@ Both scripts use test data from the `../samples/` directory:
 
 Successful test runs will show:
 - 🔵 **[INFO]** messages for test steps
-- 🟢 **[SUCCESS]** messages for completed verifications  
+- 🟢 **[SUCCESS]** messages for completed verifications
 - 🟡 **[WARNING]** messages for non-critical issues
 - 🔴 **[ERROR]** messages for failures
 
@@ -123,7 +128,7 @@ Example successful output:
 [INFO] ==================================
 [SUCCESS] All pods are ready
 [SUCCESS] Step 1: Upload completed successfully
-[SUCCESS] Steps 2-3: Koku simulation and Kafka event completed successfully  
+[SUCCESS] Steps 2-3: Koku simulation and Kafka event completed successfully
 [SUCCESS] Found 1 workload records in database
 [SUCCESS] Found 1 Kruize experiment(s) in database
 [SUCCESS] All health checks passed!
@@ -141,7 +146,7 @@ Example successful output:
 **Common issues:**
 - **Pod/container startup**: Check resource limits and pull policies
 - **Upload failures**: Verify Ingress service accessibility
-- **Processing errors**: Check Kruize and database connectivity  
+- **Processing errors**: Check Kruize and database connectivity
 - **Database issues**: Verify PostgreSQL pod readiness
 
 **Manual verification:**

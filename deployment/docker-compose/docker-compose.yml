@@ -1,11 +1,13 @@
 version: "3.8"
 services:
   zookeeper:
+    container_name: zookeeper_1
     image: confluentinc/cp-zookeeper
     environment:
       - ZOOKEEPER_CLIENT_PORT=32181
       - ZOOKEEPER_SERVER_ID=1
   kafka:
+    container_name: kafka_1
     image: confluentinc/cp-kafka
     restart: always
     ports:
@@ -20,6 +22,7 @@ services:
       - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
 
   kafka-create-topics:
+    container_name: kafka-create-topics_1
     image: confluentinc/cp-kafka
     command: "bash -c 'echo Waiting for Kafka to be ready... && \
                        cub kafka-ready -b kafka:29092 1 20 && \
@@ -30,6 +33,7 @@ services:
       - kafka
 
   db-ros:
+    container_name: db-ros_1
     image: postgres
     restart: always
     environment:
@@ -40,6 +44,7 @@ services:
       - "15432:5432"
 
   db-kruize:
+    container_name: db-kruize_1
     image: postgres
     restart: always
     environment:
@@ -48,6 +53,7 @@ services:
       POSTGRES_DB: postgres
 
   ingress:
+    container_name: ingress_1
     image: quay.io/cloudservices/insights-ingress:latest
     ports:
       - $INGRESS_PORT:3000
@@ -63,6 +69,7 @@ services:
     depends_on:
        - kafka
   kruize-autotune:
+    container_name: kruize-autotune_1
     image: quay.io/redhat-services-prod/kruize-autotune-tenant/autotune:d0b4337
     volumes:
       - ./cdappconfig.json:/tmp/cdappconfig.json:Z
@@ -96,6 +103,7 @@ services:
     depends_on:
         - db-kruize
   nginx:
+    container_name: nginx_1
     image: nginx
     volumes:
       - ./samples:/usr/share/nginx/html:Z
@@ -103,6 +111,7 @@ services:
       - 8888:80
 
   db-sources:
+    container_name: db-sources_1
     image: postgres
     restart: always
     environment:
@@ -113,11 +122,13 @@ services:
       - "15434:5432"
 
   redis:
+    container_name: redis_1
     image: quay.io/cloudservices/redis-ephemeral:6
     ports:
       - "6379:6379"
 
   sources-db-setup:
+    container_name: sources-db-setup_1
     image: quay.io/cloudservices/sources-api-go
     restart: on-failure
     command: -setup
@@ -137,6 +148,7 @@ services:
       - db-sources
 
   sources-api-go:
+    container_name: sources-api-go_1
     image: quay.io/cloudservices/sources-api-go
     command: ""
     restart: always

@@ -19,14 +19,23 @@ INGRESS_PORT=${INGRESS_PORT:-3000}
 MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioaccesskey}
 MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-miniosecretkey}
 
-# Export environment variables for docker-compose
-export INGRESS_PORT
-export MINIO_ACCESS_KEY
-export MINIO_SECRET_KEY
+# Set default values if not already set
+if [ -z "$MINIO_ACCESS_KEY" ]; then
+    MINIO_ACCESS_KEY="minioaccesskey"
+fi
+if [ -z "$MINIO_SECRET_KEY" ]; then
+    MINIO_SECRET_KEY="miniosecretkey"
+fi
 
 echo_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
+
+# Export environment variables for docker-compose
+export INGRESS_PORT
+export MINIO_ACCESS_KEY
+export MINIO_SECRET_KEY
+echo_info "Exported environment variables for docker-compose"
 
 echo_success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
@@ -108,12 +117,12 @@ upload_test_data() {
     # Create a temporary file with proper headers
     local temp_file=$(mktemp)
 
-    # Upload the file using curl
+    # Upload the file using curl with proper content type
     local response=$(curl -s -w "%{http_code}" \
-        -F "file=@${upload_file}" \
-        -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwiaW50ZXJuYWwiOnsib3JnX2lkIjoiMTIzNDUifX19" \
+        -F "upload=@${upload_file};type=application/vnd.redhat.hccm.tar+tgz" \
+        -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0=" \
         -H "x-rh-request-id: test-request-$(date +%s)" \
-        http://localhost:${INGRESS_PORT}/api/ingress/v1/upload)
+        http://localhost:${ACTUAL_INGRESS_PORT:-$INGRESS_PORT}/api/ingress/v1/upload)
 
     local http_code="${response: -3}"
     local response_body="${response%???}"
@@ -155,8 +164,13 @@ upload_test_data() {
     echo_info "Copying $source_csv to ros-data bucket as $csv_filename"
 
     # Copy CSV data to ros-data bucket (simulating koku service)
-    # Use the minio-createbucket container which already has the correct alias configured
-    podman exec scripts_minio-createbucket_1 /usr/bin/mc cp /dev/stdin myminio/ros-data/"$csv_filename" < "$source_csv"
+    # Use the main minio container and set up alias if needed
+    podman exec minio_1 /usr/bin/mc alias set myminio http://localhost:9000 minioaccesskey miniosecretkey >/dev/null 2>&1 || true
+    
+    # Copy the file to the container and then to MinIO
+    podman cp "$source_csv" minio_1:/tmp/"$csv_filename"
+    podman exec minio_1 /usr/bin/mc cp /tmp/"$csv_filename" myminio/ros-data/"$csv_filename"
+    podman exec minio_1 rm -f /tmp/"$csv_filename"
 
     if [ $? -ne 0 ]; then
         echo_error "Failed to copy CSV to ros-data bucket"
@@ -172,7 +186,7 @@ upload_test_data() {
     echo_info "Verifying file accessibility at: $file_url"
 
     # Test accessibility from within container network
-    local access_test=$(podman exec scripts_rosocp-processor_1 curl -s -I "$file_url" | head -1)
+    local access_test=$(podman exec rosocp-processor_1 curl -s -I "$file_url" | head -1)
     if [[ "$access_test" =~ "200 OK" ]]; then
         echo_success "File is accessible via HTTP"
     else
@@ -182,30 +196,14 @@ upload_test_data() {
 
     echo_info "=== STEP 4: Publish Kafka Event ==="
 
-    # Create Kafka message with container network URL
-    local kafka_message=$(cat <<EOF
-{
-  "request_id": "test-request-$(date +%s)",
-  "b64_identity": "eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0=",
-  "metadata": {
-    "account": "12345",
-    "org_id": "12345",
-    "source_id": "test-source-id",
-    "cluster_uuid": "1b77b73f-1d3e-43c6-9f55-bcd9fb6d1a0c",
-    "cluster_alias": "test-cluster"
-  },
-  "files": [
-    "$file_url"
-  ]
-}
-EOF
-)
+    # Create Kafka message with container network URL (compact JSON for single-line publishing)
+    local kafka_message="{\"request_id\":\"test-request-$(date +%s)\",\"b64_identity\":\"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0=\",\"metadata\":{\"account\":\"12345\",\"org_id\":\"12345\",\"source_id\":\"test-source-id\",\"cluster_uuid\":\"1b77b73f-1d3e-43c6-9f55-bcd9fb6d1a0c\",\"cluster_alias\":\"test-cluster\"},\"files\":[\"$file_url\"]}"
 
     echo_info "Publishing Kafka message to $expected_topic"
     echo_info "Message content: $kafka_message"
 
     # Publish message to Kafka
-    echo "$kafka_message" | podman exec -i scripts_kafka_1 kafka-console-producer \
+    echo "$kafka_message" | podman exec -i kafka_1 kafka-console-producer \
         --broker-list localhost:29092 \
         --topic "$expected_topic"
 
@@ -227,7 +225,7 @@ check_minio_bucket() {
     echo_info "Checking MinIO bucket contents..."
 
     # Use podman exec to check MinIO bucket
-    local bucket_contents=$(podman exec scripts_minio_1 /usr/bin/mc ls myminio/insights-upload-perma/ 2>/dev/null || echo "")
+    local bucket_contents=$(podman exec minio_1 /usr/bin/mc ls myminio/insights-upload-perma/ 2>/dev/null || echo "")
 
     if [ -n "$bucket_contents" ]; then
         echo_success "Files found in MinIO bucket:"
@@ -239,6 +237,53 @@ check_minio_bucket() {
     fi
 }
 
+# Function to check Kafka topics and messages with retry logic
+check_kafka_events_with_retry() {
+    local topic="$1"
+    local max_retries="${2:-3}"
+    local retry_delay="${3:-30}"
+    
+    echo_info "Checking Kafka topic: $topic (with retry)"
+    
+    # List topics first
+    local topics=$(podman exec kafka_1 kafka-topics --list --bootstrap-server localhost:29092 2>/dev/null || echo "")
+    
+    if ! echo "$topics" | grep -q "$topic"; then
+        echo_error "Topic $topic does not exist"
+        echo_info "Available topics: $topics"
+        return 1
+    fi
+    
+    echo_success "Topic $topic exists"
+    
+    # Try to consume messages with retries
+    for attempt in $(seq 1 $max_retries); do
+        echo_info "Attempt $attempt/$max_retries: Checking for messages in topic $topic..."
+        
+        local messages=$(podman exec kafka_1 kafka-console-consumer \
+            --bootstrap-server localhost:29092 \
+            --topic "$topic" \
+            --from-beginning \
+            --max-messages 5 \
+            --timeout-ms 10000 2>/dev/null || echo "")
+        
+        if [ -n "$messages" ]; then
+            echo_success "Found messages in topic $topic:"
+            echo "$messages" | head -5
+            return 0
+        else
+            if [ $attempt -lt $max_retries ]; then
+                echo_warning "No messages found in topic $topic yet (attempt $attempt/$max_retries)"
+                echo_info "Waiting ${retry_delay}s before retry..."
+                sleep $retry_delay
+            else
+                echo_warning "No messages found in topic $topic after $max_retries attempts"
+                return 1
+            fi
+        fi
+    done
+}
+
 # Function to check Kafka topics and messages
 check_kafka_events() {
     local topic="$1"
@@ -246,18 +291,19 @@ check_kafka_events() {
     echo_info "Checking Kafka topic: $topic"
 
     # List topics first
-    local topics=$(podman exec scripts_kafka_1 kafka-topics --list --bootstrap-server localhost:29092 2>/dev/null || echo "")
+    local topics=$(podman exec kafka_1 kafka-topics --list --bootstrap-server localhost:29092 2>/dev/null || echo "")
 
     if echo "$topics" | grep -q "$topic"; then
         echo_success "Topic $topic exists"
 
         # Try to consume recent messages
         echo_info "Checking for recent messages in topic $topic..."
-        local messages=$(timeout 10 podman exec scripts_kafka_1 kafka-console-consumer \
+        local messages=$(podman exec kafka_1 kafka-console-consumer \
             --bootstrap-server localhost:29092 \
             --topic "$topic" \
             --from-beginning \
-            --max-messages 5 2>/dev/null || echo "")
+            --max-messages 5 \
+            --timeout-ms 10000 2>/dev/null || echo "")
 
         if [ -n "$messages" ]; then
             echo_success "Found messages in topic $topic:"
@@ -274,27 +320,65 @@ check_kafka_events() {
     fi
 }
 
-# Function to check database for uploaded data
-check_database() {
-    echo_info "Checking database for processed data..."
-
-    # Check if data exists in ros database
-    local row_count=$(podman exec scripts_db-ros_1 psql -U postgres -d postgres -t -c \
+# Function to verify data processing (enhanced like k8s test)
+verify_processing() {
+    echo_info "=== VERIFICATION: Data Processing ==="
+    
+    echo_info "Checking processor logs for recent activity..."
+    local processor_logs=$(podman logs rosocp-processor_1 --tail=15 | grep -E "(Message received|Recommendation request sent|DB initialization complete)" | tail -5 || echo "")
+    
+    if [ -n "$processor_logs" ]; then
+        echo_success "Processor is active - recent processing logs:"
+        echo "$processor_logs"
+    else
+        echo_warning "No recent processor activity found"
+    fi
+    
+    echo_info "Checking database for workload records..."
+    local row_count=$(podman exec db-ros_1 psql -U postgres -d postgres -t -c \
         "SELECT COUNT(*) FROM workloads;" 2>/dev/null | tr -d ' ' || echo "0")
-
+    
+    # Ensure we have a valid number
+    if [ -z "$row_count" ] || ! [[ "$row_count" =~ ^[0-9]+$ ]]; then
+        row_count="0"
+    fi
+    
     if [ "$row_count" -gt 0 ]; then
         echo_success "Found $row_count workload records in database"
-
-        # Show sample data
+        
         echo_info "Sample workload data:"
-        podman exec scripts_db-ros_1 psql -U postgres -d postgres -c \
-            "SELECT cluster_uuid, workload_name, workload_type, namespace FROM workloads LIMIT 3;" 2>/dev/null || true
-
+        podman exec db-ros_1 psql -U postgres -d postgres -c \
+            "SELECT w.workload_name, w.workload_type, w.namespace, c.cluster_uuid FROM workloads w JOIN clusters c ON w.cluster_id = c.id LIMIT 3;" 2>/dev/null || true
+        
+        # Check for kruize experiments
+        echo_info "Checking Kruize experiments in database..."
+        local kruize_experiments=$(podman exec db-kruize_1 psql -U postgres -d postgres -t -c \
+            "SELECT COUNT(*) FROM kruize_experiments;" 2>/dev/null | tr -d ' ' || echo "0")
+        
+        # Ensure we have a valid number
+        if [ -z "$kruize_experiments" ] || ! [[ "$kruize_experiments" =~ ^[0-9]+$ ]]; then
+            kruize_experiments="0"
+        fi
+        
+        if [ "$kruize_experiments" -gt 0 ]; then
+            echo_success "Found $kruize_experiments Kruize experiments"
+            echo_info "Sample Kruize experiments:"
+            podman exec db-kruize_1 psql -U postgres -d postgres -c \
+                "SELECT experiment_name, status FROM kruize_experiments LIMIT 3;" 2>/dev/null || true
+        else
+            echo_warning "No Kruize experiments found yet"
+        fi
+        
         return 0
     else
-        echo_warning "No workload data found in database yet"
+        echo_warning "No workload data found in database"
         return 1
     fi
+}
+
+# Function to check database for uploaded data (wrapper for backward compatibility)
+check_database() {
+    verify_processing
 }
 
 # Function to show service logs
@@ -324,7 +408,7 @@ main() {
     cd "$SCRIPT_DIR"
 
     # Setup cleanup trap
-    trap cleanup EXIT
+   # trap cleanup EXIT
 
     echo_info "Configuration:"
     echo_info "  INGRESS_PORT: $INGRESS_PORT"
@@ -332,23 +416,35 @@ main() {
     echo_info "  MINIO_SECRET_KEY: $MINIO_SECRET_KEY"
     echo ""
 
-    # Start services
-    echo_info "Starting all services with podman-compose..."
-    podman-compose up -d
+    # Check if services are already running
+    if podman exec db-ros_1 pg_isready -U postgres >/dev/null 2>&1; then
+        echo_info "Services are already running, skipping startup..."
+    else
+        # Start services
+        echo_info "Starting all services with podman-compose..."
+        podman-compose up -d
+    fi
 
     echo ""
     echo_info "Waiting for services to start..."
 
+    # Get the actual ingress port from the running container
+    ACTUAL_INGRESS_PORT=$(podman port ingress_1 3000 2>/dev/null | cut -d: -f2)
+    if [ -z "$ACTUAL_INGRESS_PORT" ]; then
+        ACTUAL_INGRESS_PORT=$INGRESS_PORT
+    fi
+    echo_info "Using ingress port: $ACTUAL_INGRESS_PORT"
+
     # Wait for core infrastructure services
-    wait_for_service "PostgreSQL (ROS)" "podman exec scripts_db-ros_1 pg_isready -U postgres" 60
-    wait_for_service "PostgreSQL (Kruize)" "podman exec scripts_db-kruize_1 pg_isready -U postgres" 60
-    wait_for_service "PostgreSQL (Sources)" "podman exec scripts_db-sources_1 pg_isready -U postgres" 60
-    wait_for_service "Kafka" "podman exec scripts_kafka_1 kafka-broker-api-versions --bootstrap-server localhost:29092" 60
+    wait_for_service "PostgreSQL (ROS)" "podman exec db-ros_1 pg_isready -U postgres" 90
+    wait_for_service "PostgreSQL (Kruize)" "podman exec db-kruize_1 pg_isready -U postgres" 90
+    wait_for_service "PostgreSQL (Sources)" "podman exec db-sources_1 pg_isready -U postgres" 90
+    wait_for_service "Kafka" "podman exec kafka_1 kafka-broker-api-versions --bootstrap-server localhost:29092" 90
     wait_for_service "MinIO" "curl -f http://localhost:9000/minio/health/live" 60
-    wait_for_service "Redis" "podman exec scripts_redis_1 redis-cli ping" 60
+    wait_for_service "Redis" "podman exec redis_1 redis-cli ping" 60
 
     # Wait for application services
-    wait_for_service "Ingress" "curl -f http://localhost:${INGRESS_PORT}/api/ingress/v1/version" 120
+    wait_for_service "Ingress" "curl -f http://localhost:${ACTUAL_INGRESS_PORT}/api/ingress/v1/version" 120
     wait_for_service "Kruize" "curl -f http://localhost:8080/listPerformanceProfiles" 180
     wait_for_service "Sources API" "curl -f http://localhost:8002/api/sources/v1.0/source_types" 120
     wait_for_service "ROS-OCP API" "curl -f http://localhost:8001/status" 180
@@ -363,7 +459,7 @@ main() {
 
     # Test 1: Upload cost management data
     echo_info "=== TEST 1: Upload Cost Management Data ==="
-    local test_file="$SCRIPT_DIR/../docs/examples/cost-mgmt report/cost-mgmt.tar.gz"
+    local test_file="$SCRIPT_DIR/samples/cost-mgmt.tar.gz"
 
     if [ -f "$test_file" ]; then
         if upload_test_data "$test_file" "hccm.ros.events"; then
@@ -378,7 +474,13 @@ main() {
 
             # Check Kafka events
             check_kafka_events "hccm.ros.events"
-            check_kafka_events "rosocp.kruize.recommendations"
+            
+            # Wait for processing pipeline to complete before checking recommendations
+            echo_info "Waiting for recommendation processing pipeline (processor → kruize → recommendations)..."
+            sleep 90
+            
+            # Use retry logic for recommendations topic (3 attempts, 30s between retries)
+            check_kafka_events_with_retry "rosocp.kruize.recommendations" 3 30
 
             # Check database
             sleep 30  # Give more time for database processing
@@ -424,7 +526,7 @@ main() {
     echo_success "ROS-OCP Backend Data Flow Test completed!"
     echo_info "Services are still running. Use 'podman-compose down' to stop them."
     echo_info "Access points:"
-    echo_info "  - Ingress API: http://localhost:${INGRESS_PORT}/api/ingress/v1/version"
+    echo_info "  - Ingress API: http://localhost:${ACTUAL_INGRESS_PORT}/api/ingress/v1/version"
     echo_info "  - ROS-OCP API: http://localhost:8001/status"
     echo_info "  - Kruize API: http://localhost:8080/listPerformanceProfiles"
     echo_info "  - MinIO Console: http://localhost:9990 (user: ${MINIO_ACCESS_KEY})"

@@ -15,7 +15,6 @@ podman-compose up -d
 podman-compose ps
 
 # Run end-to-end testing
-cd ../../testing/scripts/
 ./test-ros-ocp-dataflow.sh
 ```
 
@@ -36,7 +35,7 @@ The compose setup includes:
 
 ### Application Services
 - **Ingress**: File upload API (port 3000)
-- **ROS-OCP API**: Main API service (port 8001) 
+- **ROS-OCP API**: Main API service (port 8001)
 - **ROS-OCP Processor**: Processes uploaded data
 - **ROS-OCP Recommendation Poller**: Polls Kruize for recommendations
 - **ROS-OCP Housekeeper**: Cleanup and maintenance
@@ -68,8 +67,9 @@ export MINIO_SECRET_KEY=miniosecretkey
 Use the comprehensive test script:
 
 ```bash
-# From this directory
-cd ../../testing/scripts/
+# From project's home directory
+cd deployment/docker-compose/
+
 ./test-ros-ocp-dataflow.sh
 
 # Or run specific test commands

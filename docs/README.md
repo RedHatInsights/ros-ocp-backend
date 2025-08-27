@@ -1,34 +1,49 @@
-# ROS-OCP Backend Testing Scripts
+# ROS-OCP Backend Documentation
 
-This directory contains scripts and configuration for testing the complete ROS-OCP backend data flow using podman-compose.
+This directory contains comprehensive documentation for the ROS-OCP backend project.
 
 ## Quick Start
 
+### Docker Compose Deployment
 ```bash
-# Navigate to the scripts directory
-cd ros-ocp-backend/scripts/
+# Navigate to the deployment directory
+cd ros-ocp-backend/deployment/docker-compose/
 
 # Set environment variables (optional, defaults will be used)
 export INGRESS_PORT=3000
 export MINIO_ACCESS_KEY=minioaccesskey
 export MINIO_SECRET_KEY=miniosecretkey
 
-# Run the complete data flow test
+# Start services and run complete data flow test
 ./test-ros-ocp-dataflow.sh
 ```
 
-## Files Overview
+### Kubernetes Deployment
+```bash
+# Navigate to the testing directory
+cd ros-ocp-backend/testing/scripts/
 
-- `docker-compose.yml` - Base compose file with all service definitions
-- `docker-compose.override.yml` - Override file with insights-onprem images and MinIO services
-- `test-ros-ocp-dataflow.sh` - Comprehensive test script for the entire data flow
-- `cdappconfig.json` - Kruize database configuration
-- `samples/` - Sample data files for testing
-- `minio-data/` - MinIO persistent storage directory
+# Run the complete data flow test (assumes deployment is running)
+./test-k8s-dataflow.sh
+```
 
-## Test Script Features
+## Documentation Files
 
-The `test-ros-ocp-dataflow.sh` script provides:
+- `README.md` - This documentation overview file
+- `ROS-OCP-DATAFLOW.md` - Detailed data flow architecture documentation
+
+## Project Structure
+
+For complete project organization details, see `../DIRECTORY-STRUCTURE.md`
+
+### Key Testing Locations
+- **Docker Compose Testing**: `../deployment/docker-compose/test-ros-ocp-dataflow.sh`
+- **Kubernetes Testing**: `../testing/scripts/test-k8s-dataflow.sh`
+- **Sample Data**: `../testing/samples/` and `../deployment/docker-compose/samples/`
+
+## Docker Compose Test Script Features
+
+The `../deployment/docker-compose/test-ros-ocp-dataflow.sh` script provides:
 
 ### 🚀 Service Management
 - Starts all services using podman-compose with proper dependencies
@@ -50,30 +65,40 @@ The `test-ros-ocp-dataflow.sh` script provides:
 
 ## Usage Examples
 
-### Run Complete Test
+### Docker Compose Usage Examples
+
 ```bash
+# Navigate to deployment directory
+cd ../deployment/docker-compose/
+
+# Run complete test
 ./test-ros-ocp-dataflow.sh
-```
 
-### Check Service Status
-```bash
+# Check service status
 ./test-ros-ocp-dataflow.sh status
-```
 
-### View Logs
-```bash
-# View all logs
+# View logs
 ./test-ros-ocp-dataflow.sh logs
-
-# View specific service logs
 ./test-ros-ocp-dataflow.sh logs rosocp-processor
-./test-ros-ocp-dataflow.sh logs ingress
-./test-ros-ocp-dataflow.sh logs kruize-autotune
+
+# Clean up
+./test-ros-ocp-dataflow.sh cleanup
 ```
 
-### Clean Up
+### Kubernetes Usage Examples
+
 ```bash
-./test-ros-ocp-dataflow.sh cleanup
+# Navigate to testing directory
+cd ../testing/scripts/
+
+# Run complete test
+./test-k8s-dataflow.sh
+
+# Run health checks only
+./test-k8s-dataflow.sh health
+
+# View service logs
+./test-k8s-dataflow.sh logs rosocp-processor
 ```
 
 ## Services Started
@@ -105,9 +130,9 @@ The script starts the following services:
 
 ## Test Data
 
-The script uses test data from:
-- `docs/examples/cost-mgmt report/cost-mgmt.tar.gz` - Primary test file
-- `samples/cost-mgmt.tar.gz` - Alternative test file
+The scripts use test data from:
+- `../deployment/docker-compose/samples/cost-mgmt.tar.gz` - Docker Compose test file
+- `../testing/samples/cost-mgmt.tar.gz` - Kubernetes test file
 
 ## Data Flow Verification
 
@@ -132,64 +157,75 @@ ROS Processor → Kruize API → Database Storage
 
 **Services not starting**:
 ```bash
-# Check service logs
+# For Docker Compose
+cd ../deployment/docker-compose/
 ./test-ros-ocp-dataflow.sh logs [service-name]
-
-# Check overall status
 podman-compose ps
+
+# For Kubernetes
+cd ../testing/scripts/
+./test-k8s-dataflow.sh logs [service-name]
+kubectl get pods -n ros-ocp
 ```
 
 **Upload failures**:
 - Ensure Ingress service is running: `curl http://localhost:3000/api/ingress/v1/version`
 - Check MinIO is accessible: `curl http://localhost:9000/minio/health/live`
-- Verify Kafka is ready: `podman exec scripts_kafka_1 kafka-topics --list --bootstrap-server localhost:29092`
+- Verify Kafka is ready: `podman exec kafka_1 kafka-topics --list --bootstrap-server localhost:29092` (Docker Compose)
 
 **No data in database**:
-- Check processor logs: `./test-ros-ocp-dataflow.sh logs rosocp-processor`
-- Verify Kruize is responding: `curl http://localhost:8080/listPerformanceProfiles`
-- Check database connection: `podman exec scripts_db-ros_1 pg_isready -U postgres`
+- Check processor logs: Use respective test script `logs rosocp-processor` command
+- Verify Kruize is responding: `curl http://localhost:8080/listPerformanceProfiles` (Docker Compose) or `curl http://localhost:30090/listPerformanceProfiles` (Kubernetes)
+- Check database connection: Use `podman exec db-ros_1 pg_isready -U postgres` (Docker Compose) or `kubectl exec -n ros-ocp <db-pod> -- pg_isready -U postgres` (Kubernetes)
 
 ### Manual Testing
 
-**Upload test file manually**:
+**Upload test file manually (Docker Compose)**:
 ```bash
-curl -F "file=@docs/examples/cost-mgmt report/cost-mgmt.tar.gz" \
-     -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwiaW50ZXJuYWwiOnsib3JnX2lkIjoiMTIzNDUifX19" \
+cd ../deployment/docker-compose/
+curl -F "upload=@samples/cost-mgmt.tar.gz;type=application/vnd.redhat.hccm.tar+tgz" \
+     -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0=" \
      http://localhost:3000/api/ingress/v1/upload
 ```
 
-**Check MinIO bucket**:
+**Check MinIO bucket (Docker Compose)**:
 ```bash
-podman exec scripts_minio_1 /usr/bin/mc ls myminio/insights-upload-perma/
+podman exec minio_1 /usr/bin/mc ls myminio/insights-upload-perma/
 ```
 
-**Monitor Kafka topics**:
+**Monitor Kafka topics (Docker Compose)**:
 ```bash
-podman exec scripts_kafka_1 kafka-console-consumer \
+podman exec kafka_1 kafka-console-consumer \
     --bootstrap-server localhost:29092 \
     --topic hccm.ros.events \
     --from-beginning
 ```
 
-**Query database**:
+**Query database (Docker Compose)**:
 ```bash
-podman exec scripts_db-ros_1 psql -U postgres -d postgres -c "SELECT COUNT(*) FROM workloads;"
+podman exec db-ros_1 psql -U postgres -d postgres -c "SELECT COUNT(*) FROM workloads;"
 ```
 
 ## Access Points
 
-After running the script, these endpoints are available:
-
+### Docker Compose Endpoints
 - **Ingress API**: http://localhost:3000/api/ingress/v1/version
 - **ROS-OCP API**: http://localhost:8001/status
 - **Kruize API**: http://localhost:8080/listPerformanceProfiles
 - **MinIO Console**: http://localhost:9990 (admin UI)
 - **Sources API**: http://localhost:8002/api/sources/v1.0/source_types
 
+### Kubernetes Endpoints (default ports)
+- **Ingress API**: http://localhost:30080/api/ingress/v1/version
+- **ROS-OCP API**: http://localhost:30081/status
+- **Kruize API**: http://localhost:30090/listPerformanceProfiles
+- **MinIO Console**: http://localhost:30099 (admin UI)
+
 ## Notes
 
-- The script uses podman-compose as specified in the project's CLAUDE.md guidelines
+- Both deployment methods use podman-compose/kubectl as specified in the project's CLAUDE.md guidelines
 - All services are configured to use insights-onprem images where available
 - MinIO bucket is automatically created and configured for public access
-- The script includes comprehensive error handling and colored output for better readability
-- Services remain running after the test completes for further manual testing
+- Scripts include comprehensive error handling and colored output for better readability
+- Services remain running after tests complete for further manual testing
+- For detailed deployment instructions, see the respective README files in `../deployment/` directories

@@ -31,6 +31,7 @@ All deployment-related artifacts organized by deployment method:
 - **`docker-compose/`** - Complete Docker Compose setup for local development
   - `docker-compose.yml` - Base service definitions
   - `docker-compose.override.yml` - Local development overrides
+  - `test-ros-ocp-dataflow.sh` - End-to-end Docker Compose testing
 
 - **`kubernetes/`** - Kubernetes deployment using Helm
   - `helm/ros-ocp/` - Helm chart (renamed from ros-ocp-helm)
@@ -42,7 +43,6 @@ All testing and validation tools:
 
 - **`scripts/`** - Test execution scripts
   - `test-k8s-dataflow.sh` - End-to-end Kubernetes testing
-  - `test-ros-ocp-dataflow.sh` - End-to-end Docker Compose testing
 
 - **`samples/`** - Sample data for testing
   - `cost-mgmt.tar.gz` - Test archive file
@@ -80,7 +80,6 @@ cd deployment/docker-compose/
 podman-compose up -d
 
 # Test the deployment
-cd ../../testing/scripts/
 ./test-ros-ocp-dataflow.sh
 ```
 

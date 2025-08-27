@@ -217,7 +217,7 @@ resources:
     limits:
       memory: "1Gi"
       cpu: "500m"
-  
+
   database:
     requests:
       memory: "128Mi"
@@ -225,7 +225,7 @@ resources:
     limits:
       memory: "256Mi"
       cpu: "250m"
-  
+
   application:
     requests:
       memory: "128Mi"
