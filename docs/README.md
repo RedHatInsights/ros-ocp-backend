@@ -20,8 +20,8 @@ export MINIO_SECRET_KEY=miniosecretkey
 
 ### Kubernetes Deployment
 ```bash
-# Navigate to the testing directory
-cd ros-ocp-backend/testing/scripts/
+# Navigate to the kubernetes scripts directory
+cd ros-ocp-backend/deployment/kubernetes/scripts/
 
 # Run the complete data flow test (assumes deployment is running)
 ./test-k8s-dataflow.sh
@@ -38,7 +38,7 @@ For complete project organization details, see `../DIRECTORY-STRUCTURE.md`
 
 ### Key Testing Locations
 - **Docker Compose Testing**: `../deployment/docker-compose/test-ros-ocp-dataflow.sh`
-- **Kubernetes Testing**: `../testing/scripts/test-k8s-dataflow.sh`
+- **Kubernetes Testing**: `../deployment/kubernetes/scripts/test-k8s-dataflow.sh`
 - **Sample Data**: `../testing/samples/` and `../deployment/docker-compose/samples/`
 
 ## Docker Compose Test Script Features
@@ -88,8 +88,8 @@ cd ../deployment/docker-compose/
 ### Kubernetes Usage Examples
 
 ```bash
-# Navigate to testing directory
-cd ../testing/scripts/
+# Navigate to kubernetes scripts directory
+cd ../deployment/kubernetes/scripts/
 
 # Run complete test
 ./test-k8s-dataflow.sh
@@ -163,7 +163,7 @@ cd ../deployment/docker-compose/
 podman-compose ps
 
 # For Kubernetes
-cd ../testing/scripts/
+cd ../deployment/kubernetes/scripts/
 ./test-k8s-dataflow.sh logs [service-name]
 kubectl get pods -n ros-ocp
 ```

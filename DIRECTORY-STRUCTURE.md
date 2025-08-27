@@ -9,10 +9,6 @@ ros-ocp-backend/
 ├── deployment/          # All deployment-related artifacts
 │   ├── docker-compose/  # Docker Compose setup
 │   └── kubernetes/      # Kubernetes/Helm deployment
-├── testing/             # Testing and validation tools
-│   ├── scripts/         # Test execution scripts
-│   ├── samples/         # Sample data for testing
-│   └── postman/         # API testing collections
 ├── docs/                # Documentation
 └── scripts/             # Original location (preserved for backward compatibility)
     ├── .env             # Environment variables (original)
@@ -36,24 +32,8 @@ All deployment-related artifacts organized by deployment method:
 - **`kubernetes/`** - Kubernetes deployment using Helm
   - `helm/ros-ocp/` - Helm chart (renamed from ros-ocp-helm)
   - `scripts/deploy-kind.sh` - KIND cluster deployment script
+  - `scripts/test-k8s-dataflow.sh` - End-to-end Kubernetes testing
   - `docs/KUBERNETES-QUICKSTART.md` - Complete Kubernetes guide
-
-### 🧪 `testing/`
-All testing and validation tools:
-
-- **`scripts/`** - Test execution scripts
-  - `test-k8s-dataflow.sh` - End-to-end Kubernetes testing
-
-- **`samples/`** - Sample data for testing
-  - `cost-mgmt.tar.gz` - Test archive file
-  - `ros-ocp-usage*.csv` - Sample CSV files
-
-- **`postman/`** - API testing collections
-  - `ros_ocp_backend.postman_collection.json` - API test collection
-
-### 🔧 `tools/`
-Utility scripts and helper tools:
-- `get_kruize_image_tag.py` - Kruize container tag helper
 
 ### 📚 `docs/`
 Centralized documentation:
@@ -69,7 +49,7 @@ cd deployment/kubernetes/scripts/
 ./deploy-kind.sh
 
 # Test the deployment
-cd ../../../testing/scripts/
+cd deployment/kubernetes/scripts/
 ./test-k8s-dataflow.sh
 ```
 

@@ -17,8 +17,8 @@ Compressed archive containing sample cost management data in the format expected
 # Used automatically by Docker Compose test script
 ./test-ros-ocp-dataflow.sh
 
-# Used by Kubernetes test script (from testing/scripts directory)
-../../../testing/scripts/test-k8s-dataflow.sh
+# Used by Kubernetes test script (from kubernetes scripts directory)
+../../kubernetes/scripts/test-k8s-dataflow.sh
 
 # Manual upload testing (Docker Compose)
 curl -F "upload=@cost-mgmt.tar.gz;type=application/vnd.redhat.hccm.tar+tgz" \

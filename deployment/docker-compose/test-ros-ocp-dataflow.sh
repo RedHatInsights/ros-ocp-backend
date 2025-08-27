@@ -477,7 +477,7 @@ main() {
             
             # Wait for processing pipeline to complete before checking recommendations
             echo_info "Waiting for recommendation processing pipeline (processor → kruize → recommendations)..."
-            sleep 90
+            sleep 30
             
             # Use retry logic for recommendations topic (3 attempts, 30s between retries)
             check_kafka_events_with_retry "rosocp.kruize.recommendations" 3 30

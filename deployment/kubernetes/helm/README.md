@@ -109,7 +109,7 @@ helm upgrade ros-ocp ./ros-ocp -n ros-ocp
 After deployment, run end-to-end testing:
 
 ```bash
-cd ../../../testing/scripts/
+cd ../scripts/
 ./test-k8s-dataflow.sh
 ```
 
