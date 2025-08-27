@@ -1,0 +1,160 @@
+version: "3.8"
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=32181
+      - ZOOKEEPER_SERVER_ID=1
+  kafka:
+    image: confluentinc/cp-kafka
+    restart: always
+    ports:
+      - 29092:29092
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:29092
+      - KAFKA_BROKER_ID=1
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:32181
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+
+  kafka-create-topics:
+    image: confluentinc/cp-kafka
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub kafka-ready -b kafka:29092 1 20 && \
+                       kafka-topics --create --if-not-exists --topic hccm.ros.events --bootstrap-server kafka:29092 && \
+                       kafka-topics --create --if-not-exists --topic platform.sources.event-stream --bootstrap-server kafka:29092 && \
+                       kafka-topics --create --if-not-exists --topic rosocp.kruize.recommendations --bootstrap-server kafka:29092'"
+    depends_on:
+      - kafka
+
+  db-ros:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "15432:5432"
+
+  db-kruize:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+
+  ingress:
+    image: quay.io/cloudservices/insights-ingress:latest
+    ports:
+      - $INGRESS_PORT:3000
+    environment:
+      - INGRESS_VALIDTOPICS=hccm,rosocp
+      - INGRESS_STAGEBUCKET=insights-upload-perma
+      - OPENSHIFT_BUILD_COMMIT=somestring
+      - INGRESS_MAXSIZE=104857600
+      - INGRESS_MINIODEV=true
+      - INGRESS_MINIOACCESSKEY=$MINIO_ACCESS_KEY
+      - INGRESS_MINIOSECRETKEY=$MINIO_SECRET_KEY
+      - INGRESS_MINIOENDPOINT=minio:9000
+    depends_on:
+       - kafka
+  kruize-autotune:
+    image: quay.io/redhat-services-prod/kruize-autotune-tenant/autotune:d0b4337
+    volumes:
+      - ./cdappconfig.json:/tmp/cdappconfig.json:Z
+    ports:
+      - 8080:8080
+    environment:
+      - LOGGING_LEVEL=debug
+      - ROOT_LOGGING_LEVEL=error
+      - DB_CONFIG_FILE=/tmp/cdappconfig.json
+      - dbdriver=jdbc:postgresql://
+      - database_name=postgres
+      - clustertype=kubernetes
+      - k8stype=openshift
+      - authtype=""
+      - monitoringagent=prometheus
+      - monitoringservice=prometheus-k8s
+      - monitoringendpoint=prometheus-k8s
+      - savetodb=true
+      - local=false
+      - LOG_ALL_HTTP_REQ_AND_RESPONSE=true
+      - hibernate_dialect=org.hibernate.dialect.PostgreSQLDialect
+      - hibernate_driver=org.postgresql.Driver
+      - hibernate_c3p0minsize=2
+      - hibernate_c3p0maxsize=5
+      - hibernate_c3p0timeout=300
+      - hibernate_c3p0maxstatements=100
+      - hibernate_hbm2ddlauto=none
+      - hibernate_showsql=false
+      - hibernate_timezone=UTC
+      - plots=true
+    depends_on:
+        - db-kruize
+  nginx:
+    image: nginx
+    volumes:
+      - ./samples:/usr/share/nginx/html:Z
+    ports:
+      - 8888:80
+
+  db-sources:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: sources_api_development
+    ports:
+      - "15434:5432"
+
+  redis:
+    image: quay.io/cloudservices/redis-ephemeral:6
+    ports:
+      - "6379:6379"
+
+  sources-db-setup:
+    image: quay.io/cloudservices/sources-api-go
+    restart: on-failure
+    command: -setup
+    environment:
+     - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_HOST=db-sources
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sources_api_development
+      - LOG_LEVEL=DEBUG
+      - REDIS_CACHE_HOST=redis
+      - REDIS_CACHE_PORT=6379
+      - BYPASS_RBAC=true
+      - QUEUE_HOST=kafka
+      - QUEUE_PORT=29092
+    depends_on:
+      - db-sources
+
+  sources-api-go:
+    image: quay.io/cloudservices/sources-api-go
+    command: ""
+    restart: always
+    ports:
+      - 8002:8000
+    environment:
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_HOST=db-sources
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sources_api_development
+      - LOG_LEVEL=DEBUG
+      - REDIS_CACHE_HOST=redis
+      - REDIS_CACHE_PORT=6379
+      - BYPASS_RBAC=true
+      - QUEUE_HOST=kafka
+      - QUEUE_PORT=29092
+    depends_on:
+      - db-sources
+      - kafka
+      - redis
