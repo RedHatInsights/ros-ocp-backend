@@ -36,6 +36,7 @@ services:
       start_period: 5s
 
   minio:
+    container_name: minio_1
     image: minio/minio:RELEASE.2025-07-23T15-54-02Z
     command: server --address 0.0.0.0:9000 --console-address 0.0.0.0:9990 /data
     volumes:
@@ -54,6 +55,7 @@ services:
       start_period: 10s
 
   minio-createbucket:
+    container_name: minio-createbucket_1
     image: minio/mc:RELEASE.2025-07-21T05-28-08Z
     depends_on:
       minio:
@@ -171,6 +173,7 @@ services:
   # ROS-OCP-Backend Services
   # 1. Processor Service
   rosocp-processor:
+    container_name: rosocp-processor_1
     image: quay.io/insights-onprem/ros-ocp-backend:latest
     command: ["sh", "-c", "echo 'Waiting for dependencies (Kafka, Kruize) to be ready...' && sleep 60 && echo 'Starting processor...' && ./rosocp db migrate up && ./rosocp start processor"]
     restart: always
@@ -204,6 +207,7 @@ services:
 
   # 2. Recommendation Poller Service
   rosocp-recommendation-poller:
+    container_name: rosocp-recommendation-poller_1
     image: quay.io/insights-onprem/ros-ocp-backend:latest
     command: ["sh", "-c", "echo 'Waiting for dependencies (Kafka, Kruize) to be ready...' && sleep 60 && echo 'Starting recommendation-poller...' && ./rosocp db migrate up && ./rosocp start recommendation-poller"]
     restart: always
@@ -237,6 +241,7 @@ services:
 
   # 3. API Service
   rosocp-api:
+    container_name: rosocp-api_1
     image: quay.io/insights-onprem/ros-ocp-backend:latest
     command: ["sh", "-c", "./rosocp db migrate up && ./rosocp start api"]
     restart: always
@@ -270,6 +275,7 @@ services:
 
   # 4. Housekeeper Service
   rosocp-housekeeper:
+    container_name: rosocp-housekeeper_1
     image: quay.io/insights-onprem/ros-ocp-backend:latest
     command: ["sh", "-c", "echo 'Waiting for dependencies (Kafka) to be ready...' && sleep 60 && echo 'Starting housekeeper...' && ./rosocp db migrate up && ./rosocp start housekeeper --sources"]
     restart: always

@@ -118,7 +118,7 @@ report_period_start,report_period_end,interval_start,interval_end,container_name
 podman-compose logs rosocp-processor
 
 # Verify database records
-podman exec scripts_db-ros_1 psql -U postgres -c "SELECT COUNT(*) FROM workloads;"
+podman exec db-ros_1 psql -U postgres -c "SELECT COUNT(*) FROM workloads;"
 ```
 
 ### 4. Kruize Autotune
@@ -184,7 +184,7 @@ curl http://localhost:8001/api/ros/v1/recommendations
 curl -f http://localhost:9000/minio/health/live
 
 # List bucket contents (using mc client)
-podman exec scripts_minio_1 /usr/bin/mc ls myminio/ros-data/
+podman exec minio_1 /usr/bin/mc ls myminio/ros-data/
 
 # Access via web console
 open http://localhost:9990
@@ -201,16 +201,16 @@ open http://localhost:9990
 **Testing**:
 ```bash
 # List topics
-podman exec scripts_kafka_1 kafka-topics --list --bootstrap-server localhost:29092
+podman exec kafka_1 kafka-topics --list --bootstrap-server localhost:29092
 
 # Consume messages
-podman exec scripts_kafka_1 kafka-console-consumer \
+podman exec kafka_1 kafka-console-consumer \
   --bootstrap-server localhost:29092 \
   --topic hccm.ros.events \
   --from-beginning
 
 # Produce test message
-echo '{"test": "message"}' | podman exec -i scripts_kafka_1 kafka-console-producer \
+echo '{"test": "message"}' | podman exec -i kafka_1 kafka-console-producer \
   --broker-list localhost:29092 \
   --topic hccm.ros.events
 ```
@@ -265,7 +265,7 @@ Services communicate using container network hostnames:
 ### Automated Testing
 Use the comprehensive test script:
 ```bash
-cd /path/to/ros-ocp-backend/scripts
+cd deployment/docker-compose/
 ./test-ros-ocp-dataflow.sh
 ```
 
@@ -301,13 +301,13 @@ curl -X POST \
 # Copy correct CSV format to ros-data bucket
 FILE_UUID=$(uuidgen | tr '[:upper:]' '[:lower:]')
 CSV_FILENAME="${FILE_UUID}_openshift_usage_report.0.csv"
-podman exec scripts_minio-createbucket_1 /usr/bin/mc cp /dev/stdin myminio/ros-data/$CSV_FILENAME < samples/ros-ocp-usage.csv
+podman exec minio_1 /usr/bin/mc cp /dev/stdin myminio/ros-data/$CSV_FILENAME < samples/ros-ocp-usage.csv
 ```
 
 4. **Publish Processing Event**:
 ```bash
 # Create and send Kafka message
-cat << EOF | podman exec -i scripts_kafka_1 kafka-console-producer --broker-list localhost:29092 --topic hccm.ros.events
+cat << EOF | podman exec -i kafka_1 kafka-console-producer --broker-list localhost:29092 --topic hccm.ros.events
 {
   "request_id": "test-request-123",
   "b64_identity": "eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0=",
@@ -331,7 +331,7 @@ EOF
 podman-compose logs rosocp-processor
 
 # Check database records
-podman exec scripts_db-ros_1 psql -U postgres -c "SELECT COUNT(*) FROM workloads;"
+podman exec db-ros_1 psql -U postgres -c "SELECT COUNT(*) FROM workloads;"
 
 # Check Kruize experiments
 curl http://localhost:8080/listExperiments
@@ -356,13 +356,13 @@ podman-compose ps
 podman-compose logs [service-name]
 
 # Test container network connectivity
-podman exec scripts_rosocp-processor_1 curl -I http://minio:9000/ros-data/file.csv
+podman exec rosocp-processor_1 curl -I http://minio:9000/ros-data/file.csv
 
 # Check MinIO bucket contents
-podman exec scripts_minio_1 /usr/bin/mc ls myminio/ros-data/
+podman exec minio_1 /usr/bin/mc ls myminio/ros-data/
 
 # Monitor Kafka topics
-podman exec scripts_kafka_1 kafka-console-consumer \
+podman exec kafka_1 kafka-console-consumer \
   --bootstrap-server localhost:29092 \
   --topic hccm.ros.events \
   --from-beginning
@@ -371,7 +371,7 @@ podman exec scripts_kafka_1 kafka-console-consumer \
 ## Configuration Files
 
 - **docker-compose.override.yml**: Service configuration and dependencies
-- **test-ros-ocp-dataflow.sh**: Comprehensive testing script
+- **deployment/docker-compose/test-ros-ocp-dataflow.sh**: Comprehensive testing script
 - **samples/ros-ocp-usage.csv**: Correct CSV format for testing
 - **samples/cost-mgmt.tar.gz**: Sample upload data
 

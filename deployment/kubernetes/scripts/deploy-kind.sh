@@ -219,13 +219,13 @@ deploy_helm_chart() {
     cd "$SCRIPT_DIR"
     
     # Check if Helm chart directory exists
-    if [ ! -d "ros-ocp-helm" ]; then
-        echo_error "Helm chart directory not found: ros-ocp-helm"
+    if [ ! -d "../helm/ros-ocp" ]; then
+        echo_error "Helm chart directory not found: ../helm/ros-ocp"
         return 1
     fi
     
     # Install or upgrade the Helm release
-    helm upgrade --install "$HELM_RELEASE_NAME" ./ros-ocp-helm \
+    helm upgrade --install "$HELM_RELEASE_NAME" ../helm/ros-ocp \
         --namespace "$NAMESPACE" \
         --create-namespace \
         --set global.storageClass="$STORAGE_CLASS" \
