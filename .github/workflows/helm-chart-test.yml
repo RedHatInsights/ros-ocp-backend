@@ -1,0 +1,84 @@
+name: Helm Chart Quality Test
+
+on:
+  pull_request:
+    paths:
+      - 'deployment/kubernetes/helm/**'
+      - 'deployment/kubernetes/scripts/**'
+
+jobs:
+  helm-chart-test:
+    name: Test Helm Chart Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install KIND
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Set up environment
+        run: |
+          echo "KIND_CLUSTER_NAME=ros-ocp-test-cluster" >> $GITHUB_ENV
+          echo "HELM_RELEASE_NAME=ros-ocp-test" >> $GITHUB_ENV
+          echo "NAMESPACE=ros-ocp-test" >> $GITHUB_ENV
+
+      - name: Deploy KIND cluster and Helm chart
+        run: |
+          cd deployment/kubernetes/scripts
+          export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
+          export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
+          export NAMESPACE=${{ env.NAMESPACE }}
+          chmod +x deploy-kind.sh
+          ./deploy-kind.sh
+
+      - name: Wait for services to stabilize
+        run: |
+          echo "Waiting for services to stabilize..."
+          sleep 60
+
+      - name: Run dataflow test
+        run: |
+          cd deployment/kubernetes/scripts
+          export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
+          export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
+          export NAMESPACE=${{ env.NAMESPACE }}
+          chmod +x test-k8s-dataflow.sh
+          ./test-k8s-dataflow.sh
+
+      - name: Show cluster status on failure
+        if: failure()
+        run: |
+          echo "=== Cluster Status ==="
+          kubectl cluster-info || true
+          echo "=== Pods Status ==="
+          kubectl get pods -n ${{ env.NAMESPACE }} -o wide || true
+          echo "=== Services Status ==="
+          kubectl get services -n ${{ env.NAMESPACE }} || true
+          echo "=== Events ==="
+          kubectl get events -n ${{ env.NAMESPACE }} --sort-by='.lastTimestamp' || true
+          echo "=== Recent Logs ==="
+          for pod in $(kubectl get pods -n ${{ env.NAMESPACE }} -o name | head -5); do
+            echo "--- Logs for $pod ---"
+            kubectl logs -n ${{ env.NAMESPACE }} $pod --tail=20 || true
+          done
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kind delete cluster --name ${{ env.KIND_CLUSTER_NAME }} || true
