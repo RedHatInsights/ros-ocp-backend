@@ -11,13 +11,13 @@ version: "3.8"
 services:
 
   db-ros:
-    image: postgres:16
+    image: quay.io/insights-onprem/postgres:16
 
   db-kruize:
-    image: postgres:16
+    image: quay.io/insights-onprem/postgres:16
 
   db-sources:
-    image: postgres:16
+    image: quay.io/insights-onprem/postgres:16
 
   nginx:
     image: nginx:stable-alpine-perl
