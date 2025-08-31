@@ -21,7 +21,7 @@ services:
     image: quay.io/insights-onprem/postgresql:16
 
   nginx:
-    image: quay.io/sclorg/nginx-124-c9s:c9s
+    image: quay.io/insights-onprem/nginx:1.28.0-alpine
 
   # Override Redis to use insights-onprem image
   redis:
