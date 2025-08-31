@@ -5,6 +5,7 @@ on:
     paths:
       - 'deployment/kubernetes/helm/**'
       - 'deployment/kubernetes/scripts/**'
+      - '.github/workflows/helm-chart-test.yml'
 
 jobs:
   helm-chart-test:
