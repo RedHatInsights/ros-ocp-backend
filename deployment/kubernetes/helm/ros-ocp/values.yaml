@@ -17,7 +17,7 @@ database:
   ros:
     enabled: true
     image:
-      repository: postgres
+      repository: quay.io/insights-onprem/postgresql
       tag: "16"
     storage:
       size: 10Gi
@@ -30,7 +30,7 @@ database:
   kruize:
     enabled: true
     image:
-      repository: postgres
+      repository: quay.io/insights-onprem/postgresql
       tag: "16"
     storage:
       size: 10Gi
@@ -43,7 +43,7 @@ database:
   sources:
     enabled: true
     image:
-      repository: postgres
+      repository: quay.io/insights-onprem/postgresql
       tag: "16"
     storage:
       size: 10Gi
@@ -94,7 +94,7 @@ redis:
 minio:
   enabled: true
   image:
-    repository: minio/minio
+    repository: quay.io/minio/minio
     tag: "RELEASE.2025-07-23T15-54-02Z"
   storage:
     size: 20Gi
@@ -113,8 +113,8 @@ minio:
 nginx:
   enabled: true
   image:
-    repository: nginx
-    tag: "stable-alpine-perl"
+    repository: quay.io/insights-onprem/nginx
+    tag: "1.28.0-alpine"
   port: 80
 
 # Ingress Service
