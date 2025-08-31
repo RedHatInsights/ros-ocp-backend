@@ -9,6 +9,9 @@ global:
   # Pull secrets for private registries
   imagePullSecrets: []
 
+serviceAccount:
+  name: ros-ocp-backend
+
 # Database configurations
 database:
   ros:
@@ -62,7 +65,6 @@ kafka:
       ZOOKEEPER_SERVER_ID: 1
     storage:
       size: 5Gi
-  
   broker:
     image:
       repository: confluentinc/cp-kafka
@@ -312,7 +314,7 @@ resources:
     limits:
       memory: "512Mi"
       cpu: "500m"
-  
+
   # Kafka minimum: ~512Mi memory, Zookeeper needs ~256Mi
   kafka:
     requests:
@@ -321,7 +323,7 @@ resources:
     limits:
       memory: "1Gi"
       cpu: "500m"
-  
+
   zookeeper:
     requests:
       memory: "256Mi"
@@ -329,7 +331,7 @@ resources:
     limits:
       memory: "512Mi"
       cpu: "250m"
-  
+
   # Regular application services
   application:
     requests:
@@ -338,7 +340,7 @@ resources:
     limits:
       memory: "512Mi"
       cpu: "300m"
-  
+
   # Kruize is memory-intensive (Java/ML workload)
   kruize:
     requests:

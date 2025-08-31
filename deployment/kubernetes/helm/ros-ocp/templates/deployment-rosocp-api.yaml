@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "ros-ocp.fullname" . }}-rosocp-api
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "ros-ocp.labels" . | nindent 4 }}
     app.kubernetes.io/component: api
@@ -20,6 +21,7 @@ spec:
         app.kubernetes.io/component: api
         app.kubernetes.io/name: rosocp-api
     spec:
+      serviceAccountName: {{ include "ros-ocp.serviceAccountName" . }}
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
