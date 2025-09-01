@@ -287,6 +287,30 @@ rosocp:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SOURCES_API_BASE_URL: http://sources-api-go:8000
 
+  partitionCleaner:
+    enabled: true
+    schedule: "0 0 */15 * *"  # Runs at 12:00 AM, every 15 days
+    image:
+      repository: quay.io/insights-onprem/ros-ocp-backend
+      tag: "latest"
+    env:
+      CLOWDER_ENABLED: false
+      SERVICE_NAME: rosocp-housekeeper-partition
+      LOG_LEVEL: INFO
+      DB_HOST: db-ros
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DATABASE_URL: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "300m"
+
 # Service configuration
 service:
   type: ClusterIP
