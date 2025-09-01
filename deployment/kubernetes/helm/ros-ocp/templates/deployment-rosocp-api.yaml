@@ -67,7 +67,7 @@ spec:
             - name: PATH_PREFIX
               value: {{ .Values.rosocp.api.env.PATH_PREFIX | quote }}
             - name: CLOWDER_ENABLED
-              value: {{ .Values.rosocp.api.env.CLOWDER_ENABLED | quote }}
+              value: "false"
             - name: RBAC_ENABLE
               value: {{ .Values.rosocp.api.env.RBAC_ENABLE | quote }}
             - name: DB_POOL_SIZE
@@ -79,20 +79,20 @@ spec:
             - name: LOG_LEVEL
               value: {{ .Values.rosocp.api.env.LOG_LEVEL | quote }}
             - name: DB_HOST
-              value: {{ include "ros-ocp.fullname" . }}-db-ros
+              value: {{ include "ros-ocp.databaseHost" . }}
             - name: DB_PORT
-              value: {{ .Values.rosocp.api.env.DB_PORT | quote }}
+              value: {{ .Values.rosocp.database.port | quote }}
             - name: DB_NAME
-              value: {{ .Values.rosocp.api.env.DB_NAME | quote }}
+              value: {{ .Values.rosocp.database.name | quote }}
             - name: DB_USER
-              value: {{ .Values.rosocp.api.env.DB_USER | quote }}
+              value: {{ .Values.rosocp.database.user | quote }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "ros-ocp.fullname" . }}-db-credentials
                   key: ros-password
             - name: DATABASE_URL
-              value: postgresql://postgres:$(DB_PASSWORD)@{{ include "ros-ocp.fullname" . }}-db-ros:{{ .Values.database.ros.port }}/postgres?sslmode=disable
+              value: {{ include "ros-ocp.databaseUrl" . }}
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}
           livenessProbe:

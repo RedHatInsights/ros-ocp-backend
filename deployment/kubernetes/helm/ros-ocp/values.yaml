@@ -194,6 +194,14 @@ kruize:
 
 # ROS-OCP Backend Services
 rosocp:
+  # Shared database configuration for all rosocp services
+  database:
+    host: internal  # Use "internal" for the built-in database service, or specify external hostname
+    port: 5432
+    name: postgres
+    user: postgres
+    password: postgres
+    url: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
   processor:
     enabled: true
     image:
@@ -201,12 +209,6 @@ rosocp:
       tag: "latest"
     metricsPort: 9000
     env:
-      CLOWDER_ENABLED: false
-      DB_HOST: db-ros
-      DB_PORT: 5432
-      DB_NAME: postgres
-      DB_USER: postgres
-      DB_PASSWORD: postgres
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_CONSUMER_GROUP_ID: rosocp-processor
       KAFKA_AUTO_COMMIT: true
@@ -226,18 +228,11 @@ rosocp:
       tag: "latest"
     metricsPort: 9000
     env:
-      CLOWDER_ENABLED: false
       KRUIZE_HOST: kruize-autotune
       KRUIZE_PORT: 8080
       KRUIZE_WAIT_TIME: 120
       SERVICE_NAME: rosocp-recommendation-poller
       LOG_LEVEL: INFO
-      DB_HOST: db-ros
-      DB_PORT: 5432
-      DB_NAME: postgres
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DATABASE_URL: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_CONSUMER_GROUP_ID: rosocp-recommendation-poller
       KAFKA_AUTO_COMMIT: false
@@ -253,18 +248,11 @@ rosocp:
     metricsPort: 9000
     env:
       PATH_PREFIX: /api
-      CLOWDER_ENABLED: false
       RBAC_ENABLE: false
       DB_POOL_SIZE: 10
       DB_MAX_OVERFLOW: 20
       SERVICE_NAME: rosocp-api
       LOG_LEVEL: INFO
-      DB_HOST: db-ros
-      DB_PORT: 5432
-      DB_NAME: postgres
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DATABASE_URL: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
 
   housekeeper:
@@ -273,17 +261,10 @@ rosocp:
       repository: quay.io/insights-onprem/ros-ocp-backend
       tag: "latest"
     env:
-      CLOWDER_ENABLED: false
       KRUIZE_HOST: kruize-autotune
       KRUIZE_PORT: 8080
       SERVICE_NAME: rosocp-housekeeper-sources
       LOG_LEVEL: INFO
-      DB_HOST: db-ros
-      DB_PORT: 5432
-      DB_NAME: postgres
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DATABASE_URL: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SOURCES_API_BASE_URL: http://sources-api-go:8000
 
@@ -294,15 +275,8 @@ rosocp:
       repository: quay.io/insights-onprem/ros-ocp-backend
       tag: "latest"
     env:
-      CLOWDER_ENABLED: false
       SERVICE_NAME: rosocp-housekeeper-partition
       LOG_LEVEL: INFO
-      DB_HOST: db-ros
-      DB_PORT: 5432
-      DB_NAME: postgres
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DATABASE_URL: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
     resources:
       requests:
         memory: "256Mi"
