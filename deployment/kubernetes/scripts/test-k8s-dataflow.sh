@@ -577,13 +577,16 @@ verify_workloads_in_db() {
 
         # Check for required fields
         local missing_org_id=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
-            psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM workloads WHERE org_id IS NULL OR org_id = '';" 2>/dev/null | tr -d ' ' || echo "0")
+            psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM workloads WHERE org_id IS NULL OR org_id = '';" 2>/dev/null | tr -d ' \n' || echo "0")
+        missing_org_id=${missing_org_id:-0}
 
         local missing_workload_name=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
-            psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM workloads WHERE workload_name IS NULL OR workload_name = '';" 2>/dev/null | tr -d ' ' || echo "0")
+            psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM workloads WHERE workload_name IS NULL OR workload_name = '';" 2>/dev/null | tr -d ' \n' || echo "0")
+        missing_workload_name=${missing_workload_name:-0}
 
         local missing_workload_type=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
-            psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM workloads WHERE workload_type IS NULL OR workload_type = '';" 2>/dev/null | tr -d ' ' || echo "0")
+            psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM workloads WHERE workload_type IS NULL OR workload_type = '';" 2>/dev/null | tr -d ' \n' || echo "0")
+        missing_workload_type=${missing_workload_type:-0}
 
         if [ "$missing_org_id" -eq 0 ] && [ "$missing_workload_name" -eq 0 ] && [ "$missing_workload_type" -eq 0 ]; then
             echo_success "✓ All workloads have required fields populated"
