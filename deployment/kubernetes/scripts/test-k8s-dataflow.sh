@@ -312,14 +312,14 @@ verify_processing() {
     # Check Kruize experiments via database (listExperiments API has known issue with KruizeLMExperimentEntry)
     echo_info "Checking Kruize experiments via database..."
     local db_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=db-kruize" -o jsonpath='{.items[0].metadata.name}')
-    
+
     if [ -n "$db_pod" ]; then
         local exp_count=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
             psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM kruize_experiments;" 2>/dev/null | tr -d ' ' || echo "0")
-        
+
         if [ "$exp_count" -gt 0 ]; then
             echo_success "Found $exp_count Kruize experiment(s) in database"
-            
+
             # Show experiment details
             echo_info "Recent experiment details:"
             kubectl exec -n "$NAMESPACE" "$db_pod" -- \
@@ -331,6 +331,347 @@ verify_processing() {
     else
         echo_warning "Could not access Kruize database"
     fi
+}
+
+# Function to verify recommendations are available via ros-ocp-api
+verify_recommendations() {
+    echo_info "=== STEP 5: Verify Recommendations via ROS-OCP API ===="
+
+    # Wait additional time for recommendations to be processed
+    echo_info "Waiting for recommendations to be processed (30 seconds)..."
+    sleep 30
+
+    # Base identity header used throughout the script
+    local identity_header="eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K"
+    local api_base_url="http://localhost:${API_PORT}/api/cost-management/v1"
+
+    # Test API status endpoint first
+    echo_info "Testing ROS-OCP API status..."
+    local status_response=$(curl -s -w "%{http_code}" -o /tmp/status_response.json \
+        "http://localhost:${API_PORT}/status" 2>/dev/null || echo "000")
+
+    local status_http_code="${status_response: -3}"
+
+    if [ "$status_http_code" = "200" ]; then
+        echo_success "ROS-OCP API status endpoint is accessible"
+        if [ -f /tmp/status_response.json ]; then
+            echo_info "Status response: $(cat /tmp/status_response.json)"
+            rm -f /tmp/status_response.json
+        fi
+    else
+        echo_error "ROS-OCP API status endpoint not accessible (HTTP $status_http_code)"
+        return 1
+    fi
+
+    # Test recommendations list endpoint
+    echo_info "Testing recommendations list endpoint..."
+    local list_response=$(curl -s -w "%{http_code}" -o /tmp/recommendations_list.json \
+        -H "x-rh-identity: $identity_header" \
+        -H "Content-Type: application/json" \
+        "$api_base_url/recommendations/openshift" 2>/dev/null || echo "000")
+
+    local list_http_code="${list_response: -3}"
+
+    if [ "$list_http_code" = "200" ]; then
+        echo_success "Recommendations list endpoint accessible (HTTP $list_http_code)"
+
+        if [ -f /tmp/recommendations_list.json ]; then
+            # Check if we have actual recommendations
+            local rec_count=$(python3 -c "
+import json, sys
+try:
+    with open('/tmp/recommendations_list.json', 'r') as f:
+        data = json.load(f)
+    if 'data' in data and isinstance(data['data'], list):
+        print(len(data['data']))
+    else:
+        print(0)
+except:
+    print(0)
+" 2>/dev/null || echo "0")
+
+            echo_info "Found $rec_count recommendation(s) in the response"
+
+            if [ "$rec_count" -gt 0 ]; then
+                echo_success "✓ Recommendations are available via API!"
+
+                # Show summary of first recommendation
+                echo_info "Sample recommendation summary:"
+                python3 -c "
+import json
+try:
+    with open('/tmp/recommendations_list.json', 'r') as f:
+        data = json.load(f)
+    if 'data' in data and len(data['data']) > 0:
+        rec = data['data'][0]
+        print(f'  ID: {rec.get(\"id\", \"N/A\")}')
+        print(f'  Cluster: {rec.get(\"cluster_alias\", \"N/A\")}')
+        print(f'  Workload: {rec.get(\"workload\", \"N/A\")}')
+        print(f'  Container: {rec.get(\"container\", \"N/A\")}')
+        print(f'  Namespace: {rec.get(\"project\", \"N/A\")}')
+except Exception as e:
+    print(f'  Error parsing response: {e}')
+" 2>/dev/null || echo "  Unable to parse recommendation details"
+
+                # Test individual recommendation endpoint
+                local rec_id=$(python3 -c "
+import json
+try:
+    with open('/tmp/recommendations_list.json', 'r') as f:
+        data = json.load(f)
+    if 'data' in data and len(data['data']) > 0:
+        print(data['data'][0].get('id', ''))
+except:
+    pass
+" 2>/dev/null)
+
+                if [ -n "$rec_id" ]; then
+                    echo_info "Testing individual recommendation endpoint for ID: $rec_id"
+                    local detail_response=$(curl -s -w "%{http_code}" -o /tmp/recommendation_detail.json \
+                        -H "x-rh-identity: $identity_header" \
+                        -H "Content-Type: application/json" \
+                        "$api_base_url/recommendations/openshift/$rec_id" 2>/dev/null || echo "000")
+
+                    local detail_http_code="${detail_response: -3}"
+
+                    if [ "$detail_http_code" = "200" ]; then
+                        echo_success "✓ Individual recommendation endpoint accessible (HTTP $detail_http_code)"
+
+                        # Show recommendation details
+                        echo_info "Recommendation details available:"
+                        python3 -c "
+import json
+try:
+    with open('/tmp/recommendation_detail.json', 'r') as f:
+        data = json.load(f)
+    if 'recommendations' in data and 'data' in data['recommendations']:
+        rec_data = data['recommendations']['data']
+        if rec_data:
+            print(f'  Current CPU request: {rec_data.get(\"requests\", {}).get(\"cpu\", {}).get(\"amount\", \"N/A\")}')
+            print(f'  Recommended CPU request: {rec_data.get(\"requests\", {}).get(\"cpu\", {}).get(\"recommendation\", {}).get(\"amount\", \"N/A\")}')
+            print(f'  Current Memory request: {rec_data.get(\"requests\", {}).get(\"memory\", {}).get(\"amount\", \"N/A\")}')
+            print(f'  Recommended Memory request: {rec_data.get(\"requests\", {}).get(\"memory\", {}).get(\"recommendation\", {}).get(\"amount\", \"N/A\")}')
+        else:
+            print('  No recommendation data available')
+except Exception as e:
+    print(f'  Error parsing recommendation: {e}')
+" 2>/dev/null || echo "  Unable to parse recommendation details"
+
+                        rm -f /tmp/recommendation_detail.json
+                    else
+                        echo_warning "Individual recommendation endpoint returned HTTP $detail_http_code"
+                    fi
+                fi
+            else
+                echo_warning "No recommendations found in response - data may still be processing"
+            fi
+
+            rm -f /tmp/recommendations_list.json
+        fi
+    elif [ "$list_http_code" = "401" ]; then
+        echo_error "Authentication failed (HTTP 401) - check identity header"
+        return 1
+    elif [ "$list_http_code" = "000" ]; then
+        echo_error "Could not connect to ROS-OCP API - check if service is running and port $API_PORT is accessible"
+        return 1
+    else
+        echo_warning "Recommendations endpoint returned HTTP $list_http_code"
+        if [ -f /tmp/recommendations_list.json ]; then
+            echo_info "Response: $(cat /tmp/recommendations_list.json)"
+            rm -f /tmp/recommendations_list.json
+        fi
+    fi
+
+    # Test CSV export format
+    echo_info "Testing CSV export functionality..."
+    local csv_response=$(curl -s -w "%{http_code}" -o /tmp/recommendations.csv \
+        -H "x-rh-identity: $identity_header" \
+        -H "Accept: text/csv" \
+        "$api_base_url/recommendations/openshift?format=csv" 2>/dev/null || echo "000")
+
+    local csv_http_code="${csv_response: -3}"
+
+    if [ "$csv_http_code" = "200" ]; then
+        echo_success "✓ CSV export functionality working (HTTP $csv_http_code)"
+        if [ -f /tmp/recommendations.csv ]; then
+            local csv_lines=$(wc -l < /tmp/recommendations.csv 2>/dev/null || echo "0")
+            echo_info "CSV contains $csv_lines lines"
+            rm -f /tmp/recommendations.csv
+        fi
+    else
+        echo_warning "CSV export returned HTTP $csv_http_code"
+        rm -f /tmp/recommendations.csv
+    fi
+
+    echo_info "Recommendation verification completed"
+}
+
+# Function to verify workloads are stored in ROS database
+verify_workloads_in_db() {
+    echo_info "=== STEP 6: Verify Workloads in ROS Database ===="
+
+    # Check database for workload records with detailed analysis
+    echo_info "Checking workloads table in ROS database..."
+    local db_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=db-ros" -o jsonpath='{.items[0].metadata.name}')
+
+    if [ -z "$db_pod" ]; then
+        echo_error "ROS database pod not found"
+        return 1
+    fi
+
+    # Test database connectivity
+    echo_info "Testing database connectivity..."
+    if ! kubectl exec -n "$NAMESPACE" "$db_pod" -- psql -U postgres -d postgres -c "SELECT 1;" >/dev/null 2>&1; then
+        echo_error "Cannot connect to ROS database"
+        return 1
+    fi
+    echo_success "✓ Database connection successful"
+
+    # Check if workloads table exists
+    echo_info "Verifying workloads table exists..."
+    local table_exists=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+        psql -U postgres -d postgres -t -c \
+        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'workloads');" 2>/dev/null | tr -d ' ' || echo "f")
+
+    if [ "$table_exists" = "t" ]; then
+        echo_success "✓ Workloads table exists"
+    else
+        echo_error "Workloads table does not exist"
+        return 1
+    fi
+
+    # Get workload count
+    local workload_count=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+        psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM workloads;" 2>/dev/null | tr -d ' ' || echo "0")
+
+    if [ "$workload_count" -gt 0 ]; then
+        echo_success "✓ Found $workload_count workload(s) in database"
+
+        # Show workload table schema
+        echo_info "Workload table schema:"
+        kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -c \
+            "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'workloads' ORDER BY ordinal_position;" 2>/dev/null || true
+
+        # Show detailed workload information
+        echo_info "Detailed workload information:"
+        kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -c \
+            "SELECT
+                id,
+                org_id,
+                cluster_id,
+                experiment_name,
+                namespace,
+                workload_type,
+                workload_name,
+                array_length(containers, 1) as container_count,
+                containers[1:3] as first_containers,
+                metrics_upload_at
+            FROM workloads
+            ORDER BY id
+            LIMIT 5;" 2>/dev/null || true
+
+        # Test workload data integrity
+        echo_info "Testing workload data integrity..."
+
+        # Check for required fields
+        local missing_org_id=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM workloads WHERE org_id IS NULL OR org_id = '';" 2>/dev/null | tr -d ' ' || echo "0")
+
+        local missing_workload_name=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM workloads WHERE workload_name IS NULL OR workload_name = '';" 2>/dev/null | tr -d ' ' || echo "0")
+
+        local missing_workload_type=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -t -c "SELECT COUNT(*) FROM workloads WHERE workload_type IS NULL OR workload_type = '';" 2>/dev/null | tr -d ' ' || echo "0")
+
+        if [ "$missing_org_id" -eq 0 ] && [ "$missing_workload_name" -eq 0 ] && [ "$missing_workload_type" -eq 0 ]; then
+            echo_success "✓ All workloads have required fields populated"
+        else
+            echo_warning "Data integrity issues found:"
+            [ "$missing_org_id" -gt 0 ] && echo_warning "  $missing_org_id workloads missing org_id"
+            [ "$missing_workload_name" -gt 0 ] && echo_warning "  $missing_workload_name workloads missing workload_name"
+            [ "$missing_workload_type" -gt 0 ] && echo_warning "  $missing_workload_type workloads missing workload_type"
+        fi
+
+        # Check cluster relationships
+        echo_info "Checking cluster relationships..."
+        local cluster_count=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -t -c "SELECT COUNT(DISTINCT cluster_id) FROM workloads;" 2>/dev/null | tr -d ' ' || echo "0")
+
+        local orphaned_workloads=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -t -c \
+            "SELECT COUNT(*) FROM workloads w
+             LEFT JOIN clusters c ON w.cluster_id = c.id
+             WHERE c.id IS NULL;" 2>/dev/null | tr -d ' ' || echo "0")
+
+        echo_info "  Workloads span $cluster_count cluster(s)"
+        if [ "$orphaned_workloads" -eq 0 ]; then
+            echo_success "✓ All workloads properly linked to clusters"
+        else
+            echo_warning "  $orphaned_workloads workloads have invalid cluster references"
+        fi
+
+        # Show workload distribution by type
+        echo_info "Workload distribution by type:"
+        kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -c \
+            "SELECT workload_type, COUNT(*) as count
+             FROM workloads
+             GROUP BY workload_type
+             ORDER BY count DESC;" 2>/dev/null || true
+
+        # Show workload distribution by namespace
+        echo_info "Workload distribution by namespace:"
+        kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -c \
+            "SELECT namespace, COUNT(*) as count
+             FROM workloads
+             GROUP BY namespace
+             ORDER BY count DESC
+             LIMIT 10;" 2>/dev/null || true
+
+        # Check container information
+        local total_containers=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -t -c \
+            "SELECT SUM(array_length(containers, 1)) FROM workloads WHERE containers IS NOT NULL;" 2>/dev/null | tr -d ' ' || echo "0")
+
+        echo_info "Total containers across all workloads: $total_containers"
+
+        # Verify recent data updates
+        echo_info "Checking data freshness..."
+        local recent_updates=$(kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -t -c \
+            "SELECT COUNT(*) FROM workloads WHERE metrics_upload_at > NOW() - INTERVAL '1 hour';" 2>/dev/null | tr -d ' ' || echo "0")
+
+        if [ "$recent_updates" -gt 0 ]; then
+            echo_success "✓ $recent_updates workloads updated within the last hour"
+        else
+            echo_info "  No workloads updated in the last hour (may be expected for test data)"
+        fi
+
+        # Show most recent workload activity
+        echo_info "Most recent workload uploads:"
+        kubectl exec -n "$NAMESPACE" "$db_pod" -- \
+            psql -U postgres -d postgres -c \
+            "SELECT workload_name, namespace, workload_type, metrics_upload_at
+             FROM workloads
+             ORDER BY metrics_upload_at DESC
+             LIMIT 3;" 2>/dev/null || true
+
+    else
+        echo_warning "No workload data found in database"
+        echo_info "This might indicate:"
+        echo_info "  - Data processing is still in progress"
+        echo_info "  - No data has been uploaded yet"
+        echo_info "  - There was an issue with data processing"
+
+        # Check if table is empty but exists
+        echo_info "Checking if this is expected for test scenario..."
+        return 0
+    fi
+
+    echo_info "Workload database verification completed"
 }
 
 # Function to run health checks
@@ -451,12 +792,20 @@ main() {
 
     verify_processing
 
+    # Verify workloads are stored in database
+    verify_workloads_in_db
+
+    # Verify recommendations are available via API
+    verify_recommendations
+
     echo ""
     run_health_checks
 
     echo ""
     echo_success "Data flow test completed!"
     echo_info "Use '$0 logs <service>' to view specific service logs"
+    echo_info "Use '$0 recommendations' to verify recommendations via API"
+    echo_info "Use '$0 workloads' to verify workloads in database"
     echo_info "Available services: ingress, rosocp-processor, rosocp-api, kruize, minio, db-ros"
 }
 
@@ -470,14 +819,24 @@ case "${1:-}" in
         run_health_checks
         exit $?
         ;;
+    "recommendations")
+        verify_recommendations
+        exit $?
+        ;;
+    "workloads")
+        verify_workloads_in_db
+        exit $?
+        ;;
     "help"|"-h"|"--help")
         echo "Usage: $0 [command] [options]"
         echo ""
         echo "Commands:"
-        echo "  (none)      - Run complete data flow test"
-        echo "  logs [svc]  - Show logs for service (or list services if no service specified)"
-        echo "  health      - Run health checks only"
-        echo "  help        - Show this help message"
+        echo "  (none)           - Run complete data flow test"
+        echo "  logs [svc]       - Show logs for service (or list services if no service specified)"
+        echo "  health           - Run health checks only"
+        echo "  recommendations  - Verify recommendations are available via API"
+        echo "  workloads        - Verify workloads are stored in ROS database"
+        echo "  help             - Show this help message"
         echo ""
         echo "Environment Variables:"
         echo "  NAMESPACE         - Kubernetes namespace (default: ros-ocp)"
