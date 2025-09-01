@@ -78,15 +78,15 @@ spec:
               readOnly: true
           env:
             - name: CLOWDER_ENABLED
-              value: {{ .Values.rosocp.processor.env.CLOWDER_ENABLED | quote }}
+              value: "false"
             - name: DB_HOST
-              value: {{ include "ros-ocp.fullname" . }}-db-ros
+              value: {{ include "ros-ocp.databaseHost" . }}
             - name: DB_PORT
-              value: {{ .Values.rosocp.processor.env.DB_PORT | quote }}
+              value: {{ .Values.rosocp.database.port | quote }}
             - name: DB_NAME
-              value: {{ .Values.rosocp.processor.env.DB_NAME | quote }}
+              value: {{ .Values.rosocp.database.name | quote }}
             - name: DB_USER
-              value: {{ .Values.rosocp.processor.env.DB_USER | quote }}
+              value: {{ .Values.rosocp.database.user | quote }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:

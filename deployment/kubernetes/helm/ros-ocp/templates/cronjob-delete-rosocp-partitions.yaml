@@ -26,23 +26,26 @@ spec:
             args: ["-c", "./rosocp db migrate up && ./rosocp start housekeeper --partitions"]
             env:
             - name: CLOWDER_ENABLED
-              value: {{ .Values.rosocp.partitionCleaner.env.CLOWDER_ENABLED | quote }}
+              value: "false"
             - name: SERVICE_NAME
               value: {{ .Values.rosocp.partitionCleaner.env.SERVICE_NAME | quote }}
             - name: LOG_LEVEL
               value: {{ .Values.rosocp.partitionCleaner.env.LOG_LEVEL | quote }}
             - name: DB_HOST
-              value: {{ .Values.rosocp.partitionCleaner.env.DB_HOST | quote }}
+              value: {{ include "ros-ocp.databaseHost" . }}
             - name: DB_PORT
-              value: {{ .Values.rosocp.partitionCleaner.env.DB_PORT | quote }}
+              value: {{ .Values.rosocp.database.port | quote }}
             - name: DB_NAME
-              value: {{ .Values.rosocp.partitionCleaner.env.DB_NAME | quote }}
+              value: {{ .Values.rosocp.database.name | quote }}
             - name: DB_USER
-              value: {{ .Values.rosocp.partitionCleaner.env.DB_USER | quote }}
+              value: {{ .Values.rosocp.database.user | quote }}
             - name: DB_PASSWORD
-              value: {{ .Values.rosocp.partitionCleaner.env.DB_PASSWORD | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ros-ocp.fullname" . }}-db-credentials
+                  key: ros-password
             - name: DATABASE_URL
-              value: {{ .Values.rosocp.partitionCleaner.env.DATABASE_URL | quote }}
+              value: {{ include "ros-ocp.databaseUrl" . }}
             {{- if .Values.rosocp.partitionCleaner.resources }}
             resources:
               {{- toYaml .Values.rosocp.partitionCleaner.resources | nindent 14 }}

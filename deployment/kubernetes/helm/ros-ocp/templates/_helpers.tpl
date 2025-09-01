@@ -60,3 +60,21 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Get the database host - returns internal service name if "internal", otherwise returns the configured host
+*/}}
+{{- define "ros-ocp.databaseHost" -}}
+{{- if eq .Values.rosocp.database.host "internal" }}
+{{- printf "%s-db-ros" (include "ros-ocp.fullname" .) }}
+{{- else }}
+{{- .Values.rosocp.database.host }}
+{{- end }}
+{{- end }}
+
+{{/*
+Get the database URL - returns complete postgresql connection string
+*/}}
+{{- define "ros-ocp.databaseUrl" -}}
+{{- printf "postgresql://postgres:$(DB_PASSWORD)@%s:%s/%s?sslmode=disable" (include "ros-ocp.databaseHost" .) (.Values.rosocp.database.port | toString) .Values.rosocp.database.name }}
+{{- end }}
