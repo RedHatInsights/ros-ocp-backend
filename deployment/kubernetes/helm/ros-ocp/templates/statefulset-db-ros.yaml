@@ -36,9 +36,9 @@ spec:
               protocol: TCP
           env:
             - name: POSTGRES_DB
-              value: {{ .Values.database.ros.env.POSTGRES_DB | quote }}
+              value: {{ .Values.database.ros.name | quote }}
             - name: POSTGRES_USER
-              value: {{ .Values.database.ros.env.POSTGRES_USER | quote }}
+              value: {{ .Values.database.ros.username | quote }}
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -54,7 +54,7 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - {{ .Values.database.ros.env.POSTGRES_USER }}
+                - {{ .Values.database.ros.username }}
             initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
@@ -64,7 +64,7 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - {{ .Values.database.ros.env.POSTGRES_USER }}
+                - {{ .Values.database.ros.username }}
             initialDelaySeconds: 5
             periodSeconds: {{ .Values.probes.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.timeoutSeconds }}

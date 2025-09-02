@@ -65,27 +65,27 @@ spec:
               protocol: TCP
           env:
             - name: PATH_PREFIX
-              value: {{ .Values.rosocp.api.env.PATH_PREFIX | quote }}
+              value: {{ .Values.rosocp.api.pathPrefix | quote }}
             - name: CLOWDER_ENABLED
               value: "false"
             - name: RBAC_ENABLE
-              value: {{ .Values.rosocp.api.env.RBAC_ENABLE | quote }}
+              value: {{ .Values.rosocp.api.rbacEnable | quote }}
             - name: DB_POOL_SIZE
-              value: {{ .Values.rosocp.api.env.DB_POOL_SIZE | quote }}
+              value: {{ .Values.rosocp.api.dbPoolSize | quote }}
             - name: DB_MAX_OVERFLOW
-              value: {{ .Values.rosocp.api.env.DB_MAX_OVERFLOW | quote }}
+              value: {{ .Values.rosocp.api.dbMaxOverflow | quote }}
             - name: SERVICE_NAME
-              value: {{ .Values.rosocp.api.env.SERVICE_NAME | quote }}
+              value: {{ .Values.rosocp.api.serviceName | quote }}
             - name: LOG_LEVEL
-              value: {{ .Values.rosocp.api.env.LOG_LEVEL | quote }}
+              value: {{ .Values.rosocp.api.logLevel | quote }}
             - name: DB_HOST
               value: {{ include "ros-ocp.databaseHost" . }}
             - name: DB_PORT
-              value: {{ .Values.rosocp.database.port | quote }}
+              value: {{ .Values.database.ros.port | quote }}
             - name: DB_NAME
-              value: {{ .Values.rosocp.database.name | quote }}
+              value: {{ .Values.database.ros.name | quote }}
             - name: DB_USER
-              value: {{ .Values.rosocp.database.user | quote }}
+              value: {{ .Values.database.ros.username | quote }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:

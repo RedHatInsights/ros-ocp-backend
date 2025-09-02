@@ -31,7 +31,7 @@ spec:
           command: ['sh', '-c']
           args:
             - |
-              until nc -z {{ include "ros-ocp.fullname" . }}-db-sources {{ .Values.database.sources.port }}; do
+              until nc -z {{ include "ros-ocp.sourcesDatabaseHost" . }} {{ .Values.database.sources.port }}; do
                 echo "Waiting for Sources database..."
                 sleep 5
               done
@@ -66,37 +66,37 @@ spec:
               protocol: TCP
           env:
             - name: DATABASE_USER
-              value: {{ .Values.sourcesApi.env.DATABASE_USER | quote }}
+              value: {{ .Values.database.sources.username | quote }}
             - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "ros-ocp.fullname" . }}-db-credentials
                   key: sources-password
             - name: DATABASE_HOST
-              value: {{ include "ros-ocp.fullname" . }}-db-sources
+              value: {{ include "ros-ocp.sourcesDatabaseHost" . }}
             - name: DATABASE_PORT
-              value: {{ .Values.sourcesApi.env.DATABASE_PORT | quote }}
+              value: {{ .Values.database.sources.port | quote }}
             - name: DATABASE_NAME
-              value: {{ .Values.sourcesApi.env.DATABASE_NAME | quote }}
+              value: {{ .Values.database.sources.name | quote }}
             - name: LOG_LEVEL
-              value: {{ .Values.sourcesApi.env.LOG_LEVEL | quote }}
+              value: {{ .Values.sourcesApi.logLevel | quote }}
             - name: REDIS_CACHE_HOST
               value: {{ include "ros-ocp.fullname" . }}-redis
             - name: REDIS_CACHE_PORT
-              value: {{ .Values.sourcesApi.env.REDIS_CACHE_PORT | quote }}
+              value: {{ .Values.redis.port | quote }}
             - name: BYPASS_RBAC
-              value: {{ .Values.sourcesApi.env.BYPASS_RBAC | quote }}
+              value: {{ .Values.sourcesApi.bypassRbac | quote }}
             - name: QUEUE_HOST
               value: {{ include "ros-ocp.fullname" . }}-kafka
             - name: QUEUE_PORT
-              value: {{ .Values.sourcesApi.env.QUEUE_PORT | quote }}
+              value: {{ .Values.kafka.broker.port | quote }}
             - name: ENCRYPTION_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "ros-ocp.fullname" . }}-sources-credentials
                   key: encryption-key
             - name: SOURCES_ENV
-              value: {{ .Values.sourcesApi.env.SOURCES_ENV | quote }}
+              value: {{ .Values.sourcesApi.sourcesEnv | quote }}
           livenessProbe:
             httpGet:
               path: /api/sources/v1.0/source_types

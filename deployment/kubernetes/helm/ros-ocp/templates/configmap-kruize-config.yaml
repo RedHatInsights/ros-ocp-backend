@@ -36,16 +36,16 @@ data:
         ],
         "topics": [
           {
-            "name": "hccm.ros.events",
-            "requestedName": "hccm.ros.events"
+            "name": "{{ .Values.rosocp.processor.uploadTopic }}",
+            "requestedName": "{{ .Values.rosocp.processor.uploadTopic }}"
           },
           {
-            "name": "rosocp.kruize.experiments",
-            "requestedName": "rosocp.kruize.experiments"
+            "name": "{{ .Values.rosocp.recommendationPoller.recommendationTopic }}",
+            "requestedName": "{{ .Values.rosocp.recommendationPoller.recommendationTopic }}"
           },
           {
-            "name": "platform.sources.event-stream",
-            "requestedName": "platform.sources.event-stream"
+            "name": "{{ .Values.sourcesApi.platformSourcesEventStreamTopic }}",
+            "requestedName": "{{ .Values.sourcesApi.platformSourcesEventStreamTopic }}"
           }
         ]
       },

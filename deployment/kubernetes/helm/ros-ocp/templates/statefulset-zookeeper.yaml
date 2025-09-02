@@ -36,9 +36,9 @@ spec:
               protocol: TCP
           env:
             - name: ZOOKEEPER_CLIENT_PORT
-              value: {{ .Values.kafka.zookeeper.env.ZOOKEEPER_CLIENT_PORT | quote }}
+              value: {{ .Values.kafka.zookeeper.clientPort | quote }}
             - name: ZOOKEEPER_SERVER_ID
-              value: {{ .Values.kafka.zookeeper.env.ZOOKEEPER_SERVER_ID | quote }}
+              value: {{ .Values.kafka.zookeeper.serverId | quote }}
           volumeMounts:
             - name: zookeeper-storage
               mountPath: /var/lib/zookeeper/data

@@ -65,10 +65,10 @@ Create the name of the service account to use
 Get the database host - returns internal service name if "internal", otherwise returns the configured host
 */}}
 {{- define "ros-ocp.databaseHost" -}}
-{{- if eq .Values.rosocp.database.host "internal" }}
+{{- if eq .Values.database.ros.host "internal" }}
 {{- printf "%s-db-ros" (include "ros-ocp.fullname" .) }}
 {{- else }}
-{{- .Values.rosocp.database.host }}
+{{- .Values.database.ros.host }}
 {{- end }}
 {{- end }}
 
@@ -76,7 +76,7 @@ Get the database host - returns internal service name if "internal", otherwise r
 Get the database URL - returns complete postgresql connection string
 */}}
 {{- define "ros-ocp.databaseUrl" -}}
-{{- printf "postgresql://postgres:$(DB_PASSWORD)@%s:%s/%s?sslmode=disable" (include "ros-ocp.databaseHost" .) (.Values.rosocp.database.port | toString) .Values.rosocp.database.name }}
+{{- printf "postgresql://postgres:$(DB_PASSWORD)@%s:%s/%s?sslmode=%s" (include "ros-ocp.databaseHost" .) (.Values.database.ros.port | toString) .Values.database.ros.name .Values.database.ros.sslMode }}
 {{- end }}
 
 {{/*
@@ -87,5 +87,16 @@ Get the kruize database host - returns internal service name if "internal", othe
 {{- printf "%s-db-kruize" (include "ros-ocp.fullname" .) }}
 {{- else }}
 {{- .Values.database.kruize.host }}
+{{- end }}
+{{- end }}
+
+{{/*
+Get the sources database host - returns internal service name if "internal", otherwise returns the configured host
+*/}}
+{{- define "ros-ocp.sourcesDatabaseHost" -}}
+{{- if eq .Values.database.sources.host "internal" }}
+{{- printf "%s-db-sources" (include "ros-ocp.fullname" .) }}
+{{- else }}
+{{- .Values.database.sources.host }}
 {{- end }}
 {{- end }}

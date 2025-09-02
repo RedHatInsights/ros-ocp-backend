@@ -56,15 +56,15 @@ spec:
               protocol: TCP
           env:
             - name: INGRESS_VALID_UPLOAD_TYPES
-              value: {{ .Values.ingress.env.INGRESS_VALID_UPLOAD_TYPES | quote }}
+              value: {{ .Values.ingress.validUploadTypes | quote }}
             - name: INGRESS_STAGEBUCKET
-              value: {{ .Values.ingress.env.INGRESS_STAGEBUCKET | quote }}
+              value: {{ .Values.ingress.stageBucket | quote }}
             - name: OPENSHIFT_BUILD_COMMIT
-              value: {{ .Values.ingress.env.OPENSHIFT_BUILD_COMMIT | quote }}
+              value: {{ .Values.ingress.openShiftBuildCommit | quote }}
             - name: INGRESS_MAXSIZE
-              value: {{ .Values.ingress.env.INGRESS_MAXSIZE | quote }}
+              value: {{ .Values.ingress.maxSize | quote }}
             - name: INGRESS_MINIODEV
-              value: {{ .Values.ingress.env.INGRESS_MINIODEV | quote }}
+              value: {{ .Values.ingress.minioDev | quote }}
             - name: INGRESS_MINIOACCESSKEY
               valueFrom:
                 secretKeyRef:

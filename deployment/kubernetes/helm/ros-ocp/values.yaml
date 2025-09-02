@@ -1,5 +1,4 @@
 # Default values for ros-ocp-helm
-# This is a YAML-formatted file.
 
 global:
   # Storage class for persistent volumes
@@ -14,33 +13,28 @@ serviceAccount:
 
 # Database configurations
 database:
-  ros:
-    enabled: true
+  ros: # Database configuration for ros-ocp services
     image:
       repository: quay.io/insights-onprem/postgresql
       tag: "16"
     storage:
       size: 10Gi
-    env:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    port: 5432
-
-  kruize:
-    enabled: true
-    image:
-      repository: quay.io/insights-onprem/postgresql
-      tag: "16"
-    storage:
-      size: 10Gi
-    env:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    port: 5432
-    # Database configuration for kruize configmap
     host: internal  # Use "internal" for the built-in database service, or specify external hostname
+    port: 5432
+    name: postgres
+    user: postgres
+    password: postgres
+    sslMode: disable
+    url: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
+
+  kruize: # Database configuration for kruize services
+    image:
+      repository: quay.io/insights-onprem/postgresql
+      tag: "16"
+    storage:
+      size: 10Gi
+    host: internal  # Use "internal" for the built-in database service, or specify external hostname
+    port: 5432
     name: postgres
     username: postgres
     password: postgres
@@ -48,67 +42,57 @@ database:
     adminPassword: postgres
     sslMode: disable
 
-  sources:
-    enabled: true
+  sources: # Database configuration for sources-api services
     image:
       repository: quay.io/insights-onprem/postgresql
       tag: "16"
     storage:
       size: 10Gi
-    env:
-      POSTGRES_DB: sources_api_development
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+    host: internal  # Use "internal" for the built-in database service, or specify external hostname
     port: 5432
+    name: sources_api_development
+    username: postgres
+    password: postgres
 
 # Kafka and Zookeeper
 kafka:
-  enabled: true
   zookeeper:
     image:
       repository: confluentinc/cp-zookeeper
       tag: "7.4.10"
-    env:
-      ZOOKEEPER_CLIENT_PORT: 32181
-      ZOOKEEPER_SERVER_ID: 1
+    clientPort: 32181
+    serverId: 1
     storage:
       size: 5Gi
   broker:
     image:
       repository: confluentinc/cp-kafka
       tag: "7.5.3"
-    env:
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
-      KAFKA_BROKER_ID: 1
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+    brokerId: 1
+    offsetsTopicReplicationFactor: 1
+    autoCreateTopicsEnable: true
     storage:
       size: 10Gi
     port: 29092
 
 # Redis
 redis:
-  enabled: true
   image:
     repository: quay.io/insights-onprem/redis-ephemeral
     tag: "6"
-  env:
-    REDIS_MAXMEMORY: 512mb
-    REDIS_MAXMEMORY_POLICY: allkeys-lru
+  maxMemory: 512mb
+  maxMemoryPolicy: allkeys-lru
   port: 6379
 
 # MinIO
 minio:
-  enabled: true
   image:
     repository: quay.io/minio/minio
     tag: "RELEASE.2025-07-23T15-54-02Z"
   storage:
     size: 20Gi
-  env:
-    MINIO_ROOT_USER: minioaccesskey
-    MINIO_ROOT_PASSWORD: miniosecretkey
+  rootUser: minioaccesskey
+  rootPassword: miniosecretkey
   ports:
     api: 9000
     console: 9990
@@ -119,7 +103,6 @@ minio:
 
 # Nginx
 nginx:
-  enabled: true
   image:
     repository: quay.io/insights-onprem/nginx
     tag: "1.28.0-alpine"
@@ -127,49 +110,31 @@ nginx:
 
 # Ingress Service
 ingress:
-  enabled: true
   image:
     repository: quay.io/insights-onprem/insights-ingress
     tag: "latest"
   port: 3000
-  env:
-    INGRESS_VALID_UPLOAD_TYPES: hccm,rosocp
-    INGRESS_STAGEBUCKET: insights-upload-perma
-    OPENSHIFT_BUILD_COMMIT: somestring
-    INGRESS_MAXSIZE: 104857600
-    INGRESS_MINIODEV: true
-    INGRESS_MINIOENDPOINT: minio:9000
-    KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-    KAFKA_BROKERS: kafka:29092
-    KAFKA_SERVERS: kafka:29092
-    QUEUE_HOST: kafka
-    QUEUE_PORT: 29092
+  validUploadTypes: hccm,rosocp
+  stageBucket: insights-upload-perma
+  openShiftBuildCommit: somestring
+  maxSize: 104857600
+  minioDev: true
 
 # Sources API
 sourcesApi:
-  enabled: true
   image:
     repository: quay.io/insights-onprem/sources-api-go
     tag: "latest"
   port: 8000
-  env:
-    DATABASE_USER: postgres
-    DATABASE_PASSWORD: postgres
-    DATABASE_HOST: db-sources
-    DATABASE_PORT: 5432
-    DATABASE_NAME: sources_api_development
-    LOG_LEVEL: DEBUG
-    REDIS_CACHE_HOST: redis
-    REDIS_CACHE_PORT: 6379
-    BYPASS_RBAC: true
-    QUEUE_HOST: kafka
-    QUEUE_PORT: 29092
-    ENCRYPTION_KEY: YWFhYWFhYWFhYWFhYWFhYQ
-    SOURCES_ENV: prod
+  logLevel: DEBUG
+  bypassRbac: true
+  sourcesEnv: prod
+  encryptionKey: YWFhYWFhYWFhYWFhYWFhYQ
+  platformSourcesEventStreamTopic: platform.sources.event-stream
+
 
 # Kruize Autotune
 kruize:
-  enabled: true
   image:
     repository: quay.io/redhat-services-prod/kruize-autotune-tenant/autotune
     tag: "d0b4337"
@@ -209,10 +174,9 @@ kruize:
     # Job history limits
     successfulJobsHistoryLimit: 3
     failedJobsHistoryLimit: 1
-    # Environment variables specific to partition jobs
-    env:
-      loggingLevel: info
-      deletePartitionsThreshold: "16"
+    loggingLevel: info
+    rootLoggingLevel: error
+    deletePartitionsThreshold: "16"
     # Resource limits for partition jobs
     resources:
       requests:
@@ -224,89 +188,57 @@ kruize:
 
 # ROS-OCP Backend Services
 rosocp:
-  # Shared database configuration for all rosocp services
-  database:
-    host: internal  # Use "internal" for the built-in database service, or specify external hostname
-    port: 5432
-    name: postgres
-    user: postgres
-    password: postgres
-    url: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
   processor:
-    enabled: true
     image:
       repository: quay.io/insights-onprem/ros-ocp-backend
       tag: "latest"
     metricsPort: 9000
-    env:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      KAFKA_CONSUMER_GROUP_ID: rosocp-processor
-      KAFKA_AUTO_COMMIT: true
-      UPLOAD_TOPIC: hccm.ros.events
-      KRUIZE_HOST: kruize-autotune
-      KRUIZE_PORT: 8080
-      KRUIZE_WAIT_TIME: 120
-      SERVICE_NAME: rosocp-processor
-      LOG_LEVEL: INFO
-      SOURCES_API_BASE_URL: http://sources-api-go:8000
-      PROMETHEUS_PORT: 9000
+    kafkaConsumerGroupId: rosocp-processor
+    kafkaAutoCommit: true
+    uploadTopic: hccm.ros.events
+    kruizeWaitTime: 120
+    serviceName: rosocp-processor
+    logLevel: INFO
 
   recommendationPoller:
-    enabled: true
     image:
       repository: quay.io/insights-onprem/ros-ocp-backend
       tag: "latest"
     metricsPort: 9000
-    env:
-      KRUIZE_HOST: kruize-autotune
-      KRUIZE_PORT: 8080
-      KRUIZE_WAIT_TIME: 120
-      SERVICE_NAME: rosocp-recommendation-poller
-      LOG_LEVEL: INFO
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      KAFKA_CONSUMER_GROUP_ID: rosocp-recommendation-poller
-      KAFKA_AUTO_COMMIT: false
-      RECOMMENDATION_TOPIC: rosocp.kruize.recommendations
-      PROMETHEUS_PORT: 9000
+    kafkaConsumerGroupId: rosocp-recommendation-poller
+    kafkaAutoCommit: false
+    recommendationTopic: rosocp.kruize.recommendations
+    logLevel: INFO
+    serviceName: rosocp-recommendation-poller
+    kruizeWaitTime: 120
 
   api:
-    enabled: true
     image:
       repository: quay.io/insights-onprem/ros-ocp-backend
       tag: "latest"
     port: 8000
     metricsPort: 9000
-    env:
-      PATH_PREFIX: /api
-      RBAC_ENABLE: false
-      DB_POOL_SIZE: 10
-      DB_MAX_OVERFLOW: 20
-      SERVICE_NAME: rosocp-api
-      LOG_LEVEL: INFO
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    pathPrefix: /api
+    rbacEnable: false
+    dbPoolSize: 10
+    dbMaxOverflow: 20
+    serviceName: rosocp-api
+    logLevel: INFO
 
   housekeeper:
-    enabled: true
     image:
       repository: quay.io/insights-onprem/ros-ocp-backend
       tag: "latest"
-    env:
-      KRUIZE_HOST: kruize-autotune
-      KRUIZE_PORT: 8080
-      SERVICE_NAME: rosocp-housekeeper-sources
-      LOG_LEVEL: INFO
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SOURCES_API_BASE_URL: http://sources-api-go:8000
+    serviceName: rosocp-housekeeper-sources
+    logLevel: INFO
 
   partitionCleaner:
-    enabled: true
     schedule: "0 0 */15 * *"  # Runs at 12:00 AM, every 15 days
     image:
       repository: quay.io/insights-onprem/ros-ocp-backend
       tag: "latest"
-    env:
-      SERVICE_NAME: rosocp-housekeeper-partition
-      LOG_LEVEL: INFO
+    serviceName: rosocp-housekeeper-partition
+    logLevel: INFO
     resources:
       requests:
         memory: "256Mi"
@@ -322,7 +254,6 @@ service:
 
 # Ingress configuration for external access
 serviceIngress:
-  enabled: false
   className: ""
   annotations: {}
   hosts:
@@ -380,7 +311,6 @@ resources:
 
 # Startup and readiness probe configuration
 probes:
-  enabled: true
   initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 5

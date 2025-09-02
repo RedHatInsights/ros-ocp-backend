@@ -9,14 +9,14 @@ data:
   cdappconfig.json: |
     {
       "database": {
-        "adminPassword": "postgres",
-        "adminUsername": "postgres",
-        "hostname": "{{ include "ros-ocp.fullname" . }}-db-ros",
-        "name": "postgres",
-        "password": "postgres",
+        "adminPassword": "{{ .Values.database.ros.password }}",
+        "adminUsername": "{{ .Values.database.ros.username }}",
+        "hostname": "{{ include "ros-ocp.databaseHost" . }}",
+        "name": "{{ .Values.database.ros.name }}",
+        "password": "{{ .Values.database.ros.password }}",
         "port": {{ .Values.database.ros.port }},
-        "username": "postgres",
-        "sslMode": "disable"
+        "username": "{{ .Values.database.ros.username }}",
+        "sslMode": "{{ .Values.database.ros.sslMode }}"
       },
       "kafka": {
         "brokers": [
@@ -27,16 +27,16 @@ data:
         ],
         "topics": [
           {
-            "name": "hccm.ros.events",
-            "requestedName": "hccm.ros.events"
+            "name": "{{ .Values.rosocp.processor.uploadTopic }}",
+            "requestedName": "{{ .Values.rosocp.processor.uploadTopic }}"
           },
           {
-            "name": "rosocp.kruize.recommendations",
-            "requestedName": "rosocp.kruize.recommendations"
+            "name": "{{ .Values.rosocp.recommendationPoller.recommendationTopic }}",
+            "requestedName": "{{ .Values.rosocp.recommendationPoller.recommendationTopic }}"
           },
           {
-            "name": "platform.sources.event-stream",
-            "requestedName": "platform.sources.event-stream"
+            "name": "{{ .Values.sourcesApi.platformSourcesEventStreamTopic }}",
+            "requestedName": "{{ .Values.sourcesApi.platformSourcesEventStreamTopic }}"
           }
         ]
       },
