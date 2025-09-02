@@ -41,52 +41,52 @@ spec:
           image: "{{ .Values.kruize.image.repository }}:{{ .Values.kruize.image.tag }}"
           imagePullPolicy: {{ .Values.global.pullPolicy }}
           command: ["sh"]
-          args: ["-c", "export DB_CONFIG_FILE={{ .Values.kruize.env.DB_CONFIG_FILE }} && /home/autotune/app/target/bin/CreatePartition"]
+          args: ["-c", "export DB_CONFIG_FILE={{ .Values.kruize.env.dbConfigFile }} && /home/autotune/app/target/bin/CreatePartition"]
           env:
             - name: START_AUTOTUNE
               value: "false"
             - name: LOGGING_LEVEL
-              value: {{ .Values.kruize.partitions.env.LOGGING_LEVEL | quote }}
+              value: {{ .Values.kruize.partitions.env.loggingLevel | quote }}
             - name: ROOT_LOGGING_LEVEL
-              value: {{ .Values.kruize.env.ROOT_LOGGING_LEVEL | quote }}
+              value: {{ .Values.kruize.env.rootLoggingLevel | quote }}
             - name: DB_CONFIG_FILE
-              value: {{ .Values.kruize.env.DB_CONFIG_FILE | quote }}
+              value: {{ .Values.kruize.env.dbConfigFile | quote }}
             - name: dbdriver
-              value: {{ .Values.kruize.env.dbdriver | quote }}
+              value: {{ .Values.kruize.env.dbDriver | quote }}
             - name: database_name
               value: {{ .Values.database.kruize.name | quote }}
             - name: clustertype
-              value: {{ .Values.kruize.env.clustertype | quote }}
+              value: {{ .Values.kruize.env.clusterType | quote }}
             - name: k8stype
-              value: {{ .Values.kruize.env.k8stype | quote }}
+              value: {{ .Values.kruize.env.k8sType | quote }}
             - name: authtype
-              value: {{ .Values.kruize.env.authtype | quote }}
+              value: {{ .Values.kruize.env.authType | quote }}
             - name: monitoringagent
-              value: {{ .Values.kruize.env.monitoringagent | quote }}
+              value: {{ .Values.kruize.env.monitoringAgent | quote }}
             - name: monitoringservice
-              value: {{ .Values.kruize.env.monitoringservice | quote }}
+              value: {{ .Values.kruize.env.monitoringService | quote }}
             - name: monitoringendpoint
-              value: {{ .Values.kruize.env.monitoringendpoint | quote }}
+              value: {{ .Values.kruize.env.monitoringEndpoint | quote }}
             - name: savetodb
-              value: {{ .Values.kruize.env.savetodb | quote }}
+              value: {{ .Values.kruize.env.saveToDb | quote }}
             - name: hibernate_dialect
-              value: {{ .Values.kruize.env.hibernate_dialect | quote }}
+              value: {{ .Values.kruize.env.hibernateDialect | quote }}
             - name: hibernate_driver
-              value: {{ .Values.kruize.env.hibernate_driver | quote }}
+              value: {{ .Values.kruize.env.hibernateDriver | quote }}
             - name: hibernate_c3p0minsize
-              value: {{ .Values.kruize.env.hibernate_c3p0minsize | quote }}
+              value: {{ .Values.kruize.env.hibernateC3p0MinSize | quote }}
             - name: hibernate_c3p0maxsize
-              value: {{ .Values.kruize.env.hibernate_c3p0maxsize | quote }}
+              value: {{ .Values.kruize.env.hibernateC3p0MaxSize | quote }}
             - name: hibernate_c3p0timeout
-              value: {{ .Values.kruize.env.hibernate_c3p0timeout | quote }}
+              value: {{ .Values.kruize.env.hibernateC3p0Timeout | quote }}
             - name: hibernate_c3p0maxstatements
-              value: {{ .Values.kruize.env.hibernate_c3p0maxstatements | quote }}
+              value: {{ .Values.kruize.env.hibernateC3p0MaxStatements | quote }}
             - name: hibernate_hbm2ddlauto
-              value: {{ .Values.kruize.env.hibernate_hbm2ddlauto | quote }}
+              value: {{ .Values.kruize.env.hibernateHbm2ddlAuto | quote }}
             - name: hibernate_showsql
-              value: {{ .Values.kruize.env.hibernate_showsql | quote }}
+              value: {{ .Values.kruize.env.hibernateShowSql | quote }}
             - name: hibernate_timezone
-              value: {{ .Values.kruize.env.hibernate_timezone | quote }}
+              value: {{ .Values.kruize.env.hibernateTimezone | quote }}
             - name: local
               value: {{ .Values.kruize.env.local | quote }}
           volumeMounts:
@@ -107,51 +107,51 @@ spec:
               protocol: TCP
           env:
             - name: LOGGING_LEVEL
-              value: {{ .Values.kruize.env.LOGGING_LEVEL | quote }}
+              value: {{ .Values.kruize.env.loggingLevel | quote }}
             - name: ROOT_LOGGING_LEVEL
-              value: {{ .Values.kruize.env.ROOT_LOGGING_LEVEL | quote }}
+              value: {{ .Values.kruize.env.rootLoggingLevel | quote }}
             - name: DB_CONFIG_FILE
-              value: {{ .Values.kruize.env.DB_CONFIG_FILE | quote }}
+              value: {{ .Values.kruize.env.dbConfigFile | quote }}
             - name: dbdriver
-              value: {{ .Values.kruize.env.dbdriver | quote }}
+              value: {{ .Values.kruize.env.dbDriver | quote }}
             - name: database_name
               value: {{ .Values.database.kruize.name | quote }}
             - name: clustertype
-              value: {{ .Values.kruize.env.clustertype | quote }}
+              value: {{ .Values.kruize.env.clusterType | quote }}
             - name: k8stype
-              value: {{ .Values.kruize.env.k8stype | quote }}
+              value: {{ .Values.kruize.env.k8sType | quote }}
             - name: authtype
-              value: {{ .Values.kruize.env.authtype | quote }}
+              value: {{ .Values.kruize.env.authType | quote }}
             - name: monitoringagent
-              value: {{ .Values.kruize.env.monitoringagent | quote }}
+              value: {{ .Values.kruize.env.monitoringAgent | quote }}
             - name: monitoringservice
-              value: {{ .Values.kruize.env.monitoringservice | quote }}
+              value: {{ .Values.kruize.env.monitoringService | quote }}
             - name: monitoringendpoint
-              value: {{ .Values.kruize.env.monitoringendpoint | quote }}
+              value: {{ .Values.kruize.env.monitoringEndpoint | quote }}
             - name: savetodb
-              value: {{ .Values.kruize.env.savetodb | quote }}
+              value: {{ .Values.kruize.env.saveToDb | quote }}
             - name: local
               value: {{ .Values.kruize.env.local | quote }}
             - name: LOG_ALL_HTTP_REQ_AND_RESPONSE
-              value: {{ .Values.kruize.env.LOG_ALL_HTTP_REQ_AND_RESPONSE | quote }}
+              value: {{ .Values.kruize.env.logAllHttpReqAndResponse | quote }}
             - name: hibernate_dialect
-              value: {{ .Values.kruize.env.hibernate_dialect | quote }}
+              value: {{ .Values.kruize.env.hibernateDialect | quote }}
             - name: hibernate_driver
-              value: {{ .Values.kruize.env.hibernate_driver | quote }}
+              value: {{ .Values.kruize.env.hibernateDriver | quote }}
             - name: hibernate_c3p0minsize
-              value: {{ .Values.kruize.env.hibernate_c3p0minsize | quote }}
+              value: {{ .Values.kruize.env.hibernateC3p0MinSize | quote }}
             - name: hibernate_c3p0maxsize
-              value: {{ .Values.kruize.env.hibernate_c3p0maxsize | quote }}
+              value: {{ .Values.kruize.env.hibernateC3p0MaxSize | quote }}
             - name: hibernate_c3p0timeout
-              value: {{ .Values.kruize.env.hibernate_c3p0timeout | quote }}
+              value: {{ .Values.kruize.env.hibernateC3p0Timeout | quote }}
             - name: hibernate_c3p0maxstatements
-              value: {{ .Values.kruize.env.hibernate_c3p0maxstatements | quote }}
+              value: {{ .Values.kruize.env.hibernateC3p0MaxStatements | quote }}
             - name: hibernate_hbm2ddlauto
-              value: {{ .Values.kruize.env.hibernate_hbm2ddlauto | quote }}
+              value: {{ .Values.kruize.env.hibernateHbm2ddlAuto | quote }}
             - name: hibernate_showsql
-              value: {{ .Values.kruize.env.hibernate_showsql | quote }}
+              value: {{ .Values.kruize.env.hibernateShowSql | quote }}
             - name: hibernate_timezone
-              value: {{ .Values.kruize.env.hibernate_timezone | quote }}
+              value: {{ .Values.kruize.env.hibernateTimezone | quote }}
             - name: plots
               value: {{ .Values.kruize.env.plots | quote }}
           volumeMounts:

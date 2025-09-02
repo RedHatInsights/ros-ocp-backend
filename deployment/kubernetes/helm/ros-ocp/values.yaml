@@ -175,29 +175,28 @@ kruize:
     tag: "d0b4337"
   port: 8080
   env:
-    LOGGING_LEVEL: debug
-    ROOT_LOGGING_LEVEL: error
-    DB_CONFIG_FILE: /tmp/cdappconfig.json
-    dbdriver: "jdbc:postgresql://"
-    database_name: postgres
-    clustertype: kubernetes
-    k8stype: openshift
-    authtype: ""
-    monitoringagent: prometheus
-    monitoringservice: prometheus-k8s
-    monitoringendpoint: prometheus-k8s
-    savetodb: true
+    loggingLevel: debug
+    rootLoggingLevel: error
+    dbConfigFile: /tmp/cdappconfig.json
+    dbDriver: "jdbc:postgresql://"
+    clusterType: kubernetes
+    k8sType: openshift
+    authType: ""
+    monitoringAgent: prometheus
+    monitoringService: prometheus-k8s
+    monitoringEndpoint: prometheus-k8s
+    saveToDb: true
     local: false
-    LOG_ALL_HTTP_REQ_AND_RESPONSE: true
-    hibernate_dialect: org.hibernate.dialect.PostgreSQLDialect
-    hibernate_driver: org.postgresql.Driver
-    hibernate_c3p0minsize: 2
-    hibernate_c3p0maxsize: 5
-    hibernate_c3p0timeout: 300
-    hibernate_c3p0maxstatements: 100
-    hibernate_hbm2ddlauto: none
-    hibernate_showsql: false
-    hibernate_timezone: UTC
+    logAllHttpReqAndResponse: true
+    hibernateDialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernateDriver: org.postgresql.Driver
+    hibernateC3p0MinSize: 2
+    hibernateC3p0MaxSize: 5
+    hibernateC3p0Timeout: 300
+    hibernateC3p0MaxStatements: 100
+    hibernateHbm2ddlAuto: none
+    hibernateShowSql: false
+    hibernateTimezone: UTC
     plots: true
   # Partition management configuration
   partitions:
@@ -212,8 +211,8 @@ kruize:
     failedJobsHistoryLimit: 1
     # Environment variables specific to partition jobs
     env:
-      LOGGING_LEVEL: info
-      deletepartitionsthreshold: "16"
+      loggingLevel: info
+      deletePartitionsThreshold: "16"
     # Resource limits for partition jobs
     resources:
       requests:
