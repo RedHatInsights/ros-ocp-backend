@@ -39,6 +39,14 @@ database:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     port: 5432
+    # Database configuration for kruize configmap
+    host: internal  # Use "internal" for the built-in database service, or specify external hostname
+    name: postgres
+    username: postgres
+    password: postgres
+    adminUsername: postgres
+    adminPassword: postgres
+    sslMode: disable
 
   sources:
     enabled: true
@@ -191,6 +199,29 @@ kruize:
     hibernate_showsql: false
     hibernate_timezone: UTC
     plots: true
+  # Partition management configuration
+  partitions:
+    # Enable partition creation as initContainer
+    createEnabled: true
+    # Enable partition deletion CronJob
+    deleteEnabled: true
+    # Schedule for partition deletion CronJob (daily at midnight)
+    deleteSchedule: "0 0 * * *"
+    # Job history limits
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 1
+    # Environment variables specific to partition jobs
+    env:
+      LOGGING_LEVEL: info
+      deletepartitionsthreshold: "16"
+    # Resource limits for partition jobs
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "300m"
 
 # ROS-OCP Backend Services
 rosocp:

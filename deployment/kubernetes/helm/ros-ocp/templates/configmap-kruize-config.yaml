@@ -9,14 +9,14 @@ data:
   cdappconfig.json: |
     {
       "database": {
-        "adminPassword": "postgres",
-        "adminUsername": "postgres",
-        "hostname": "{{ include "ros-ocp.fullname" . }}-db-kruize",
-        "name": "postgres",
-        "password": "postgres",
+        "adminPassword": "{{ .Values.database.kruize.adminPassword }}",
+        "adminUsername": "{{ .Values.database.kruize.adminUsername }}",
+        "hostname": "{{ include "ros-ocp.kruizeDatabaseHost" . }}",
+        "name": "{{ .Values.database.kruize.name }}",
+        "password": "{{ .Values.database.kruize.password }}",
         "port": {{ .Values.database.kruize.port }},
-        "username": "postgres",
-        "sslMode": "disable"
+        "username": "{{ .Values.database.kruize.username }}",
+        "sslMode": "{{ .Values.database.kruize.sslMode }}"
       },
       "kafka": {
         "brokers": [
