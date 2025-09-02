@@ -76,7 +76,7 @@ Get the database host - returns internal service name if "internal", otherwise r
 Get the database URL - returns complete postgresql connection string
 */}}
 {{- define "ros-ocp.databaseUrl" -}}
-{{- printf "postgresql://postgres:$(DB_PASSWORD)@%s:%s/%s?sslmode=disable" (include "ros-ocp.databaseHost" .) (.Values.database.ros.port | toString) .Values.database.ros.name }}
+{{- printf "postgresql://postgres:$(DB_PASSWORD)@%s:%s/%s?sslmode=%s" (include "ros-ocp.databaseHost" .) (.Values.database.ros.port | toString) .Values.database.ros.name .Values.database.ros.sslMode }}
 {{- end }}
 
 {{/*

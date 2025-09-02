@@ -35,9 +35,9 @@ spec:
               protocol: TCP
           env:
             - name: REDIS_MAXMEMORY
-              value: {{ .Values.redis.env.REDIS_MAXMEMORY | quote }}
+              value: {{ .Values.redis.maxMemory | quote }}
             - name: REDIS_MAXMEMORY_POLICY
-              value: {{ .Values.redis.env.REDIS_MAXMEMORY_POLICY | quote }}
+              value: {{ .Values.redis.maxMemoryPolicy | quote }}
           livenessProbe:
             exec:
               command:

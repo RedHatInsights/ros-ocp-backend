@@ -46,9 +46,9 @@ spec:
             - name: START_AUTOTUNE
               value: "false"
             - name: LOGGING_LEVEL
-              value: {{ .Values.kruize.partitions.env.loggingLevel | quote }}
+              value: {{ .Values.kruize.partitions.loggingLevel | quote }}
             - name: ROOT_LOGGING_LEVEL
-              value: {{ .Values.kruize.env.rootLoggingLevel | quote }}
+              value: {{ .Values.kruize.partitions.rootLoggingLevel | quote }}
             - name: DB_CONFIG_FILE
               value: {{ .Values.kruize.env.dbConfigFile | quote }}
             - name: dbdriver
