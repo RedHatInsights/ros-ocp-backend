@@ -31,7 +31,7 @@ spec:
           command: ['sh', '-c']
           args:
             - |
-              until nc -z {{ include "ros-ocp.fullname" . }}-db-sources {{ .Values.database.sources.port }}; do
+              until nc -z {{ include "ros-ocp.sourcesDatabaseHost" . }} {{ .Values.database.sources.port }}; do
                 echo "Waiting for Sources database..."
                 sleep 5
               done
@@ -73,7 +73,7 @@ spec:
                   name: {{ include "ros-ocp.fullname" . }}-db-credentials
                   key: sources-password
             - name: DATABASE_HOST
-              value: {{ include "ros-ocp.fullname" . }}-db-sources
+              value: {{ include "ros-ocp.sourcesDatabaseHost" . }}
             - name: DATABASE_PORT
               value: {{ .Values.sourcesApi.env.DATABASE_PORT | quote }}
             - name: DATABASE_NAME

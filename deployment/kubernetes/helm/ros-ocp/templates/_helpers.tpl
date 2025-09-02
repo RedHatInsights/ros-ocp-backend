@@ -89,3 +89,14 @@ Get the kruize database host - returns internal service name if "internal", othe
 {{- .Values.database.kruize.host }}
 {{- end }}
 {{- end }}
+
+{{/*
+Get the sources database host - returns internal service name if "internal", otherwise returns the configured host
+*/}}
+{{- define "ros-ocp.sourcesDatabaseHost" -}}
+{{- if eq .Values.database.sources.host "internal" }}
+{{- printf "%s-db-sources" (include "ros-ocp.fullname" .) }}
+{{- else }}
+{{- .Values.database.sources.host }}
+{{- end }}
+{{- end }}
