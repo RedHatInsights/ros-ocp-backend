@@ -1,0 +1,96 @@
+{{- if .Values.kruize.partitions.deleteEnabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-kruize-delete-partitions
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: maintenance
+    app.kubernetes.io/name: kruize-partitions
+spec:
+  schedule: {{ .Values.kruize.partitions.deleteSchedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.kruize.partitions.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.kruize.partitions.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "ros-ocp.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: maintenance
+            app.kubernetes.io/name: kruize-partitions
+        spec:
+          restartPolicy: OnFailure
+          {{- with .Values.global.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: delete-kruize-partitions
+              image: "{{ .Values.kruize.image.repository }}:{{ .Values.kruize.image.tag }}"
+              imagePullPolicy: {{ .Values.global.pullPolicy }}
+              command: ["sh"]
+              args: ["-c", "export DB_CONFIG_FILE={{ .Values.kruize.env.dbConfigFile }} && /home/autotune/app/target/bin/RetentionPartition"]
+              env:
+                - name: START_AUTOTUNE
+                  value: "false"
+                - name: LOGGING_LEVEL
+                  value: {{ .Values.kruize.partitions.env.loggingLevel | quote }}
+                - name: ROOT_LOGGING_LEVEL
+                  value: {{ .Values.kruize.env.rootLoggingLevel | quote }}
+                - name: DB_CONFIG_FILE
+                  value: {{ .Values.kruize.env.dbConfigFile | quote }}
+                - name: dbdriver
+                  value: {{ .Values.kruize.env.dbDriver | quote }}
+                - name: database_name
+                  value: {{ .Values.database.kruize.name | quote }}
+                - name: clustertype
+                  value: {{ .Values.kruize.env.clusterType | quote }}
+                - name: k8stype
+                  value: {{ .Values.kruize.env.k8sType | quote }}
+                - name: authtype
+                  value: {{ .Values.kruize.env.authType | quote }}
+                - name: monitoringagent
+                  value: {{ .Values.kruize.env.monitoringAgent | quote }}
+                - name: monitoringservice
+                  value: {{ .Values.kruize.env.monitoringService | quote }}
+                - name: monitoringendpoint
+                  value: {{ .Values.kruize.env.monitoringEndpoint | quote }}
+                - name: savetodb
+                  value: {{ .Values.kruize.env.saveToDb | quote }}
+                - name: hibernate_dialect
+                  value: {{ .Values.kruize.env.hibernateDialect | quote }}
+                - name: hibernate_driver
+                  value: {{ .Values.kruize.env.hibernateDriver | quote }}
+                - name: hibernate_c3p0minsize
+                  value: {{ .Values.kruize.env.hibernateC3p0MinSize | quote }}
+                - name: hibernate_c3p0maxsize
+                  value: {{ .Values.kruize.env.hibernateC3p0MaxSize | quote }}
+                - name: hibernate_c3p0timeout
+                  value: {{ .Values.kruize.env.hibernateC3p0Timeout | quote }}
+                - name: hibernate_c3p0maxstatements
+                  value: {{ .Values.kruize.env.hibernateC3p0MaxStatements | quote }}
+                - name: hibernate_hbm2ddlauto
+                  value: {{ .Values.kruize.env.hibernateHbm2ddlAuto | quote }}
+                - name: hibernate_showsql
+                  value: {{ .Values.kruize.env.hibernateShowSql | quote }}
+                - name: hibernate_timezone
+                  value: {{ .Values.kruize.env.hibernateTimezone | quote }}
+                - name: deletepartitionsthreshold
+                  value: {{ .Values.kruize.partitions.env.deletePartitionsThreshold | quote }}
+                - name: local
+                  value: {{ .Values.kruize.env.local | quote }}
+              volumeMounts:
+                - name: kruize-config
+                  mountPath: /tmp/cdappconfig.json
+                  subPath: cdappconfig.json
+                  readOnly: true
+              resources:
+                {{- toYaml .Values.kruize.partitions.resources | nindent 16 }}
+          volumes:
+            - name: kruize-config
+              configMap:
+                name: {{ include "ros-ocp.fullname" . }}-kruize-config
+{{- end }}

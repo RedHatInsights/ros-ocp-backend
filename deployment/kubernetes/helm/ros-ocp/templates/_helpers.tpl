@@ -78,3 +78,14 @@ Get the database URL - returns complete postgresql connection string
 {{- define "ros-ocp.databaseUrl" -}}
 {{- printf "postgresql://postgres:$(DB_PASSWORD)@%s:%s/%s?sslmode=disable" (include "ros-ocp.databaseHost" .) (.Values.rosocp.database.port | toString) .Values.rosocp.database.name }}
 {{- end }}
+
+{{/*
+Get the kruize database host - returns internal service name if "internal", otherwise returns the configured host
+*/}}
+{{- define "ros-ocp.kruizeDatabaseHost" -}}
+{{- if eq .Values.database.kruize.host "internal" }}
+{{- printf "%s-db-kruize" (include "ros-ocp.fullname" .) }}
+{{- else }}
+{{- .Values.database.kruize.host }}
+{{- end }}
+{{- end }}
