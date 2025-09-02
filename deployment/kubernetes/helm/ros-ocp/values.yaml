@@ -1,5 +1,4 @@
 # Default values for ros-ocp-helm
-# This is a YAML-formatted file.
 
 global:
   # Storage class for persistent volumes
@@ -14,33 +13,29 @@ serviceAccount:
 
 # Database configurations
 database:
-  ros:
+  ros: # Database configuration for ros-ocp services
     enabled: true
     image:
       repository: quay.io/insights-onprem/postgresql
       tag: "16"
     storage:
       size: 10Gi
-    env:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    port: 5432
-
-  kruize:
-    enabled: true
-    image:
-      repository: quay.io/insights-onprem/postgresql
-      tag: "16"
-    storage:
-      size: 10Gi
-    env:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    port: 5432
-    # Database configuration for kruize configmap
     host: internal  # Use "internal" for the built-in database service, or specify external hostname
+    port: 5432
+    name: postgres
+    user: postgres
+    password: postgres
+    url: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
+
+  kruize: # Database configuration for kruize services
+    enabled: true
+    image:
+      repository: quay.io/insights-onprem/postgresql
+      tag: "16"
+    storage:
+      size: 10Gi
+    host: internal  # Use "internal" for the built-in database service, or specify external hostname
+    port: 5432
     name: postgres
     username: postgres
     password: postgres
@@ -48,18 +43,18 @@ database:
     adminPassword: postgres
     sslMode: disable
 
-  sources:
+  sources: # Database configuration for sources-api services
     enabled: true
     image:
       repository: quay.io/insights-onprem/postgresql
       tag: "16"
     storage:
       size: 10Gi
-    env:
-      POSTGRES_DB: sources_api_development
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+    host: internal  # Use "internal" for the built-in database service, or specify external hostname
     port: 5432
+    name: sources_api_development
+    username: postgres
+    password: postgres
 
 # Kafka and Zookeeper
 kafka:
@@ -224,14 +219,6 @@ kruize:
 
 # ROS-OCP Backend Services
 rosocp:
-  # Shared database configuration for all rosocp services
-  database:
-    host: internal  # Use "internal" for the built-in database service, or specify external hostname
-    port: 5432
-    name: postgres
-    user: postgres
-    password: postgres
-    url: postgresql://postgres:postgres@db-ros:5432/postgres?sslmode=disable
   processor:
     enabled: true
     image:
@@ -380,7 +367,6 @@ resources:
 
 # Startup and readiness probe configuration
 probes:
-  enabled: true
   initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 5

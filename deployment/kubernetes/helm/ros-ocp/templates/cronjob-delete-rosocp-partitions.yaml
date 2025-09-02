@@ -34,11 +34,11 @@ spec:
             - name: DB_HOST
               value: {{ include "ros-ocp.databaseHost" . }}
             - name: DB_PORT
-              value: {{ .Values.rosocp.database.port | quote }}
+              value: {{ .Values.database.ros.port | quote }}
             - name: DB_NAME
-              value: {{ .Values.rosocp.database.name | quote }}
+              value: {{ .Values.database.ros.name | quote }}
             - name: DB_USER
-              value: {{ .Values.rosocp.database.user | quote }}
+              value: {{ .Values.database.ros.username | quote }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
