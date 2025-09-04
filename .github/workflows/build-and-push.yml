@@ -1,0 +1,82 @@
+name: Build and Push Container Image
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/build-and-push.yml'
+      - '.dockerignore'
+      - 'Dockerfile'
+      - 'cmd/**'
+      - 'internal/**'
+      - 'migrations/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'rosocp.go'
+      - 'openapi.json'
+      - 'resource_optimization_openshift.json'
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Custom tag for the image (optional)'
+        required: false
+        default: ''
+        type: string
+
+env:
+  REGISTRY: quay.io
+  IMAGE_NAME: insights-onprem/ros-ocp-backend
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Run tests
+        run: make test
+
+      - name: Build application
+        run: make build
+
+      - name: Log in to Quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event.inputs.tag != '' }}
+
+      - name: Build and push container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
