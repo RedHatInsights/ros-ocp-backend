@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/redhatinsights/platform-go-middlewares/v2/identity"
@@ -23,7 +24,8 @@ const (
 
 	// ID Provider header values
 	RHSSOIdentityHeader = "X-Rh-Identity"
-	OAuthIdentityHeader = "Bearer Token"
+	OAuthIdentityHeader = "Authorization"
+	bearerPrefix        = "Bearer "
 )
 
 type IdentityProvider interface {
@@ -44,16 +46,15 @@ func (o *OAuthIdentityProvider) GetHandlerFunction() echo.MiddlewareFunc {
 
 func (o *OAuthIdentityProvider) oauthIdentityHandlerFunction(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		decodedIdentity, err := decodeIdentity(c, OAuthIdentityHeader)
+		token, err := extractBearerToken(c, OAuthIdentityHeader)
 		if err != nil {
 			return err
 		}
-		token := string(decodedIdentity)
 		if token == "" {
-			return echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("Missing %s", OAuthIdentityHeader))
+			return echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("Missing or invalid %s header", OAuthIdentityHeader))
 		}
 
-		userInfo, err := o.validateToken(string(token))
+		userInfo, err := o.validateToken(token)
 		if err != nil {
 			return err
 		}
@@ -152,6 +153,26 @@ func (r *RHSSOIdentityProvider) rhSSOIdentityHandlerFunction(next echo.HandlerFu
 		c.Set("Identity", id)
 		return next(c)
 	}
+}
+
+func extractBearerToken(c echo.Context, header string) (string, error) {
+	authHeader := c.Request().Header.Get(header)
+	if authHeader == "" {
+		return "", echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("Missing %s header", header))
+	}
+
+	// Check if header starts with "Bearer "
+	if !strings.HasPrefix(authHeader, bearerPrefix) {
+		return "", echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("Invalid %s header format, must start with 'Bearer '", header))
+	}
+
+	// Extract the token part after "Bearer "
+	token := strings.TrimSpace(authHeader[len(bearerPrefix):])
+	if token == "" {
+		return "", echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("Empty token in %s header", header))
+	}
+
+	return token, nil
 }
 
 func decodeIdentity(c echo.Context, header string) ([]byte, error) {
