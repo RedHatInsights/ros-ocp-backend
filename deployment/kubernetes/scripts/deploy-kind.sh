@@ -130,10 +130,10 @@ nodes:
         node-labels: "ingress-ready=true"
   extraPortMappings:
   - containerPort: 80
-    hostPort: 80
+    hostPort: 7080
     protocol: TCP
   - containerPort: 443
-    hostPort: 443
+    hostPort: 7443
     protocol: TCP
   - containerPort: 30080
     hostPort: 30080
@@ -304,6 +304,7 @@ show_status() {
     echo ""
     
     echo_info "Access Points:"
+    echo_info "  - Ingress: http://localhost:7080 or https://localhost:7443"
     echo_info "  - Ingress API: http://localhost:30080/api/ingress/v1/version"
     echo_info "  - ROS-OCP API: http://localhost:30081/status"
     echo_info "  - Kruize API: http://localhost:30090/listPerformanceProfiles"
