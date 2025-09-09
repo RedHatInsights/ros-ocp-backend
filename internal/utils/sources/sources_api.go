@@ -18,7 +18,9 @@ func GetCostApplicationID() (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("error while calling sources API: %v", err)
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	body, _ := io.ReadAll(res.Body)
 	if res.StatusCode != 200 {
 		return 0, fmt.Errorf("%v", res)

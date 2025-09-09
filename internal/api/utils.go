@@ -170,13 +170,14 @@ func parseQueryParams(param string, values []string) (string, []string) {
 		parsedKeyMultipleVal = strings.TrimSuffix(parsedKeyMultipleVal, " OR ")
 		return parsedKeyMultipleVal, valuesSlice
 	} else {
-		if param == "cluster" {
+		switch param {
+		case "cluster":
 			paramMap[param] = paramMap[param] + " OR " + "clusters.cluster_uuid ILIKE ?"
 			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
 			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
-		} else if param == "workload_type" {
+		case "workload_type":
 			valuesSlice = append(valuesSlice, values[0])
-		} else {
+		default:
 			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
 		}
 		return paramMap[param], valuesSlice
@@ -212,11 +213,12 @@ func truncateToThreeDecimalPlaces(value float64) float64 {
 func convertCPUUnit(cpuUnit string, cpuValue float64) float64 {
 	var convertedValueCPU float64
 
-	if cpuUnit == "millicores" {
+	switch cpuUnit {
+	case "millicores":
 		convertedValueCPU = math.Round(cpuValue * 1000) // millicore values don't require decimal precision
-	} else if cpuUnit == "cores" {
+	case "cores":
 		convertedValueCPU = truncateToThreeDecimalPlaces(cpuValue)
-	} else {
+	default:
 		convertedValueCPU = cpuValue
 	}
 
@@ -226,13 +228,14 @@ func convertCPUUnit(cpuUnit string, cpuValue float64) float64 {
 func convertMemoryUnit(memoryUnit string, memoryValue float64) float64 {
 	var convertedValueMemory float64
 
-	if memoryUnit == "MiB" {
+	switch memoryUnit {
+	case "MiB":
 		memoryInMiB := memoryValue / 1024 / 1024
 		convertedValueMemory = math.Trunc(memoryInMiB*100) / 100
-	} else if memoryUnit == "GiB" {
+	case "GiB":
 		memoryInGiB := memoryValue / 1024 / 1024 / 1024
 		convertedValueMemory = math.Trunc(memoryInGiB*100) / 100
-	} else if memoryUnit == "bytes" {
+	case "bytes":
 		convertedValueMemory = memoryValue
 	}
 
@@ -512,9 +515,10 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 			memoryObject, ok := sectionObject["memory"].(map[string]interface{})
 			if ok {
 				if memoryValue, ok := memoryObject["amount"].(float64); ok {
-					if section == "limits" {
+					switch section {
+					case "limits":
 						currentMemoryLimits = memoryValue
-					} else if section == "requests" {
+					case "requests":
 						currentMemoryRequests = memoryValue
 					}
 				}
@@ -523,9 +527,10 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 			cpuObject, ok := sectionObject["cpu"].(map[string]interface{})
 			if ok {
 				if cpuValue, ok := cpuObject["amount"].(float64); ok {
-					if section == "limits" {
+					switch section {
+					case "limits":
 						currentCpuLimits = cpuValue
-					} else if section == "requests" {
+					case "requests":
 						currentCpuRequests = cpuValue
 					}
 				}
@@ -564,10 +569,11 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 							memoryObject, ok := sectionObject["memory"].(map[string]interface{})
 							if ok {
 								if memoryValue, ok := memoryObject["amount"].(float64); ok {
-									if section == "limits" {
+									switch section {
+									case "limits":
 										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryLimits)
 										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
-									} else if section == "requests" {
+									case "requests":
 										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryRequests)
 										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
 									}
@@ -578,10 +584,11 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 							cpuObject, ok := sectionObject["cpu"].(map[string]interface{})
 							if ok {
 								if cpuValue, ok := cpuObject["amount"].(float64); ok {
-									if section == "limits" {
+									switch section {
+									case "limits":
 										percentageCpuValue := calculatePercentage(cpuValue, currentCpuLimits)
 										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
-									} else if section == "requests" {
+									case "requests":
 										percentageCpuValue := calculatePercentage(cpuValue, currentCpuRequests)
 										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
 									}

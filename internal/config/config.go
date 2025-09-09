@@ -113,12 +113,13 @@ func initConfig() {
 
 		// clowder RBAC Config
 		for _, endpoint := range c.Endpoints {
-			if endpoint.App == "rbac" {
+			switch endpoint.App {
+			case "rbac":
 				viper.SetDefault("RBACHost", endpoint.Hostname)
 				viper.SetDefault("RBACPort", endpoint.Port)
 				viper.SetDefault("RBACProtocol", "http")
 				viper.SetDefault("RBAC_ENABLE", true)
-			} else if endpoint.App == "sources-api" {
+			case "sources-api":
 				viper.SetDefault("SOURCES_API_BASE_URL", fmt.Sprintf("http://%v:%v", endpoint.Hostname, endpoint.Port))
 			}
 		}
