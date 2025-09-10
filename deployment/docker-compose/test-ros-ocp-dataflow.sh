@@ -193,10 +193,12 @@ upload_test_data() {
     fi
 
     # Upload the file using curl with proper content type and authentication
+    # Include cluster_alias in the x-rh-identity header for proper Kafka message generation
     local curl_cmd="curl -s -w \"%{http_code}\" \
         -F \"upload=@${upload_file};type=application/vnd.redhat.hccm.upload\" \
-        -H \"x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0=\" \
-        -H \"x-rh-request-id: test-request-$(date +%s)\""
+        -H \"x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSIsImNsdXN0ZXJfYWxpYXMiOiJ0ZXN0LWNsdXN0ZXIifX19\" \
+        -H \"x-rh-request-id: test-request-$(date +%s)\" \
+        -H \"x-rh-cluster-alias: test-cluster\""
 
     if [ -n "$auth_token" ]; then
         curl_cmd="$curl_cmd -H \"Authorization: Bearer $auth_token\""

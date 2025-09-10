@@ -86,6 +86,9 @@ services:
       - METRICS_PORT=8080
       - KUBECONFIG=/tmp/ros-ingress-kubeconfig
       - JWT_SECRET=dev-jwt-secret-key-for-ros-ingress
+      - DEFAULT_CLUSTER_ALIAS=test-cluster
+      - CLUSTER_ALIAS=test-cluster
+      - ROS_CLUSTER_ALIAS=test-cluster
     volumes:
       - /tmp/ros-ingress-kubeconfig:/tmp/ros-ingress-kubeconfig:ro
     depends_on:
