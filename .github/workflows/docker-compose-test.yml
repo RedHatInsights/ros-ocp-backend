@@ -62,13 +62,13 @@ jobs:
         export INGRESS_PORT=${{ env.INGRESS_PORT }}
         export MINIO_ACCESS_KEY=${{ env.MINIO_ACCESS_KEY }}
         export MINIO_SECRET_KEY=${{ env.MINIO_SECRET_KEY }}
-        
+
         echo "Starting services with podman-compose..."
         podman-compose up -d
-        
+
         echo "Waiting for services to initialize..."
         sleep 30
-        
+
         echo "Service status:"
         podman-compose ps
 
@@ -80,15 +80,15 @@ jobs:
         timeout 300 bash -c 'until podman exec db-ros_1 pg_isready -U postgres; do sleep 5; done'
         timeout 300 bash -c 'until podman exec db-kruize_1 pg_isready -U postgres; do sleep 5; done'
         timeout 300 bash -c 'until podman exec db-sources_1 pg_isready -U postgres; do sleep 5; done'
-        
+
         # Wait for Kafka
         echo "Waiting for Kafka..."
         timeout 300 bash -c 'until podman exec kafka_1 kafka-broker-api-versions --bootstrap-server localhost:29092 &>/dev/null; do sleep 5; done'
-        
+
         # Wait for MinIO
         echo "Waiting for MinIO..."
         timeout 180 bash -c 'until curl -f http://localhost:9000/minio/health/live &>/dev/null; do sleep 5; done'
-        
+
         # Wait for Redis
         echo "Waiting for Redis..."
         timeout 180 bash -c 'until podman exec redis_1 redis-cli ping &>/dev/null; do sleep 5; done'
@@ -99,23 +99,23 @@ jobs:
         # Get actual ingress port
         ACTUAL_INGRESS_PORT=$(podman port ingress_1 3000 2>/dev/null | cut -d: -f2 || echo "$INGRESS_PORT")
         echo "Using ingress port: $ACTUAL_INGRESS_PORT"
-        
+
         # Wait for application services
         echo "Waiting for Ingress service..."
-        timeout 300 bash -c "until curl -f http://localhost:${ACTUAL_INGRESS_PORT}/api/ingress/v1/version &>/dev/null; do sleep 5; done"
-        
+        timeout 300 bash -c "until curl -f http://localhost:${ACTUAL_INGRESS_PORT}/health &>/dev/null; do sleep 5; done"
+
         echo "Waiting for Kruize service..."
         timeout 300 bash -c 'until curl -f http://localhost:8080/listPerformanceProfiles &>/dev/null; do sleep 5; done'
-        
+
         echo "Waiting for Sources API..."
         timeout 300 bash -c 'until curl -f http://localhost:8002/api/sources/v1.0/source_types &>/dev/null; do sleep 5; done'
-        
+
         echo "Waiting for ROS-OCP API..."
         timeout 300 bash -c 'until curl -f http://localhost:8001/status &>/dev/null; do sleep 5; done'
-        
+
         echo "Waiting for processor to start..."
         timeout 300 bash -c 'until podman logs rosocp-processor_1 2>/dev/null | grep -q "Starting processor"; do sleep 5; done'
-        
+
         echo "Waiting for recommendation poller to start..."
         timeout 300 bash -c 'until podman logs rosocp-recommendation-poller_1 2>/dev/null | grep -q "Starting recommendation-poller"; do sleep 5; done'
 
@@ -124,7 +124,7 @@ jobs:
       run: |
         # Make test script executable
         chmod +x test-ros-ocp-dataflow.sh
-        
+
         # Run the test script
         ./test-ros-ocp-dataflow.sh
 
@@ -134,17 +134,17 @@ jobs:
       run: |
         echo "=== Final service status ==="
         podman-compose ps
-        
+
         echo "=== Service logs (last 20 lines each) ==="
         echo "--- Ingress logs ---"
         podman-compose logs --tail=20 ingress || true
-        
+
         echo "--- ROS-OCP API logs ---"
         podman-compose logs --tail=20 rosocp-api || true
-        
+
         echo "--- ROS-OCP Processor logs ---"
         podman-compose logs --tail=20 rosocp-processor || true
-        
+
         echo "--- Kruize logs ---"
         podman-compose logs --tail=20 kruize-autotune || true
 
@@ -154,10 +154,10 @@ jobs:
       run: |
         echo "Cleaning up services..."
         podman-compose down -v || true
-        
+
         # Clean up any remaining containers
         podman container prune -f || true
-        
+
         # Clean up any remaining volumes
         podman volume prune -f || true
 

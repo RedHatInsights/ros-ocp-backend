@@ -130,15 +130,46 @@ services:
     depends_on:
       - kafka
 
-  # Override Insights Ingress to use insights-onprem image
+  # Override Insights Ingress to use insights-ros-ingress image
   ingress:
-    image: quay.io/insights-onprem/insights-ingress:latest
+    image: quay.io/insights-onprem/insights-ros-ingress:latest
     # All other configuration remains the same
     depends_on:
       - minio
       - kafka
+    ports:
+      - $INGRESS_PORT:8080
     environment:
-      - INGRESS_VALID_UPLOAD_TYPES=hccm,rosocp
+      - SERVER_PORT=8080
+      - UPLOAD_MAX_SIZE=104857600
+      - UPLOAD_MAX_MEMORY=33554432
+      - UPLOAD_TEMP_DIR=/tmp
+      - UPLOAD_ALLOWED_TYPES=application/vnd.redhat.hccm.upload
+      - UPLOAD_REQUIRE_AUTH=true
+      - STORAGE_ENDPOINT=minio:9000
+      - STORAGE_BUCKET=ros-data
+      - STORAGE_USE_SSL=false
+      - STORAGE_URL_EXPIRATION=172800
+      - STORAGE_PATH_PREFIX=ros
+      - STORAGE_ACCESS_KEY=$MINIO_ACCESS_KEY
+      - STORAGE_SECRET_KEY=$MINIO_SECRET_KEY
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_ROS_TOPIC=hccm.ros.events
+      - KAFKA_SECURITY_PROTOCOL=PLAINTEXT
+      - KAFKA_CLIENT_ID=insights-ros-ingress
+      - KAFKA_BATCH_SIZE=16384
+      - KAFKA_RETRIES=3
+      - AUTH_ENABLED=true
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+      - LOG_OUTPUT=stdout
+      - METRICS_ENABLED=true
+      - METRICS_PATH=/metrics
+      - METRICS_PORT=8080
+      - KUBECONFIG=/tmp/ros-ingress-kubeconfig
+      - JWT_SECRET=dev-jwt-secret-key-for-ros-ingress
+    volumes:
+      - /tmp/ros-ingress-kubeconfig:/tmp/ros-ingress-kubeconfig:ro
 
   # Add health check for kruize-autotune service
   kruize-autotune:

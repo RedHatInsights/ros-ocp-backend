@@ -54,18 +54,40 @@ services:
 
   ingress:
     container_name: ingress_1
-    image: quay.io/cloudservices/insights-ingress:latest
+    image: quay.io/insights-onprem/insights-ros-ingress:latest
     ports:
-      - $INGRESS_PORT:3000
+      - $INGRESS_PORT:8080
     environment:
-      - INGRESS_VALIDTOPICS=hccm,rosocp
-      - INGRESS_STAGEBUCKET=insights-upload-perma
-      - OPENSHIFT_BUILD_COMMIT=somestring
-      - INGRESS_MAXSIZE=104857600
-      - INGRESS_MINIODEV=true
-      - INGRESS_MINIOACCESSKEY=$MINIO_ACCESS_KEY
-      - INGRESS_MINIOSECRETKEY=$MINIO_SECRET_KEY
-      - INGRESS_MINIOENDPOINT=minio:9000
+      - SERVER_PORT=8080
+      - UPLOAD_MAX_SIZE=104857600
+      - UPLOAD_MAX_MEMORY=33554432
+      - UPLOAD_TEMP_DIR=/tmp
+      - UPLOAD_ALLOWED_TYPES=application/vnd.redhat.hccm.upload
+      - UPLOAD_REQUIRE_AUTH=true
+      - STORAGE_ENDPOINT=minio:9000
+      - STORAGE_BUCKET=ros-data
+      - STORAGE_USE_SSL=false
+      - STORAGE_URL_EXPIRATION=172800
+      - STORAGE_PATH_PREFIX=ros
+      - STORAGE_ACCESS_KEY=$MINIO_ACCESS_KEY
+      - STORAGE_SECRET_KEY=$MINIO_SECRET_KEY
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_ROS_TOPIC=hccm.ros.events
+      - KAFKA_SECURITY_PROTOCOL=PLAINTEXT
+      - KAFKA_CLIENT_ID=insights-ros-ingress
+      - KAFKA_BATCH_SIZE=16384
+      - KAFKA_RETRIES=3
+      - AUTH_ENABLED=false
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+      - LOG_OUTPUT=stdout
+      - METRICS_ENABLED=true
+      - METRICS_PATH=/metrics
+      - METRICS_PORT=8080
+      - KUBECONFIG=/tmp/ros-ingress-kubeconfig
+      - JWT_SECRET=dev-jwt-secret-key-for-ros-ingress
+    volumes:
+      - /tmp/ros-ingress-kubeconfig:/tmp/ros-ingress-kubeconfig:ro
     depends_on:
        - kafka
   kruize-autotune:
