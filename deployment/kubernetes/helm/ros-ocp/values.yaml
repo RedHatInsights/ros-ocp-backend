@@ -115,14 +115,46 @@ minio:
 # Ingress Service
 ingress:
   image:
-    repository: quay.io/insights-onprem/insights-ingress
+    repository: quay.io/insights-onprem/insights-ros-ingress
     tag: "latest"
-  port: 3000
-  validUploadTypes: hccm,rosocp
-  stageBucket: insights-upload-perma
-  openShiftBuildCommit: somestring
-  maxSize: 104857600
-  minioDev: true
+  port: 8080
+  server:
+    port: 8080
+    readTimeout: 30
+    writeTimeout: 30
+    idleTimeout: 120
+    debug: false
+  upload:
+    maxUploadSize: 104857600
+    maxMemory: 33554432
+    tempDir: "/tmp"
+    allowedTypes:
+      - "application/vnd.redhat.hccm.upload"
+    requireAuth: true
+  storage:
+    bucket: "ros-data"
+    useSSL: false
+    urlExpiration: 172800
+    pathPrefix: "ros"
+  kafka:
+    brokers:
+      - "kafka:29092"
+    topic: "hccm.ros.events"
+    securityProtocol: "PLAINTEXT"
+    clientId: "insights-ros-ingress"
+    batchSize: 16384
+    retries: 3
+  auth:
+    enabled: true
+    allowedOrgs: []
+  logging:
+    level: "info"
+    format: "json"
+    output: "stdout"
+  metrics:
+    enabled: true
+    path: "/metrics"
+    port: 8080
 
 # Sources API
 sourcesApi:

@@ -34,9 +34,9 @@ spec:
             - minio
             - server
             - --address
-            - 0.0.0.0:9000
+            - 0.0.0.0:{{ .Values.minio.ports.api }}
             - --console-address
-            - 0.0.0.0:9990
+            - 0.0.0.0:{{ .Values.minio.ports.console }}
             - /data
           ports:
             - name: api

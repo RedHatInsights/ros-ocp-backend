@@ -341,6 +341,121 @@ install_ingress_controller() {
     echo_success "NGINX Ingress Controller is ready"
 }
 
+# Function to create authentication setup for insights-ros-ingress
+create_auth_setup() {
+    echo_info "Setting up authentication for insights-ros-ingress..."
+
+    # Create service account for insights-ros-ingress
+    local service_account="insights-ros-ingress"
+
+    if kubectl get serviceaccount "$service_account" -n "$NAMESPACE" >/dev/null 2>&1; then
+        echo_warning "Service account '$service_account' already exists in namespace '$NAMESPACE'"
+    else
+        kubectl create serviceaccount "$service_account" -n "$NAMESPACE"
+        echo_success "Service account '$service_account' created"
+    fi
+
+    # Create ClusterRoleBinding for system:auth-delegator (required for TokenReviewer API)
+    local cluster_role_binding="${service_account}-token-reviewer"
+
+    if kubectl get clusterrolebinding "$cluster_role_binding" >/dev/null 2>&1; then
+        echo_warning "ClusterRoleBinding '$cluster_role_binding' already exists"
+    else
+        cat <<EOF | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: $cluster_role_binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: $service_account
+  namespace: $NAMESPACE
+EOF
+        echo_success "ClusterRoleBinding '$cluster_role_binding' created"
+    fi
+
+    # Create a long-lived token secret for the service account
+    local token_secret="${service_account}-token"
+
+    if kubectl get secret "$token_secret" -n "$NAMESPACE" >/dev/null 2>&1; then
+        echo_warning "Token secret '$token_secret' already exists"
+    else
+        cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: $token_secret
+  namespace: $NAMESPACE
+  annotations:
+    kubernetes.io/service-account.name: $service_account
+type: kubernetes.io/service-account-token
+EOF
+        echo_success "Token secret '$token_secret' created"
+    fi
+
+    # Wait for the token to be generated
+    echo_info "Waiting for service account token to be generated..."
+    local retries=30
+    local count=0
+
+    while [ $count -lt $retries ]; do
+        if kubectl get secret "$token_secret" -n "$NAMESPACE" -o jsonpath='{.data.token}' >/dev/null 2>&1; then
+            local token_data
+            token_data=$(kubectl get secret "$token_secret" -n "$NAMESPACE" -o jsonpath='{.data.token}')
+            if [ -n "$token_data" ]; then
+                echo_success "Service account token generated successfully"
+                break
+            fi
+        fi
+        echo_info "Waiting for token generation... ($((count + 1))/$retries)"
+        sleep 2
+        count=$((count + 1))
+    done
+
+    if [ $count -eq $retries ]; then
+        echo_error "Failed to generate service account token after $retries attempts"
+        return 1
+    fi
+
+    # Save authentication configuration for test scripts
+    local kubeconfig_path="/tmp/dev-kubeconfig"
+    local cluster_server
+    cluster_server=$(kubectl config view --raw -o jsonpath="{.clusters[?(@.name=='kind-${KIND_CLUSTER_NAME}')].cluster.server}")
+    local token
+    token=$(kubectl get secret "$token_secret" -n "$NAMESPACE" -o jsonpath='{.data.token}' | base64 -d)
+
+    # Create kubeconfig file for test scripts
+    cat > "$kubeconfig_path" <<EOF
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: $cluster_server
+    insecure-skip-tls-verify: true
+  name: kind-dev
+contexts:
+- context:
+    cluster: kind-dev
+    user: $service_account
+    namespace: $NAMESPACE
+  name: kind-dev
+current-context: kind-dev
+users:
+- name: $service_account
+  user:
+    token: $token
+EOF
+
+    echo_success "Test kubeconfig created at $kubeconfig_path"
+    echo_info "This kubeconfig can be used by test scripts for authentication"
+
+    return 0
+}
+
 # Function to deploy Helm chart
 deploy_helm_chart() {
     echo_info "Deploying ROS-OCP Helm chart..."

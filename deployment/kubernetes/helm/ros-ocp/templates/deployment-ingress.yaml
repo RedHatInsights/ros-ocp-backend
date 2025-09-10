@@ -60,41 +60,88 @@ spec:
               containerPort: {{ .Values.ingress.port }}
               protocol: TCP
           env:
-            - name: INGRESS_VALID_UPLOAD_TYPES
-              value: {{ .Values.ingress.validUploadTypes | quote }}
-            - name: INGRESS_STAGEBUCKET
-              value: {{ .Values.ingress.stageBucket | quote }}
-            - name: OPENSHIFT_BUILD_COMMIT
-              value: {{ .Values.ingress.openShiftBuildCommit | quote }}
-            - name: INGRESS_MAXSIZE
-              value: {{ .Values.ingress.maxSize | quote }}
-            - name: INGRESS_MINIODEV
-              value: {{ .Values.ingress.minioDev | quote }}
-            - name: INGRESS_MINIOACCESSKEY
+            # Server configuration
+            - name: SERVER_PORT
+              value: {{ .Values.ingress.server.port | quote }}
+            - name: SERVER_READ_TIMEOUT
+              value: {{ .Values.ingress.server.readTimeout | quote }}
+            - name: SERVER_WRITE_TIMEOUT
+              value: {{ .Values.ingress.server.writeTimeout | quote }}
+            - name: SERVER_IDLE_TIMEOUT
+              value: {{ .Values.ingress.server.idleTimeout | quote }}
+            - name: DEBUG
+              value: {{ .Values.ingress.server.debug | quote }}
+
+            # Upload configuration
+            - name: UPLOAD_MAX_SIZE
+              value: {{ .Values.ingress.upload.maxUploadSize | quote }}
+            - name: UPLOAD_MAX_MEMORY
+              value: {{ .Values.ingress.upload.maxMemory | quote }}
+            - name: UPLOAD_TEMP_DIR
+              value: {{ .Values.ingress.upload.tempDir | quote }}
+            - name: UPLOAD_ALLOWED_TYPES
+              value: {{ join "," .Values.ingress.upload.allowedTypes | quote }}
+            - name: UPLOAD_REQUIRE_AUTH
+              value: {{ .Values.ingress.upload.requireAuth | quote }}
+
+            # Storage configuration
+            - name: STORAGE_ENDPOINT
+              value: {{ include "ros-ocp.fullname" . }}-minio:{{ .Values.minio.ports.api }}
+            - name: STORAGE_BUCKET
+              value: {{ .Values.ingress.storage.bucket | quote }}
+            - name: STORAGE_USE_SSL
+              value: {{ .Values.ingress.storage.useSSL | quote }}
+            - name: STORAGE_URL_EXPIRATION
+              value: {{ .Values.ingress.storage.urlExpiration | quote }}
+            - name: STORAGE_PATH_PREFIX
+              value: {{ .Values.ingress.storage.pathPrefix | quote }}
+            - name: STORAGE_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "ros-ocp.fullname" . }}-minio-credentials
                   key: access-key
-            - name: INGRESS_MINIOSECRETKEY
+            - name: STORAGE_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "ros-ocp.fullname" . }}-minio-credentials
                   key: secret-key
-            - name: INGRESS_MINIOENDPOINT
-              value: {{ include "ros-ocp.fullname" . }}-minio:{{ .Values.minio.ports.api }}
-            - name: KAFKA_BOOTSTRAP_SERVERS
-              value: {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}
+
+            # Kafka configuration
             - name: KAFKA_BROKERS
               value: {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}
-            - name: KAFKA_SERVERS
-              value: {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}
-            - name: QUEUE_HOST
-              value: {{ include "ros-ocp.fullname" . }}-kafka
-            - name: QUEUE_PORT
-              value: {{ .Values.kafka.broker.port | quote }}
+            - name: KAFKA_ROS_TOPIC
+              value: {{ .Values.ingress.kafka.topic | quote }}
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: {{ .Values.ingress.kafka.securityProtocol | quote }}
+            - name: KAFKA_CLIENT_ID
+              value: {{ .Values.ingress.kafka.clientId | quote }}
+            - name: KAFKA_BATCH_SIZE
+              value: {{ .Values.ingress.kafka.batchSize | quote }}
+            - name: KAFKA_RETRIES
+              value: {{ .Values.ingress.kafka.retries | quote }}
+
+            # Authentication configuration
+            - name: AUTH_ENABLED
+              value: {{ .Values.ingress.auth.enabled | quote }}
+
+            # Logging configuration
+            - name: LOG_LEVEL
+              value: {{ .Values.ingress.logging.level | quote }}
+            - name: LOG_FORMAT
+              value: {{ .Values.ingress.logging.format | quote }}
+            - name: LOG_OUTPUT
+              value: {{ .Values.ingress.logging.output | quote }}
+
+            # Metrics configuration
+            - name: METRICS_ENABLED
+              value: {{ .Values.ingress.metrics.enabled | quote }}
+            - name: METRICS_PATH
+              value: {{ .Values.ingress.metrics.path | quote }}
+            - name: METRICS_PORT
+              value: {{ .Values.ingress.metrics.port | quote }}
           livenessProbe:
             httpGet:
-              path: /api/ingress/v1/version
+              path: /health
               port: {{ .Values.ingress.port }}
             initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.periodSeconds }}
@@ -102,7 +149,7 @@ spec:
             failureThreshold: {{ .Values.probes.failureThreshold }}
           readinessProbe:
             httpGet:
-              path: /api/ingress/v1/version
+              path: /ready
               port: {{ .Values.ingress.port }}
             initialDelaySeconds: 10
             periodSeconds: {{ .Values.probes.periodSeconds }}

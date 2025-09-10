@@ -151,9 +151,15 @@ EOF
     echo "$test_csv"
 }
 
-# Function to upload test data
+# Function to upload test data using insights-ros-ingress
 upload_test_data() {
-    echo_info "=== STEP 1: Upload Test Data ===="
+    echo_info "=== STEP 1: Upload HCCM Data via insights-ros-ingress ===="
+    echo_info "Testing the new insights-ros-ingress service which:"
+    echo_info "- Replaces the insights-ingress-go service"
+    echo_info "- Automatically extracts CSV files from uploaded archives"
+    echo_info "- Uploads CSV files directly to MinIO ros-data bucket"
+    echo_info "- Publishes Kafka events to trigger ROS processing"
+    echo_info ""
 
     local test_csv=$(create_test_data)
     local test_dir=$(mktemp -d)
@@ -168,16 +174,8 @@ upload_test_data() {
         return 1
     fi
 
-    # Verify the file exists and has content
-    if [ ! -f "$test_dir/$csv_filename" ] || [ ! -s "$test_dir/$csv_filename" ]; then
-        echo_error "CSV file not found or is empty in temporary directory"
-        rm -f "$test_csv"
-        rm -rf "$test_dir"
-        return 1
-    fi
-
-    # Create tar.gz file
-    echo_info "Creating tar.gz archive..."
+    # Create tar.gz file (insights-ros-ingress will extract this automatically)
+    echo_info "Creating HCCM tar.gz archive for insights-ros-ingress..."
     if ! (cd "$test_dir" && tar -czf "$tar_filename" "$csv_filename"); then
         echo_error "Failed to create tar.gz archive"
         rm -f "$test_csv"
@@ -185,15 +183,51 @@ upload_test_data() {
         return 1
     fi
 
-    # Verify tar.gz file was created
-    if [ ! -f "$test_dir/$tar_filename" ]; then
-        echo_error "tar.gz file was not created"
-        rm -f "$test_csv"
-        rm -rf "$test_dir"
-        return 1
+    echo_info "Uploading HCCM archive to insights-ros-ingress..."
+
+    # Get authentication token (required by insights-ros-ingress in Kubernetes)
+    local auth_token=""
+    local auth_setup_ok=false
+
+    # Check if we can use the kubeconfig created by deploy-kind.sh
+    if [ -f "/tmp/dev-kubeconfig" ]; then
+        # Try to get token from the kubeconfig file
+        auth_token=$(kubectl --kubeconfig=/tmp/dev-kubeconfig config view --raw -o jsonpath='{.users[0].user.token}' 2>/dev/null || echo "")
+        if [ -n "$auth_token" ]; then
+            auth_setup_ok=true
+            echo_info "✓ Using authentication token from dev kubeconfig"
+        fi
     fi
 
-    echo_info "Uploading tar.gz file..."
+    # Fallback: try to get token from service account secret directly
+    if [ "$auth_setup_ok" = false ] && kubectl get serviceaccount insights-ros-ingress -n "$NAMESPACE" >/dev/null 2>&1; then
+        # Try the new token secret created by deploy-kind.sh
+        auth_token=$(kubectl get secret insights-ros-ingress-token -n "$NAMESPACE" \
+            -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+
+        if [ -n "$auth_token" ]; then
+            auth_setup_ok=true
+            echo_info "✓ Using authentication token from service account secret"
+        fi
+    fi
+
+    # If still no token, provide helpful guidance
+    if [ "$auth_setup_ok" = false ]; then
+        echo_warning "No authentication token available"
+        echo_info "Make sure deploy-kind.sh was run to set up authentication"
+        echo_info "Expected token secret: insights-ros-ingress-token in namespace $NAMESPACE"
+    fi
+
+    # Upload the tar.gz file to insights-ros-ingress
+    local curl_cmd="curl -s -w \"%{http_code}\" \
+        -F \"upload=@${test_dir}/${tar_filename};type=application/vnd.redhat.hccm.upload\" \
+        -H \"x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K\" \
+        -H \"x-rh-request-id: test-request-$(date +%s)\""
+
+    if [ -n "$auth_token" ]; then
+        curl_cmd="$curl_cmd -H \"Authorization: Bearer $auth_token\""
+        echo_info "✓ Authentication token will be included in request"
+    fi
 
     # Upload the tar.gz file using curl with proper headers and content-type
     local upload_url=$(get_service_url "ingress" "/api/ingress/v1/upload")
@@ -206,6 +240,9 @@ upload_test_data() {
         -H "Host: localhost" \
         "$upload_url")
 
+    curl_cmd="$curl_cmd http://localhost:${INGRESS_PORT}/api/ingress/v1/upload"
+
+    local response=$(eval $curl_cmd)
     local http_code="${response: -3}"
     local response_body="${response%???}"
 
@@ -216,18 +253,30 @@ upload_test_data() {
     if [ "$http_code" != "202" ]; then
         echo_error "Upload failed! HTTP $http_code"
         echo_error "Response: $response_body"
+        if [ "$http_code" = "401" ]; then
+            echo_error "Authentication failed. Check that insights-ros-ingress service account exists"
+        fi
         return 1
     fi
 
     echo_success "Upload successful! HTTP $http_code"
     echo_info "Response: $response_body"
+    echo_info "insights-ros-ingress will now:"
+    echo_info "1. Extract CSV files from the uploaded archive"
+    echo_info "2. Upload CSV files to MinIO ros-data bucket"
+    echo_info "3. Publish Kafka events to trigger ROS processing"
 
     return 0
 }
 
-# Function to simulate Koku processing
-simulate_koku_processing() {
-    echo_info "=== STEP 2: Simulate Koku Processing ===="
+# Function to verify insights-ros-ingress processing
+verify_ros_ingress_processing() {
+    echo_info "=== STEP 2: Verify insights-ros-ingress Processing ===="
+    echo_info "insights-ros-ingress should automatically:"
+    echo_info "- Extract CSV files from the uploaded archive"
+    echo_info "- Upload CSV files to MinIO ros-data bucket"
+    echo_info "- Publish Kafka events to trigger ROS processing"
+    echo_info ""
 
     # Generate unique file UUID for this test
     local file_uuid
@@ -264,6 +313,9 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
     # Copy CSV data to ros-data bucket via MinIO pod
     echo_info "Copying CSV to ros-data bucket..."
 
+    # Check for CSV files in ros-data bucket (created by insights-ros-ingress)
+    echo_info "Checking for CSV files in MinIO ros-data bucket..."
+
     local minio_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=minio" -o jsonpath='{.items[0].metadata.name}')
 
     if [ -z "$minio_pod" ]; then
@@ -271,51 +323,33 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
         return 1
     fi
 
-    # Create CSV file in MinIO pod and copy to bucket
-    # Use stdin redirection to avoid websocket stream issues with large content
-    echo "$csv_content" | kubectl exec -i -n "$NAMESPACE" "$minio_pod" -- sh -c "
-        cat > /tmp/$csv_filename
-        /usr/bin/mc alias set myminio http://localhost:9000 minioaccesskey miniosecretkey 2>/dev/null
-        /usr/bin/mc cp /tmp/$csv_filename myminio/ros-data/$csv_filename
-        rm /tmp/$csv_filename
-    "
+    local retries=6
+    local csv_found=false
 
-    if [ $? -ne 0 ]; then
-        echo_error "Failed to copy CSV to ros-data bucket"
-        return 1
-    fi
+    for i in $(seq 1 $retries); do
+        echo_info "Checking for CSV files in ros-data bucket (attempt $i/$retries)..."
 
-    echo_success "CSV file copied to ros-data bucket"
+        # List files in ros-data bucket
+        local bucket_contents=$(kubectl exec -n "$NAMESPACE" "$minio_pod" -- \
+            /usr/bin/mc ls myminio/ros-data/ 2>/dev/null || echo "")
 
-    # Verify file accessibility from processor pod
-    local processor_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=rosocp-processor" -o jsonpath='{.items[0].metadata.name}')
-
-    if [ -n "$processor_pod" ]; then
-        echo_info "Verifying file accessibility from processor pod..."
-
-        local file_url="http://${HELM_RELEASE_NAME}-minio:9000/ros-data/$csv_filename"
-        local access_test=$(kubectl exec -n "$NAMESPACE" "$processor_pod" -- curl -s -I "$file_url" | head -1)
-
-        if [[ "$access_test" =~ "200 OK" ]]; then
-            echo_success "File is accessible via HTTP"
+        if echo "$bucket_contents" | grep -q "\.csv"; then
+            echo_success "CSV files found in ros-data bucket (uploaded by insights-ros-ingress):"
+            echo "$bucket_contents" | grep "\.csv"
+            csv_found=true
+            break
         else
-            echo_error "File is not accessible via HTTP: $access_test"
+            echo_info "No CSV files found yet, waiting... ($i/$retries)"
+            sleep 10
         fi
-    fi
+    done
 
-    echo_info "=== STEP 3: Publish Kafka Event ===="
-
-    # Create Kafka message with container network URL (compact JSON)
-    local kafka_message="{\"request_id\":\"test-request-$(date +%s)\",\"b64_identity\":\"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K\",\"metadata\":{\"account\":\"12345\",\"org_id\":\"12345\",\"source_id\":\"test-source-id\",\"cluster_uuid\":\"1b77b73f-1d3e-43c6-9f55-bcd9fb6d1a0c\",\"cluster_alias\":\"test-cluster\"},\"files\":[\"http://${HELM_RELEASE_NAME}-minio:9000/ros-data/$csv_filename\"]}"
-
-    echo_info "Publishing Kafka message to hccm.ros.events topic"
-    echo_info "Message content: $kafka_message"
-
-    # Get Kafka pod
-    local kafka_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=kafka" -o jsonpath='{.items[0].metadata.name}')
-
-    if [ -z "$kafka_pod" ]; then
-        echo_error "Kafka pod not found"
+    if [ "$csv_found" = false ]; then
+        echo_error "No CSV files found in ros-data bucket after $retries attempts"
+        echo_info "insights-ros-ingress may have failed to process the upload"
+        echo_info "Checking MinIO bucket contents for debugging:"
+        kubectl exec -n "$NAMESPACE" "$minio_pod" -- \
+            /usr/bin/mc ls myminio/ros-data/ 2>/dev/null || echo "Could not list bucket contents"
         return 1
     fi
 
@@ -880,10 +914,10 @@ main() {
         exit 1
     fi
 
-    if simulate_koku_processing; then
-        echo_success "Steps 2-3: Koku simulation and Kafka event completed successfully"
+    if verify_ros_ingress_processing; then
+        echo_success "Steps 2-3: insights-ros-ingress processing completed successfully"
     else
-        echo_error "Steps 2-3: Koku simulation failed"
+        echo_error "Steps 2-3: insights-ros-ingress processing failed"
         exit 1
     fi
 
