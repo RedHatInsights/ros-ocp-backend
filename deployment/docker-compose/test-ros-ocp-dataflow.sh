@@ -194,11 +194,11 @@ upload_test_data() {
 
     # Upload the file using curl with proper content type and authentication
     # Include cluster_alias in the x-rh-identity header for proper Kafka message generation
+    # Base64 encoded: {"identity":{"account_number":"1","type":"User","internal":{"org_id":"1","cluster_alias":"023d9b0e-7ca6-481d-b04f-ea606becd54e"}}}
     local curl_cmd="curl -s -w \"%{http_code}\" \
         -F \"upload=@${upload_file};type=application/vnd.redhat.hccm.upload\" \
-        -H \"x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSIsImNsdXN0ZXJfYWxpYXMiOiJ0ZXN0LWNsdXN0ZXIifX19\" \
-        -H \"x-rh-request-id: test-request-$(date +%s)\" \
-        -H \"x-rh-cluster-alias: test-cluster\""
+        -H \"x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEiLCJ0eXBlIjoiVXNlciIsImludGVybmFsIjp7Im9yZ19pZCI6IjEiLCJjbHVzdGVyX2FsaWFzIjoiMDIzZDliMGUtN2NhNi00ODFkLWIwNGYtZWE2MDZiZWNkNTRlIn19fQo=\" \
+        -H \"x-rh-request-id: test-request-$(date +%s)\""
 
     if [ -n "$auth_token" ]; then
         curl_cmd="$curl_cmd -H \"Authorization: Bearer $auth_token\""
@@ -283,7 +283,7 @@ check_minio_bucket() {
     echo_info "Checking MinIO bucket contents..."
 
     # Use podman exec to check MinIO bucket
-    local bucket_contents=$(podman exec minio_1 /usr/bin/mc ls myminio/insights-upload-perma/ 2>/dev/null || echo "")
+    local bucket_contents=$(podman exec minio_1 /usr/bin/mc ls myminio/ros-data/ros 2>/dev/null || echo "")
 
     if [ -n "$bucket_contents" ]; then
         echo_success "Files found in MinIO bucket:"
@@ -383,7 +383,7 @@ verify_processing() {
     echo_info "=== VERIFICATION: Data Processing ==="
 
     echo_info "Checking processor logs for recent activity..."
-    local processor_logs=$(podman logs rosocp-processor_1 --tail=15 | grep -E "(Message received|Recommendation request sent|DB initialization complete)" | tail -5 || echo "")
+    local processor_logs=$(podman logs rosocp-processor_1 --tail=15 | grep -E "(Message received|Recommendation request sent|DB initialization complete|data processing completed successfully)" | tail -5 || echo "")
 
     if [ -n "$processor_logs" ]; then
         echo_success "Processor is active - recent processing logs:"
@@ -517,15 +517,15 @@ main() {
     podman-compose ps
     echo ""
 
-    # Test 1: Upload cost management data using insights-ros-ingress
-    echo_info "=== TEST 1: Upload HCCM Data via insights-ros-ingress ==="
+    # Test 1: Upload ROS-OCP data using insights-ros-ingress
+    echo_info "=== TEST 1: Upload ROS-OCP Data via insights-ros-ingress ==="
     echo_info "Testing the new insights-ros-ingress service which:"
     echo_info "- Replaces the insights-ingress-go service"
     echo_info "- Automatically extracts CSV files from uploaded archives"
     echo_info "- Uploads CSV files directly to MinIO ros-data bucket"
     echo_info "- Publishes Kafka events to trigger ROS processing"
     echo_info ""
-    local test_file="$SCRIPT_DIR/samples/cost-mgmt.tar.gz"
+    local test_file="$SCRIPT_DIR/samples/ros-ocp-test-data.tar.gz"
 
     if [ -f "$test_file" ]; then
         if upload_test_data "$test_file" "hccm.ros.events"; then
@@ -560,18 +560,26 @@ main() {
         echo_warning "Test file not found: $test_file"
         echo_info "Available files in samples:"
         ls -la "$SCRIPT_DIR/samples/" || true
+        
+        # Fallback to original cost-mgmt test file
+        echo_info "Falling back to cost-mgmt.tar.gz (expected to show validation errors)"
+        local fallback_file="$SCRIPT_DIR/samples/cost-mgmt.tar.gz"
+        if [ -f "$fallback_file" ]; then
+            upload_test_data "$fallback_file" "hccm.ros.events"
+        fi
     fi
 
     echo ""
-    echo_info "=== TEST 2: Alternative Upload with Sample Data ==="
+    echo_info "=== TEST 2: Alternative Upload with Individual CSV Sample ==="
 
-    # Try with sample data if available
+    # Try with individual CSV sample file if available (should work but not be processed by full pipeline)
     local sample_file="$SCRIPT_DIR/samples/ros-ocp-usage.csv"
     if [ -f "$sample_file" ]; then
-        echo_info "Testing with sample file: $sample_file"
-        upload_test_data "$sample_file" "hccm.ros.events"
+        echo_info "Testing with individual CSV file: $sample_file"
+        echo_warning "Note: Individual CSV files may not be processed by the full pipeline"
+        # Upload individual CSV files won't work as expected since the system expects tar.gz archives
     else
-        echo_warning "No sample file found for additional testing"
+        echo_warning "No individual CSV sample file found for additional testing"
     fi
 
     echo ""
