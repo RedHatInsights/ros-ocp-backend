@@ -124,9 +124,36 @@ jobs:
           kubectl get services -n $NAMESPACE
           kubectl get ingress -n $NAMESPACE
 
-      - name: Wait for services to stabilize
+      - name: Wait for services to stabilize and verify authentication
         run: |
           echo "Waiting for services to stabilize..."
+          sleep 60
+
+          # Verify authentication setup was created by deploy-kind.sh
+          if [ -f "/tmp/dev-kubeconfig" ]; then
+            echo "✅ Authentication kubeconfig found at /tmp/dev-kubeconfig"
+          else
+            echo "❌ Authentication kubeconfig not found"
+            echo "Expected file: /tmp/dev-kubeconfig"
+            echo "This should have been created by deploy-kind.sh"
+            ls -la /tmp/ | grep -E "(kubeconfig|auth)" || true
+          fi
+
+          # Check if service account exists
+          if kubectl get serviceaccount insights-ros-ingress -n ${{ env.NAMESPACE }} >/dev/null 2>&1; then
+            echo "✅ insights-ros-ingress service account found"
+
+            # Check if token secret exists
+            if kubectl get secret insights-ros-ingress-token -n ${{ env.NAMESPACE }} >/dev/null 2>&1; then
+              echo "✅ insights-ros-ingress-token secret found"
+            else
+              echo "❌ insights-ros-ingress-token secret not found"
+              kubectl get secrets -n ${{ env.NAMESPACE }} | head -10 || true
+            fi
+          else
+            echo "❌ insights-ros-ingress service account not found"
+            kubectl get serviceaccounts -n ${{ env.NAMESPACE }} || true
+          fi
 
           # Wait for all pods to be in Running state
           timeout 600 bash -c "until kubectl wait --for=condition=ready pod -l 'app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}' -n ${{ env.NAMESPACE }} --timeout=30s; do echo 'Waiting for pods...'; sleep 10; done"
@@ -199,6 +226,16 @@ jobs:
           kubectl get nodes -o wide || true
           kubectl describe nodes || true
 
+          echo "=== Authentication Status ==="
+          echo "Service Accounts:"
+          kubectl get serviceaccounts -n ${{ env.NAMESPACE }} || true
+          echo "Secrets:"
+          kubectl get secrets -n ${{ env.NAMESPACE }} | grep -E "(insights-ros-ingress|token)" || true
+          echo "Authentication files:"
+          ls -la /tmp/ | grep -E "(kubeconfig|auth)" || true
+
+          echo "=== Ingress Service Logs ==="
+          kubectl logs -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=ingress --tail=30 || true
           echo "=== Recent Logs ==="
           for pod in $(kubectl get pods -n ${{ env.NAMESPACE }} -o name | head -5); do
             echo "--- Logs for $pod ---"
