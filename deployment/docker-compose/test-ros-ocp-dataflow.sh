@@ -570,19 +570,6 @@ main() {
     fi
 
     echo ""
-    echo_info "=== TEST 2: Alternative Upload with Individual CSV Sample ==="
-
-    # Try with individual CSV sample file if available (should work but not be processed by full pipeline)
-    local sample_file="$SCRIPT_DIR/samples/ros-ocp-usage.csv"
-    if [ -f "$sample_file" ]; then
-        echo_info "Testing with individual CSV file: $sample_file"
-        echo_warning "Note: Individual CSV files may not be processed by the full pipeline"
-        # Upload individual CSV files won't work as expected since the system expects tar.gz archives
-    else
-        echo_warning "No individual CSV sample file found for additional testing"
-    fi
-
-    echo ""
     echo_info "=== FINAL STATUS ==="
 
     # Show final service status
