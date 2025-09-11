@@ -26,6 +26,11 @@ jobs:
         # Enable lingering for systemd user services
         sudo loginctl enable-linger $USER || true
 
+        # Configure systemd for rootless KIND
+        sudo mkdir -p /etc/systemd/system/user@$(id -u).service.d/
+        echo -e "[Service]\nDelegate=yes" | sudo tee /etc/systemd/system/user@$(id -u).service.d/delegate.conf
+        sudo systemctl daemon-reload
+
     - name: Install additional dependencies
       run: |
         sudo apt-get install -y uuid-runtime curl
@@ -52,6 +57,12 @@ jobs:
         # Set DOCKER_HOST for podman-compose compatibility
         echo "DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock" >> $GITHUB_ENV
 
+        # Verify podman socket is running
+        systemctl --user status podman.socket || true
+
+        # Also set KIND to use podman provider globally
+        echo "KIND_EXPERIMENTAL_PROVIDER=podman" >> $GITHUB_ENV
+
     - name: Verify podman installation
       run: |
         podman --version
@@ -67,6 +78,7 @@ jobs:
         
         # Set up KIND cluster and authentication for insights-ros-ingress
         echo "Setting up Kubernetes authentication for insights-ros-ingress..."
+        echo "Using KIND with podman rootless provider (KIND_EXPERIMENTAL_PROVIDER=$KIND_EXPERIMENTAL_PROVIDER)"
         (cd ../../scripts && ./setup-ingress-auth.sh)
         
         # Verify authentication setup
