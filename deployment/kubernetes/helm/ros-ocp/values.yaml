@@ -147,6 +147,7 @@ ingress:
   auth:
     enabled: true
     allowedOrgs: []
+    jwtSecret: "dev-jwt-secret-key-for-ros-ingress"
   logging:
     level: "info"
     format: "json"

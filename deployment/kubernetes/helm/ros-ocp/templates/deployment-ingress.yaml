@@ -123,6 +123,8 @@ spec:
             # Authentication configuration
             - name: AUTH_ENABLED
               value: {{ .Values.ingress.auth.enabled | quote }}
+            - name: JWT_SECRET
+              value: {{ .Values.ingress.auth.jwtSecret | quote }}
 
             # Logging configuration
             - name: LOG_LEVEL
