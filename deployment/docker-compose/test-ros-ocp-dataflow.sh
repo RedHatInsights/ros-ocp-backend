@@ -560,36 +560,59 @@ main() {
             sleep 30
 
             # Check MinIO bucket
-            check_minio_bucket
+            if ! check_minio_bucket; then
+                echo_warning "MinIO bucket check failed, but continuing with test..."
+            fi
 
             # Check Kafka events
-            check_kafka_events "hccm.ros.events"
+            if ! check_kafka_events "hccm.ros.events"; then
+                echo_error "=== TEST FAILED ==="
+                echo_error "Failed to find Kafka events in hccm.ros.events topic."
+                exit 1
+            fi
 
             # Wait for processing pipeline to complete before checking recommendations
             echo_info "Waiting for recommendation processing pipeline (processor → kruize → recommendations)..."
             sleep 30
 
             # Use retry logic for recommendations topic (3 attempts, 30s between retries)
-            check_kafka_events_with_retry "rosocp.kruize.recommendations" 3 30
+            if ! check_kafka_events_with_retry "rosocp.kruize.recommendations" 3 30; then
+                echo_warning "No recommendation messages found, but continuing with database check..."
+            fi
 
             # Check database
             sleep 30  # Give more time for database processing
-            check_database
+            if ! check_database; then
+                echo_error "=== TEST FAILED ==="
+                echo_error "Database verification failed - no processed data found."
+                exit 1
+            fi
 
         else
             echo_error "Upload test failed!"
             show_service_logs "ingress"
+            echo_error "=== TEST FAILED ==="
+            echo_error "The data flow test failed. See logs above for details."
+            exit 1
         fi
     else
-        echo_warning "Test file not found: $test_file"
+        echo_error "Test file not found: $test_file"
         echo_info "Available files in samples:"
         ls -la "$SCRIPT_DIR/samples/" || true
         
         # Fallback to original cost-mgmt test file
-        echo_info "Falling back to cost-mgmt.tar.gz (expected to show validation errors)"
+        echo_warning "Falling back to cost-mgmt.tar.gz (expected to show validation errors)"
         local fallback_file="$SCRIPT_DIR/samples/cost-mgmt.tar.gz"
         if [ -f "$fallback_file" ]; then
-            upload_test_data "$fallback_file" "hccm.ros.events"
+            if ! upload_test_data "$fallback_file" "hccm.ros.events"; then
+                echo_error "=== TEST FAILED ==="
+                echo_error "Fallback test with cost-mgmt.tar.gz also failed."
+                exit 1
+            fi
+        else
+            echo_error "=== TEST FAILED ==="
+            echo_error "No test files available for upload test."
+            exit 1
         fi
     fi
 
