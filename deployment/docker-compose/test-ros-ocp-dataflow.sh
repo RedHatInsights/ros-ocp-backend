@@ -404,7 +404,7 @@ verify_processing() {
     echo_info "=== VERIFICATION: Data Processing ==="
 
     echo_info "Checking processor logs for recent activity..."
-    local processor_logs=$(podman logs rosocp-processor_1 --tail=15 | grep -E "(Message received|Recommendation request sent|DB initialization complete|data processing completed successfully)" | tail -5 || echo "")
+    local processor_logs=$(podman logs rosocp-processor_1 | grep -E "(Message received|Recommendation request sent|DB initialization complete|data processing completed successfully)" | tail -5 || echo "")
 
     if [ -n "$processor_logs" ]; then
         echo_success "Processor is active - recent processing logs:"
