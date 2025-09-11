@@ -5,6 +5,7 @@ on:
     paths:
       - 'deployment/docker-compose/**'
       - '.github/workflows/docker-compose-test.yml'
+      - 'internal/**'  # Include internal code changes that might affect data processing
   workflow_dispatch:
 
 jobs:
@@ -58,21 +59,43 @@ jobs:
         echo "Podman info:"
         podman info
 
+    - name: Setup authentication for insights-ros-ingress
+      working-directory: deployment/docker-compose
+      run: |
+        # Make authentication setup script executable
+        chmod +x ../../scripts/setup-ingress-auth.sh
+        
+        # Set up KIND cluster and authentication for insights-ros-ingress
+        echo "Setting up Kubernetes authentication for insights-ros-ingress..."
+        (cd ../../scripts && ./setup-ingress-auth.sh)
+        
+        # Verify authentication setup
+        if [ -f "../../scripts/.ingress-auth.env" ]; then
+          echo "✅ Authentication environment created successfully"
+          echo "Auth file contents (without sensitive data):"
+          grep -v "DEV_SERVICE_ACCOUNT_TOKEN" ../../scripts/.ingress-auth.env || true
+          
+          # Source the auth environment and export KUBECONFIG
+          source ../../scripts/.ingress-auth.env
+          echo "KUBECONFIG=$KUBECONFIG" >> $GITHUB_ENV
+          echo "✅ KUBECONFIG exported for subsequent steps"
+        else
+          echo "❌ Authentication setup failed - environment file not found"
+          exit 1
+        fi
+
     - name: Pull required container images
       working-directory: deployment/docker-compose
       run: |
         # Pre-pull images to avoid timeout issues during compose up
-        podman-compose pull --ignore-pull-failures || true
+        podman-compose pull || true
 
     - name: Start services with podman-compose
       working-directory: deployment/docker-compose
       run: |
-        # Export environment variables
-        export INGRESS_PORT=${{ env.INGRESS_PORT }}
-        export MINIO_ACCESS_KEY=${{ env.MINIO_ACCESS_KEY }}
-        export MINIO_SECRET_KEY=${{ env.MINIO_SECRET_KEY }}
-
         echo "Starting services with podman-compose..."
+        echo "KUBECONFIG is set to: $KUBECONFIG"
+        echo "Environment variables: INGRESS_PORT=$INGRESS_PORT, MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY"
         podman-compose up -d
 
         echo "Waiting for services to initialize..."
@@ -128,38 +151,24 @@ jobs:
         echo "Waiting for recommendation poller to start..."
         timeout 300 bash -c 'until podman logs rosocp-recommendation-poller_1 2>/dev/null | grep -q "Starting recommendation-poller"; do sleep 5; done'
 
-    - name: Setup authentication for insights-ros-ingress
-      working-directory: deployment/docker-compose
-      run: |
-        # Make authentication setup script executable
-        chmod +x ../../scripts/setup-ingress-auth.sh
-        
-        # Set up KIND cluster and authentication for insights-ros-ingress
-        echo "Setting up Kubernetes authentication for insights-ros-ingress..."
-        (cd ../../scripts && ./setup-ingress-auth.sh)
-        
-        # Verify authentication setup
-        if [ -f "../../scripts/.ingress-auth.env" ]; then
-          echo "✅ Authentication environment created successfully"
-          echo "Auth file contents (without sensitive data):"
-          grep -v "DEV_SERVICE_ACCOUNT_TOKEN" ../../scripts/.ingress-auth.env || true
-        else
-          echo "❌ Authentication setup failed - environment file not found"
-          exit 1
-        fi
-
     - name: Run data flow test
       working-directory: deployment/docker-compose
       run: |
         # Make test script executable
         chmod +x test-ros-ocp-dataflow.sh
 
-        # Export environment variables for docker-compose
-        export INGRESS_PORT=${{ env.INGRESS_PORT }}
-        export MINIO_ACCESS_KEY=${{ env.MINIO_ACCESS_KEY }}
-        export MINIO_SECRET_KEY=${{ env.MINIO_SECRET_KEY }}
+        # Verify new test data is available
+        echo "Checking for ROS-OCP test data..."
+        if [ -f "samples/ros-ocp-test-data.tar.gz" ]; then
+          echo "✅ Found ros-ocp-test-data.tar.gz (proper 37-column CSV format)"
+        else
+          echo "❌ Missing ros-ocp-test-data.tar.gz - test may fail with CSV validation errors"
+        fi
 
-        # Run the test script (it will automatically use the authentication setup)
+        # Environment variables are automatically available from GITHUB_ENV
+        echo "Environment: INGRESS_PORT=$INGRESS_PORT, MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY"
+        
+        # Run the test script (it will use ros-ocp-test-data.tar.gz for proper validation)
         ./test-ros-ocp-dataflow.sh
 
     - name: Check service health after test
@@ -217,7 +226,7 @@ jobs:
         echo "### Tested Components" >> $GITHUB_STEP_SUMMARY
         echo "- PostgreSQL databases (ROS, Kruize, Sources)" >> $GITHUB_STEP_SUMMARY
         echo "- Kafka message broker" >> $GITHUB_STEP_SUMMARY
-        echo "- MinIO object storage" >> $GITHUB_STEP_SUMMARY
+        echo "- MinIO object storage (ros-data bucket)" >> $GITHUB_STEP_SUMMARY
         echo "- Redis cache" >> $GITHUB_STEP_SUMMARY
         echo "- **insights-ros-ingress service** (with Kubernetes authentication)" >> $GITHUB_STEP_SUMMARY
         echo "- ROS-OCP API service" >> $GITHUB_STEP_SUMMARY
@@ -226,4 +235,5 @@ jobs:
         echo "- Kruize Autotune service" >> $GITHUB_STEP_SUMMARY
         echo "- Sources API service" >> $GITHUB_STEP_SUMMARY
         echo "- **Authentication flow** (KIND cluster + service account tokens)" >> $GITHUB_STEP_SUMMARY
-        echo "- **Complete data flow** (authenticated upload → CSV extraction → MinIO → Kafka → processing → database)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Complete ROS-OCP data flow** (authenticated upload → CSV extraction → MinIO ros-data bucket → Kafka → processing → database)" >> $GITHUB_STEP_SUMMARY
+        echo "- **CSV validation and processing** (37-column ROS-OCP format)" >> $GITHUB_STEP_SUMMARY
