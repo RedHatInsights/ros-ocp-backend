@@ -177,6 +177,34 @@ jobs:
           echo "❌ Missing ros-ocp-test-data.tar.gz - test may fail with CSV validation errors"
         fi
 
+        # Fix kubeconfig IP address for GitHub Actions environment
+        echo "Fixing kubeconfig for container network access..."
+        if [ -f "/tmp/ros-ingress-kubeconfig" ]; then
+          echo "Current kubeconfig server:"
+          grep "server:" /tmp/ros-ingress-kubeconfig || true
+          
+          # Get KIND container IP
+          KIND_CONTAINER_IP=$(podman inspect ros-ingress-dev-control-plane 2>/dev/null | grep -o '"IPAddress": "[^"]*"' | grep -v '""' | head -1 | cut -d'"' -f4 || echo "")
+          
+          if [ -n "$KIND_CONTAINER_IP" ]; then
+            echo "Updating kubeconfig to use KIND container IP: $KIND_CONTAINER_IP"
+            sed -i.bak "s|server: https://.*:6443|server: https://${KIND_CONTAINER_IP}:6443|" /tmp/ros-ingress-kubeconfig
+            echo "Updated kubeconfig server:"
+            grep "server:" /tmp/ros-ingress-kubeconfig || true
+            
+            # Restart ingress service to pick up the corrected kubeconfig
+            echo "Restarting ingress service..."
+            podman-compose restart ingress
+            sleep 10
+          else
+            echo "❌ Could not determine KIND container IP"
+            exit 1
+          fi
+        else
+          echo "❌ Kubeconfig file not found at /tmp/ros-ingress-kubeconfig"
+          exit 1
+        fi
+
         # Environment variables are automatically available from GITHUB_ENV
         echo "Environment: INGRESS_PORT=$INGRESS_PORT, MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY"
         
