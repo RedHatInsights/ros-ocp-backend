@@ -54,10 +54,29 @@ elif [ -f "$SETUP_AUTH_SCRIPT" ]; then
                 echo_info "Kubeconfig updated for container network access"
             fi
         fi
-    else
-        echo_warning "Authentication setup completed but environment file not found"
     fi
 fi
+
+# Additional kubeconfig fix for authentication (ensure correct KIND cluster IP is used)
+fix_kubeconfig_ip() {
+    if [ -f "/tmp/ros-ingress-kubeconfig" ] && command -v podman >/dev/null 2>&1; then
+        # Check if kubeconfig has incorrect IP (0.0.0.0 or localhost)
+        if grep -q "server: https://0\.0\.0\.0:6443\|server: https://127\.0\.0\.1:6443\|server: https://localhost:6443" /tmp/ros-ingress-kubeconfig; then
+            echo_info "Detected incorrect kubeconfig server IP, fixing..."
+            KIND_CONTAINER_IP=$(podman inspect ros-ingress-dev-control-plane 2>/dev/null | grep -o '"IPAddress": "[^"]*"' | grep -v '""' | head -1 | cut -d'"' -f4)
+            if [ -n "$KIND_CONTAINER_IP" ]; then
+                echo_info "Updating kubeconfig to use correct container IP: $KIND_CONTAINER_IP"
+                sed -i.bak "s|server: https://.*:6443|server: https://${KIND_CONTAINER_IP}:6443|" /tmp/ros-ingress-kubeconfig
+                echo_info "Kubeconfig IP address corrected"
+                return 0
+            else
+                echo_warning "Could not determine KIND container IP address"
+                return 1
+            fi
+        fi
+    fi
+    return 0
+}
 
 # Set default values if not already set
 if [ -z "$MINIO_ACCESS_KEY" ]; then
@@ -213,6 +232,8 @@ upload_test_data() {
 
     if [ "$http_code" != "202" ]; then
         echo_error "Upload failed! HTTP $http_code"
+        echo "curl_cmd: $curl_cmd"
+
         echo_error "Response: $response_body"
         if [ "$http_code" = "401" ]; then
             echo_error "Authentication failed - insights-ros-ingress requires valid authentication"
@@ -485,6 +506,9 @@ main() {
 
     echo ""
     echo_info "Waiting for services to start..."
+
+    # Fix kubeconfig IP if needed before checking services
+    fix_kubeconfig_ip
 
     # Get the actual ingress port from the running container
     ACTUAL_INGRESS_PORT=$(podman port ingress_1 2>/dev/null | cut -d: -f2)
