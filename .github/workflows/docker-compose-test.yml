@@ -141,7 +141,7 @@ jobs:
       working-directory: deployment/docker-compose
       run: |
         # Get actual ingress port
-        ACTUAL_INGRESS_PORT=$(podman port ingress_1 3000 2>/dev/null | cut -d: -f2 || echo "$INGRESS_PORT")
+        ACTUAL_INGRESS_PORT=$(podman port ingress_1 2>/dev/null | cut -d: -f2 || echo "$INGRESS_PORT")
         echo "Using ingress port: $ACTUAL_INGRESS_PORT"
 
         # Wait for application services

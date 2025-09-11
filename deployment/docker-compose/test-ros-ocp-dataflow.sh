@@ -487,7 +487,7 @@ main() {
     echo_info "Waiting for services to start..."
 
     # Get the actual ingress port from the running container
-    ACTUAL_INGRESS_PORT=$(podman port ingress_1 3000 2>/dev/null | cut -d: -f2)
+    ACTUAL_INGRESS_PORT=$(podman port ingress_1 2>/dev/null | cut -d: -f2)
     if [ -z "$ACTUAL_INGRESS_PORT" ]; then
         ACTUAL_INGRESS_PORT=$INGRESS_PORT
     fi
