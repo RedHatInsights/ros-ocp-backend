@@ -130,10 +130,10 @@ nodes:
         node-labels: "ingress-ready=true"
   extraPortMappings:
   - containerPort: 80
-    hostPort: 7080
+    hostPort: 80
     protocol: TCP
   - containerPort: 443
-    hostPort: 7443
+    hostPort: 443
     protocol: TCP
   - containerPort: 30080
     hostPort: 30080
@@ -304,41 +304,11 @@ show_status() {
     echo ""
     
     echo_info "Access Points:"
-    echo_info ""
-    echo_info "  INGRESS ENDPOINTS (Main Application Access):"
-    echo_info "    Port 7080 (HTTP):  http://localhost:7080"
-    echo_info "      - Primary entry point for all web traffic"
-    echo_info "      - Routes requests to appropriate backend services based on URL paths"
-    echo_info "      - Non-privileged port (replaces standard port 80 for rootless environments)"
-    echo_info "      - Use this for application access and API calls"
-    echo_info ""
-    echo_info "    Port 7443 (HTTPS): https://localhost:7443"
-    echo_info "      - Secure encrypted entry point for all web traffic"
-    echo_info "      - Same routing capabilities as port 7080 but with TLS encryption"
-    echo_info "      - Non-privileged port (replaces standard port 443 for rootless environments)"
-    echo_info "      - Recommended for production-like testing"
-    echo_info ""
-    echo_info "  DIRECT SERVICE ENDPOINTS (Development/Debugging Access):"
-    echo_info "    Port 30080: http://localhost:30080/api/ingress/v1/version"
-    echo_info "      - Ingress Controller API: Monitor ingress controller health and configuration"
-    echo_info "      - Use for: Verifying ingress controller is running and responsive"
-    echo_info ""
-    echo_info "    Port 30081: http://localhost:30081/status"
-    echo_info "      - ROS-OCP Backend Service: Main application backend health endpoint"
-    echo_info "      - Use for: Checking if the core ROS-OCP service is operational"
-    echo_info ""
-    echo_info "    Port 30090: http://localhost:30090/listPerformanceProfiles"
-    echo_info "      - Kruize Optimization Service: Performance analysis and recommendations"
-    echo_info "      - Use for: Accessing performance optimization features and profiles"
-    echo_info ""
-    echo_info "    Port 30091: http://localhost:30091"
-    echo_info "      - MinIO S3 API: Object storage service with S3-compatible interface"
-    echo_info "      - Use for: Programmatic access to stored objects and file management"
-    echo_info ""
-    echo_info "    Port 30099: http://localhost:30099"
-    echo_info "      - MinIO Web Console: Browser-based object storage management interface"
-    echo_info "      - Web UI: minioaccesskey/miniosecretkey"
-    echo_info "      - Use for: Visual file management, bucket operations, and storage monitoring"
+    echo_info "  - Ingress API: http://localhost:30080/api/ingress/v1/version"
+    echo_info "  - ROS-OCP API: http://localhost:30081/status"
+    echo_info "  - Kruize API: http://localhost:30090/listPerformanceProfiles"
+    echo_info "  - MinIO API: http://localhost:30091 (S3 API)"
+    echo_info "  - MinIO Console: http://localhost:30099 (Web UI - minioaccesskey/miniosecretkey)"
     echo ""
     
     echo_info "Useful Commands:"
