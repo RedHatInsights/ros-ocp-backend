@@ -1,5 +1,11 @@
 name: Helm Chart Quality Test
 
+# This workflow tests the ROS-OCP Helm chart deployment on Kind
+# Uses alternative registries to avoid Docker Hub rate limiting:
+# - public.ecr.aws for official images (postgres, redis, busybox, confluent)
+# - quay.io for application images (already configured)
+# - ghcr.io as fallback for some images
+
 on:
   pull_request:
     paths:
@@ -17,27 +23,102 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Public ECR
+        run: |
+          # Login to public.ecr.aws (no authentication required for public images, but login for higher rate limits)
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws 2>/dev/null || echo "Public ECR login failed, continuing without auth"
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+
+      - name: Verify Docker is running
+        run: |
+          echo "Docker version:"
+          docker --version
+          echo "Docker info:"
+          docker info
+          echo "Docker daemon status:"
+          docker system info --format '{{.ServerVersion}}'
+          echo "Testing Docker connectivity:"
+          docker run --rm hello-world
+
       - name: Install KIND
         run: |
+          # Download and install Kind v0.20.0 (stable version)
           curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
+
+          # Verify installation
+          kind version
+
+          # Configure Kind to use Docker explicitly
+          echo "Docker driver will be used by Kind"
 
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/kubectl
+          kubectl version --client
 
       - name: Install Helm
         run: |
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
 
-      - name: Set up environment
+      - name: Set up environment and Docker configuration
         run: |
           echo "KIND_CLUSTER_NAME=ros-ocp-test-cluster" >> $GITHUB_ENV
           echo "HELM_RELEASE_NAME=ros-ocp-test" >> $GITHUB_ENV
           echo "NAMESPACE=ros-ocp-test" >> $GITHUB_ENV
+
+          # Ensure Docker daemon is accessible
+          echo "Current user: $(whoami)"
+          echo "Docker group members:"
+          getent group docker || echo "Docker group not found"
+
+          # Set Docker environment variables for Kind
+          echo "DOCKER_HOST=" >> $GITHUB_ENV
+          echo "KIND_EXPERIMENTAL_DOCKER_NETWORK=bridge" >> $GITHUB_ENV
+
+      - name: Pre-pull required Docker images
+        run: |
+          echo "Pre-pulling essential images from alternative registries to avoid docker.io rate limits..."
+
+          # Use Kind's official registry mirror when available
+          docker pull kindest/node:v1.27.3 &
+
+          # Use public.ecr.aws mirrors when available, fallback to docker.io
+          docker pull public.ecr.aws/docker/library/postgres:13 || docker pull postgres:13 &
+          docker pull public.ecr.aws/docker/library/redis:7-alpine || docker pull redis:7-alpine &
+
+          # Quay.io images (already using alternative registry)
+          docker pull quay.io/minio/minio:latest &
+
+          # Confluent images (try GitHub Container Registry first)
+          docker pull ghcr.io/confluentinc/cp-kafka:7.5.3 || docker pull confluentinc/cp-kafka:7.5.3 &
+          docker pull ghcr.io/confluentinc/cp-zookeeper:7.4.10 || docker pull confluentinc/cp-zookeeper:7.4.10 &
+
+          wait
+          echo "Image pre-pulling completed"
+
+      - name: Clean up any existing Kind clusters
+        run: |
+          # Clean up any existing clusters to avoid conflicts
+          kind get clusters | xargs -I {} kind delete cluster --name {} || true
+          docker system prune -f || true
 
       - name: Deploy KIND cluster and Helm chart
         run: |
@@ -45,15 +126,47 @@ jobs:
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
+
+          # Make script executable
           chmod +x deploy-kind.sh
+
+          # Run deployment with verbose output
+          echo "Starting KIND cluster deployment..."
           ./deploy-kind.sh
+
+          # Verify cluster is running
+          echo "Verifying cluster status..."
+          kind get clusters
+          kubectl cluster-info
+          kubectl get nodes -o wide
 
       - name: Wait for services to stabilize
         run: |
           echo "Waiting for services to stabilize..."
-          sleep 60
+
+          # Wait for all pods to be in Running state
+          timeout 600 bash -c "until kubectl wait --for=condition=ready pod -l 'app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}' -n ${{ env.NAMESPACE }} --timeout=30s; do echo 'Waiting for pods...'; sleep 10; done"
+
+          # Additional wait for services to fully initialize
+          echo "All pods ready, waiting additional 30 seconds for service initialization..."
+          sleep 30
+
+      - name: Verify cluster and services health
+        run: |
+          echo "=== Cluster Health Check ==="
+          kubectl get nodes -o wide
+          kubectl get pods -n ${{ env.NAMESPACE }} -o wide
+          kubectl get services -n ${{ env.NAMESPACE }}
+
+          echo "=== Docker Container Status ==="
+          docker ps --filter "label=io.x-k8s.kind.cluster=${{ env.KIND_CLUSTER_NAME }}"
+
+          echo "=== Resource Usage ==="
+          df -h
+          free -h
 
       - name: Run dataflow test
+        timeout-minutes: 15
         run: |
           cd deployment/kubernetes/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
@@ -65,19 +178,55 @@ jobs:
       - name: Show cluster status on failure
         if: failure()
         run: |
+          echo "=== Docker Status ==="
+          docker --version || true
+          docker info || true
+          docker ps -a || true
+          docker images | head -10 || true
+
+          echo "=== Kind Status ==="
+          kind version || true
+          kind get clusters || true
+
           echo "=== Cluster Status ==="
           kubectl cluster-info || true
+          kubectl version || true
+
           echo "=== Pods Status ==="
           kubectl get pods -n ${{ env.NAMESPACE }} -o wide || true
+          kubectl get pods --all-namespaces | head -20 || true
+
           echo "=== Services Status ==="
           kubectl get services -n ${{ env.NAMESPACE }} || true
+
           echo "=== Events ==="
           kubectl get events -n ${{ env.NAMESPACE }} --sort-by='.lastTimestamp' || true
+          kubectl get events --all-namespaces --sort-by='.lastTimestamp' | head -20 || true
+
+          echo "=== Persistent Volumes ==="
+          kubectl get pv,pvc -n ${{ env.NAMESPACE }} || true
+
+          echo "=== Node Status ==="
+          kubectl get nodes -o wide || true
+          kubectl describe nodes || true
+
           echo "=== Recent Logs ==="
           for pod in $(kubectl get pods -n ${{ env.NAMESPACE }} -o name | head -5); do
             echo "--- Logs for $pod ---"
             kubectl logs -n ${{ env.NAMESPACE }} $pod --tail=20 || true
+            kubectl logs -n ${{ env.NAMESPACE }} $pod --previous --tail=10 || true
           done
+
+          echo "=== Docker Container Logs ==="
+          for container in $(docker ps --filter "label=io.x-k8s.kind.cluster=${{ env.KIND_CLUSTER_NAME }}" --format "{{.Names}}" | head -3); do
+            echo "--- Docker logs for $container ---"
+            docker logs $container --tail=20 || true
+          done
+
+          echo "=== System Resources ==="
+          df -h || true
+          free -h || true
+          top -bn1 | head -20 || true
 
       - name: Cleanup
         if: always()

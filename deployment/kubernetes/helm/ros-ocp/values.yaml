@@ -7,6 +7,14 @@ global:
   pullPolicy: IfNotPresent
   # Pull secrets for private registries
   imagePullSecrets: []
+  # Init container images (using alternative registries to avoid docker.io rate limits)
+  initContainers:
+    waitFor:
+      repository: registry.access.redhat.com/ubi9/ubi-minimal
+      tag: "latest"
+    minioMc:
+      repository: quay.io/minio/mc
+      tag: "RELEASE.2025-07-21T05-28-08Z"
 
 serviceAccount:
   name: ros-ocp-backend
@@ -54,11 +62,11 @@ database:
     username: postgres
     password: postgres
 
-# Kafka and Zookeeper
+# Kafka and Zookeeper (using insights-onprem images)
 kafka:
   zookeeper:
     image:
-      repository: confluentinc/cp-zookeeper
+      repository: quay.io/insights-onprem/cp-zookeeper  # Variable for future updates
       tag: "7.4.10"
     clientPort: 32181
     serverId: 1
@@ -66,7 +74,7 @@ kafka:
       size: 5Gi
   broker:
     image:
-      repository: confluentinc/cp-kafka
+      repository: quay.io/insights-onprem/cp-kafka  # Variable for future updates
       tag: "7.5.3"
     brokerId: 1
     offsetsTopicReplicationFactor: 1
@@ -147,11 +155,11 @@ kruize:
     clusterType: kubernetes
     k8sType: openshift
     authType: ""
-    monitoringAgent: prometheus
-    monitoringService: prometheus-k8s
-    monitoringEndpoint: prometheus-k8s
+    monitoringAgent: "prometheus"
+    monitoringService: "prometheus"
+    monitoringEndpoint: "prometheus"
     saveToDb: true
-    local: false
+    local: true
     logAllHttpReqAndResponse: true
     hibernateDialect: org.hibernate.dialect.PostgreSQLDialect
     hibernateDriver: org.postgresql.Driver

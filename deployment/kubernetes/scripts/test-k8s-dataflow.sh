@@ -94,14 +94,34 @@ wait_for_services() {
 
 # Function to create test data
 create_test_data() {
-    echo_info "Creating test data..." >&2
+    echo_info "Creating test data with current timestamps..." >&2
 
-    # Create a temporary CSV file with proper ROS-OCP format
+    # Generate dynamic timestamps for current data (multiple intervals for better recommendations)
+    local now_date=$(date -u +%Y-%m-%d)
+    local interval_start_1=$(date -u -d '75 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_end_1=$(date -u -d '60 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_start_2=$(date -u -d '60 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_end_2=$(date -u -d '45 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_start_3=$(date -u -d '45 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_end_3=$(date -u -d '30 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_start_4=$(date -u -d '30 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_end_4=$(date -u -d '15 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+
+    echo_info "Using timestamps:" >&2
+    echo_info "  Report date: $now_date" >&2
+    echo_info "  Interval 1: $interval_start_1 to $interval_end_1" >&2
+    echo_info "  Interval 2: $interval_start_2 to $interval_end_2" >&2
+    echo_info "  Interval 3: $interval_start_3 to $interval_end_3" >&2
+    echo_info "  Interval 4: $interval_start_4 to $interval_end_4" >&2
+
+    # Create a temporary CSV file with proper ROS-OCP format and current timestamps
     local test_csv=$(mktemp)
-    cat > "$test_csv" << 'EOF'
+    cat > "$test_csv" << EOF
 report_period_start,report_period_end,interval_start,interval_end,container_name,pod,owner_name,owner_kind,workload,workload_type,namespace,image_name,node,resource_id,cpu_request_container_avg,cpu_request_container_sum,cpu_limit_container_avg,cpu_limit_container_sum,cpu_usage_container_avg,cpu_usage_container_min,cpu_usage_container_max,cpu_usage_container_sum,cpu_throttle_container_avg,cpu_throttle_container_max,cpu_throttle_container_sum,memory_request_container_avg,memory_request_container_sum,memory_limit_container_avg,memory_limit_container_sum,memory_usage_container_avg,memory_usage_container_min,memory_usage_container_max,memory_usage_container_sum,memory_rss_usage_container_avg,memory_rss_usage_container_min,memory_rss_usage_container_max,memory_rss_usage_container_sum
-2024-01-01,2024-01-01,2024-01-01 00:00:00 -0000 UTC,2024-01-01 00:15:00 -0000 UTC,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,100,100,200,200,50,10,90,50,0,0,0,512,512,1024,1024,256,128,384,256,200,100,300,200
-2024-01-01,2024-01-01,2024-01-01 00:15:00 -0000 UTC,2024-01-01 00:30:00 -0000 UTC,test-container-2,test-pod-456,test-deployment-2,Deployment,test-workload-2,deployment,test-namespace-2,quay.io/test/image2:latest,worker-node-2,resource-456,150,150,300,300,75,20,120,75,5,10,5,768,768,1536,1536,384,192,576,384,300,150,450,300
+$now_date,$now_date,$interval_start_1,$interval_end_1,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,0.5,0.5,1.0,1.0,0.247832,0.185671,0.324131,0.247832,0.001,0.002,0.001,536870912,536870912,1073741824,1073741824,413587266.064516,410009344,420900544,413587266.064516,393311537.548387,390293568,396371392,393311537.548387
+$now_date,$now_date,$interval_start_2,$interval_end_2,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,0.5,0.5,1.0,1.0,0.265423,0.198765,0.345678,0.265423,0.0012,0.0025,0.0012,536870912,536870912,1073741824,1073741824,427891456.123456,422014016,435890624,427891456.123456,407654321.987654,403627568,411681024,407654321.987654
+$now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,0.5,0.5,1.0,1.0,0.289567,0.210987,0.367890,0.289567,0.0008,0.0018,0.0008,536870912,536870912,1073741824,1073741824,445678901.234567,441801728,449556074,445678901.234567,425987654.321098,421960800,430014256,425987654.321098
+$now_date,$now_date,$interval_start_4,$interval_end_4,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,0.5,0.5,1.0,1.0,0.234567,0.189012,0.298765,0.234567,0.0005,0.0012,0.0005,536870912,536870912,1073741824,1073741824,398765432.101234,394887168,402643696,398765432.101234,378654321.098765,374627568,382681024,378654321.098765
 EOF
 
     echo "$test_csv"
@@ -195,9 +215,23 @@ simulate_koku_processing() {
     echo_info "Generated file UUID: $file_uuid"
     echo_info "CSV filename: $csv_filename"
 
-    # Create test CSV content
-    local csv_content='report_period_start,report_period_end,interval_start,interval_end,container_name,pod,owner_name,owner_kind,workload,workload_type,namespace,image_name,node,resource_id,cpu_request_container_avg,cpu_request_container_sum,cpu_limit_container_avg,cpu_limit_container_sum,cpu_usage_container_avg,cpu_usage_container_min,cpu_usage_container_max,cpu_usage_container_sum,cpu_throttle_container_avg,cpu_throttle_container_max,cpu_throttle_container_sum,memory_request_container_avg,memory_request_container_sum,memory_limit_container_avg,memory_limit_container_sum,memory_usage_container_avg,memory_usage_container_min,memory_usage_container_max,memory_usage_container_sum,memory_rss_usage_container_avg,memory_rss_usage_container_min,memory_rss_usage_container_max,memory_rss_usage_container_sum
-2024-01-01,2024-01-01,2024-01-01 00:00:00 -0000 UTC,2024-01-01 00:15:00 -0000 UTC,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,100,100,200,200,50,10,90,50,0,0,0,512,512,1024,1024,256,128,384,256,200,100,300,200'
+    # Create test CSV content with current timestamps (multiple data points)
+    local now_date=$(date -u +%Y-%m-%d)
+    local interval_start_1=$(date -u -d '60 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_end_1=$(date -u -d '45 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_start_2=$(date -u -d '45 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_end_2=$(date -u -d '30 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_start_3=$(date -u -d '30 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+    local interval_end_3=$(date -u -d '15 minutes ago' '+%Y-%m-%d %H:%M:%S -0000 UTC')
+
+    echo_info "Creating CSV with current timestamps:" >&2
+    echo_info "  Report date: $now_date" >&2
+    echo_info "  Multiple intervals for better recommendations" >&2
+
+    local csv_content="report_period_start,report_period_end,interval_start,interval_end,container_name,pod,owner_name,owner_kind,workload,workload_type,namespace,image_name,node,resource_id,cpu_request_container_avg,cpu_request_container_sum,cpu_limit_container_avg,cpu_limit_container_sum,cpu_usage_container_avg,cpu_usage_container_min,cpu_usage_container_max,cpu_usage_container_sum,cpu_throttle_container_avg,cpu_throttle_container_max,cpu_throttle_container_sum,memory_request_container_avg,memory_request_container_sum,memory_limit_container_avg,memory_limit_container_sum,memory_usage_container_avg,memory_usage_container_min,memory_usage_container_max,memory_usage_container_sum,memory_rss_usage_container_avg,memory_rss_usage_container_min,memory_rss_usage_container_max,memory_rss_usage_container_sum
+$now_date,$now_date,$interval_start_1,$interval_end_1,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,0.5,0.5,1.0,1.0,0.247832,0.185671,0.324131,0.247832,0.001,0.002,0.001,536870912,536870912,1073741824,1073741824,413587266.064516,410009344,420900544,413587266.064516,393311537.548387,390293568,396371392,393311537.548387
+$now_date,$now_date,$interval_start_2,$interval_end_2,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,0.5,0.5,1.0,1.0,0.265423,0.198765,0.345678,0.265423,0.0012,0.0025,0.0012,536870912,536870912,1073741824,1073741824,427891456.123456,422014016,435890624,427891456.123456,407654321.987654,403627568,411681024,407654321.987654
+$now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,0.5,0.5,1.0,1.0,0.289567,0.210987,0.367890,0.289567,0.0008,0.0018,0.0008,536870912,536870912,1073741824,1073741824,445678901.234567,441801728,449556074,445678901.234567,425987654.321098,421960800,430014256,425987654.321098"
 
     # Copy CSV data to ros-data bucket via MinIO pod
     echo_info "Copying CSV to ros-data bucket..."
@@ -337,9 +371,10 @@ verify_processing() {
 verify_recommendations() {
     echo_info "=== STEP 5: Verify Recommendations via ROS-OCP API ===="
 
-    # Wait additional time for recommendations to be processed
-    echo_info "Waiting for recommendations to be processed (30 seconds)..."
-    sleep 30
+    # Wait additional time for recommendations to be processed with fresh data
+    echo_info "Waiting for recommendations to be processed with fresh timestamps (45 seconds)..."
+    echo_info "Fresh data should trigger Kruize to generate valid recommendations..."
+    sleep 45
 
     # Base identity header used throughout the script
     local identity_header="eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K"
@@ -463,7 +498,12 @@ except Exception as e:
                     fi
                 fi
             else
-                echo_warning "No recommendations found in response - data may still be processing"
+                echo_warning "No recommendations found in response with fresh timestamps"
+                echo_info "This may indicate:"
+                echo_info "  - Kruize is still processing the recent data (may need more time)"
+                echo_info "  - Fresh timestamps generated valid data but recommendations aren't ready yet"
+                echo_info "  - Check Kruize logs: kubectl logs -n $NAMESPACE -l app.kubernetes.io/name=kruize --tail=50"
+                echo_info "  - Check processor logs: kubectl logs -n $NAMESPACE -l app.kubernetes.io/name=rosocp-processor --tail=20"
             fi
 
             rm -f /tmp/recommendations_list.json
