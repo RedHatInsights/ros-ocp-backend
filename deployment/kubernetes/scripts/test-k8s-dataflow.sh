@@ -174,9 +174,79 @@ upload_test_data() {
         return 1
     fi
 
+    # Create manifest.json file (required by insights-ros-ingress)
+    local manifest_json="$test_dir/manifest.json"
+    local cluster_id=$(uuidgen | tr '[:upper:]' '[:lower:]')
+    local current_date=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
+    local start_date=$(date -u +"%Y-%m-%dT%H:00:00Z")
+    local end_date=$(date -u +"%Y-%m-%dT%H:59:59Z")
+
+    cat > "$manifest_json" << EOF
+{
+    "uuid": "$uuid",
+    "cluster_id": "$cluster_id",
+    "version": "test-version",
+    "date": "$current_date",
+    "files": [
+        "$csv_filename"
+    ],
+    "start": "$start_date",
+    "end": "$end_date",
+    "cr_status": {
+        "clusterID": "$cluster_id",
+        "clusterVersion": "test-4.10",
+        "api_url": "http://localhost:30080",
+        "authentication": {
+            "type": "bearer",
+            "secret_name": "test-auth-secret",
+            "credentials_found": true
+        },
+        "packaging": {
+            "last_successful_packaging_time": null,
+            "max_reports_to_store": 30,
+            "max_size_MB": 100,
+            "number_reports_stored": 1
+        },
+        "upload": {
+            "ingress_path": "/api/ingress/v1/upload",
+            "upload": true,
+            "upload_wait": 30,
+            "upload_cycle": 360,
+            "last_successful_upload_time": null,
+            "validate_cert": false
+        },
+        "operator_commit": "test-commit",
+        "prometheus": {
+            "prometheus_configured": true,
+            "prometheus_connected": true,
+            "context_timeout": 120,
+            "last_query_start_time": "$current_date",
+            "last_query_success_time": "$current_date",
+            "service_address": "https://prometheus-test",
+            "skip_tls_verification": true
+        },
+        "reports": {
+            "report_month": "$(date +%m)",
+            "last_hour_queried": "$start_date - $end_date",
+            "data_collected": true
+        },
+        "source": {
+            "sources_path": "/api/sources/v1.0/",
+            "create_source": false,
+            "last_check_time": null,
+            "check_cycle": 1440
+        },
+        "storage": {}
+    },
+    "certified": false
+}
+EOF
+
+    echo_info "Created manifest.json with cluster_id: $cluster_id"
+
     # Create tar.gz file (insights-ros-ingress will extract this automatically)
     echo_info "Creating HCCM tar.gz archive for insights-ros-ingress..."
-    if ! (cd "$test_dir" && tar -czf "$tar_filename" "$csv_filename"); then
+    if ! (cd "$test_dir" && tar -czf "$tar_filename" "$csv_filename" "manifest.json"); then
         echo_error "Failed to create tar.gz archive"
         rm -f "$test_csv"
         rm -rf "$test_dir"
