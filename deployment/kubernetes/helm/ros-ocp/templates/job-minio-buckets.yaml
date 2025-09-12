@@ -20,18 +20,19 @@ spec:
       restartPolicy: OnFailure
       initContainers:
         - name: wait-for-minio
-          image: busybox:1.35
-          command: ['sh', '-c']
+          image: "{{ .Values.global.initContainers.waitFor.repository }}:{{ .Values.global.initContainers.waitFor.tag }}"
+          command: ['bash', '-c']
           args:
             - |
-              until nc -z {{ include "ros-ocp.fullname" . }}-minio {{ .Values.minio.ports.api }}; do
-                echo "Waiting for MinIO..."
+              echo "Waiting for MinIO at {{ include "ros-ocp.fullname" . }}-minio:{{ .Values.minio.ports.api }}..."
+              until timeout 3 bash -c "echo > /dev/tcp/{{ include "ros-ocp.fullname" . }}-minio/{{ .Values.minio.ports.api }}" 2>/dev/null; do
+                echo "MinIO not ready yet, retrying in 5 seconds..."
                 sleep 5
               done
               echo "MinIO is ready"
       containers:
         - name: minio-buckets
-          image: minio/mc:RELEASE.2025-07-21T05-28-08Z
+          image: "{{ .Values.global.initContainers.minioMc.repository }}:{{ .Values.global.initContainers.minioMc.tag }}"
           imagePullPolicy: {{ .Values.global.pullPolicy }}
           env:
             - name: MINIO_ACCESS_KEY

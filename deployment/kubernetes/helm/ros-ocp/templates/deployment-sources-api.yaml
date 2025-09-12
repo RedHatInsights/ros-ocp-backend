@@ -27,34 +27,40 @@ spec:
       {{- end }}
       initContainers:
         - name: wait-for-db-sources
-          image: busybox:1.35
-          command: ['sh', '-c']
+          image: "{{ .Values.global.initContainers.waitFor.repository }}:{{ .Values.global.initContainers.waitFor.tag }}"
+          command: ['bash', '-c']
           args:
             - |
-              until nc -z {{ include "ros-ocp.sourcesDatabaseHost" . }} {{ .Values.database.sources.port }}; do
-                echo "Waiting for Sources database..."
+              echo "Waiting for Sources database at {{ include "ros-ocp.sourcesDatabaseHost" . }}:{{ .Values.database.sources.port }}..."
+              until timeout 3 bash -c "echo > /dev/tcp/{{ include "ros-ocp.sourcesDatabaseHost" . }}/{{ .Values.database.sources.port }}" 2>/dev/null; do
+                echo "Database not ready yet, retrying in 5 seconds..."
                 sleep 5
               done
               echo "Sources database is ready"
+              echo "Sources database is ready"
         - name: wait-for-kafka
-          image: busybox:1.35
-          command: ['sh', '-c']
+          image: "{{ .Values.global.initContainers.waitFor.repository }}:{{ .Values.global.initContainers.waitFor.tag }}"
+          command: ['bash', '-c']
           args:
             - |
-              until nc -z {{ include "ros-ocp.fullname" . }}-kafka {{ .Values.kafka.broker.port }}; do
-                echo "Waiting for Kafka..."
+              echo "Waiting for Kafka at {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}..."
+              until timeout 3 bash -c "echo > /dev/tcp/{{ include "ros-ocp.fullname" . }}-kafka/{{ .Values.kafka.broker.port }}" 2>/dev/null; do
+                echo "Kafka not ready yet, retrying in 5 seconds..."
                 sleep 5
               done
               echo "Kafka is ready"
+              echo "Kafka is ready"
         - name: wait-for-redis
-          image: busybox:1.35
-          command: ['sh', '-c']
+          image: "{{ .Values.global.initContainers.waitFor.repository }}:{{ .Values.global.initContainers.waitFor.tag }}"
+          command: ['bash', '-c']
           args:
             - |
-              until nc -z {{ include "ros-ocp.fullname" . }}-redis {{ .Values.redis.port }}; do
-                echo "Waiting for Redis..."
+              echo "Waiting for Redis at {{ include "ros-ocp.fullname" . }}-redis:{{ .Values.redis.port }}..."
+              until timeout 3 bash -c "echo > /dev/tcp/{{ include "ros-ocp.fullname" . }}-redis/{{ .Values.redis.port }}" 2>/dev/null; do
+                echo "Redis not ready yet, retrying in 5 seconds..."
                 sleep 5
               done
+              echo "Redis is ready"
               echo "Redis is ready"
       containers:
         - name: sources-api

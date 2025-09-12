@@ -27,12 +27,13 @@ spec:
       {{- end }}
       initContainers:
         - name: wait-for-db-kruize
-          image: busybox:1.35
-          command: ['sh', '-c']
+          image: "{{ .Values.global.initContainers.waitFor.repository }}:{{ .Values.global.initContainers.waitFor.tag }}"
+          command: ['bash', '-c']
           args:
             - |
-              until nc -z {{ include "ros-ocp.fullname" . }}-db-kruize {{ .Values.database.kruize.port }}; do
-                echo "Waiting for Kruize database..."
+              echo "Waiting for Kruize database at {{ include "ros-ocp.fullname" . }}-db-kruize:{{ .Values.database.kruize.port }}..."
+              until timeout 3 bash -c "echo > /dev/tcp/{{ include "ros-ocp.fullname" . }}-db-kruize/{{ .Values.database.kruize.port }}" 2>/dev/null; do
+                echo "Database not ready yet, retrying in 5 seconds..."
                 sleep 5
               done
               echo "Kruize database is ready"

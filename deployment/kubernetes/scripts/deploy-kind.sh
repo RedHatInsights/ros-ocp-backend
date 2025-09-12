@@ -2,6 +2,7 @@
 
 # ROS-OCP Kubernetes Deployment Script for KIND
 # This script deploys the ROS-OCP Helm chart on a KIND cluster with proper storage and dependencies
+# Container Runtime: Docker (default)
 
 set -e  # Exit on any error
 
@@ -43,29 +44,29 @@ command_exists() {
 # Function to check prerequisites
 check_prerequisites() {
     echo_info "Checking prerequisites..."
-    
+
     local missing_tools=()
-    
+
     if ! command_exists kind; then
         missing_tools+=("kind")
     fi
-    
+
     if ! command_exists kubectl; then
         missing_tools+=("kubectl")
     fi
-    
+
     if ! command_exists helm; then
         missing_tools+=("helm")
     fi
-    
-    if ! command_exists podman; then
-        missing_tools+=("podman")
+
+    if ! command_exists docker; then
+        missing_tools+=("docker")
     fi
-    
+
     if [ ${#missing_tools[@]} -gt 0 ]; then
         echo_error "Missing required tools: ${missing_tools[*]}"
         echo_info "Please install the missing tools:"
-        
+
         for tool in "${missing_tools[@]}"; do
             case $tool in
                 "kind")
@@ -86,26 +87,37 @@ check_prerequisites() {
                         echo_info "  macOS: brew install helm"
                     fi
                     ;;
-                "podman")
-                    echo_info "  Install Podman: https://podman.io/getting-started/installation"
+                "docker")
+                    echo_info "  Install Docker: https://docs.docker.com/get-docker/"
                     if [[ "$OSTYPE" == "darwin"* ]]; then
-                        echo_info "  macOS: brew install podman"
+                        echo_info "  macOS: brew install --cask docker"
                     fi
                     ;;
             esac
         done
-        
+
         return 1
     fi
-    
-    echo_success "All prerequisites are installed"
+
+    # Ensure Docker is running and set as default container runtime
+    echo_info "Configuring Docker as default container runtime..."
+    if ! docker info >/dev/null 2>&1; then
+        echo_error "Docker is not running. Please start Docker and try again."
+        return 1
+    fi
+
+    # Set KIND to use Docker explicitly
+    export KIND_EXPERIMENTAL_PROVIDER=docker
+    export DOCKER_CLI_EXPERIMENTAL=enabled
+
+    echo_success "All prerequisites are installed and Docker configured as default"
     return 0
 }
 
 # Function to create KIND cluster with storage
 create_kind_cluster() {
     echo_info "Creating KIND cluster: $KIND_CLUSTER_NAME"
-    
+
     # Check if cluster already exists
     if kind get clusters | grep -q "^${KIND_CLUSTER_NAME}$"; then
         echo_error "KIND cluster '$KIND_CLUSTER_NAME' already exists"
@@ -114,8 +126,8 @@ create_kind_cluster() {
         echo_info "Or use a different cluster name by setting KIND_CLUSTER_NAME environment variable"
         exit 1
     fi
-    
-    # Create KIND cluster configuration
+
+    # Create KIND cluster configuration with increased file descriptor limits
     local kind_config=$(cat <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -128,6 +140,12 @@ nodes:
     nodeRegistration:
       kubeletExtraArgs:
         node-labels: "ingress-ready=true"
+  - |
+    kind: KubeletConfiguration
+    maxPods: 250
+    systemReserved:
+      cpu: "0.5"
+      memory: "1Gi"
   extraPortMappings:
   - containerPort: 80
     hostPort: 80
@@ -153,57 +171,141 @@ nodes:
   - containerPort: 30099
     hostPort: 30099
     protocol: TCP
-- role: worker
-- role: worker
 EOF
 )
-    
+
     echo "$kind_config" | kind create cluster --config=-
-    
+
     if [ $? -eq 0 ]; then
         echo_success "KIND cluster '$KIND_CLUSTER_NAME' created successfully"
     else
         echo_error "Failed to create KIND cluster"
         return 1
     fi
-    
+
     # Set kubectl context
     kubectl cluster-info --context "kind-${KIND_CLUSTER_NAME}"
     echo_success "kubectl context set to kind-${KIND_CLUSTER_NAME}"
+
+    # Wait for API server to be fully ready
+    echo_info "Waiting for API server to be fully ready..."
+    local retries=30
+    local count=0
+    while [ $count -lt $retries ]; do
+        if kubectl get --raw /healthz >/dev/null 2>&1; then
+            echo_success "API server is ready"
+            break
+        fi
+        echo_info "Waiting for API server... ($((count + 1))/$retries)"
+        sleep 5
+        count=$((count + 1))
+    done
+
+    if [ $count -eq $retries ]; then
+        echo_error "API server not ready after $retries attempts"
+        return 1
+    fi
 }
 
 # Function to install storage provisioner
 install_storage_provisioner() {
     echo_info "Installing storage provisioner..."
-    
+
     # KIND comes with Rancher Local Path Provisioner by default
     # We just need to make it the default storage class
     kubectl patch storageclass standard -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-    
+
     echo_success "Storage provisioner configured"
 }
 
 # Function to install NGINX Ingress Controller
 install_ingress_controller() {
     echo_info "Installing NGINX Ingress Controller..."
-    
-    # Install NGINX Ingress Controller for KIND
-    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-    
+
+    # Install NGINX Ingress Controller for KIND (using older stable version)
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/kind/deploy.yaml
+
+    # Wait additional time for API server to be fully stable
+    echo_info "Waiting for API server to be fully stable before ingress controller starts..."
+    sleep 30
+
+    # Wait for the deployment to be created before patching
+    echo_info "Waiting for ingress controller deployment to be created..."
+    local retries=30
+    local count=0
+    while [ $count -lt $retries ]; do
+        if kubectl get deployment ingress-nginx-controller -n ingress-nginx >/dev/null 2>&1; then
+            echo_success "Ingress controller deployment found"
+            break
+        fi
+        echo_info "Waiting for deployment... ($((count + 1))/$retries)"
+        sleep 2
+        count=$((count + 1))
+    done
+
+    # Wait for admission webhook job to complete (creates the certificate secret)
+    echo_info "Waiting for admission webhook setup to complete..."
+    kubectl wait --namespace ingress-nginx \
+        --for=condition=complete job/ingress-nginx-admission-create \
+        --timeout=120s || true
+
+    # Wait for admission webhook patch job if it exists
+    kubectl wait --namespace ingress-nginx \
+        --for=condition=complete job/ingress-nginx-admission-patch \
+        --timeout=60s || true
+
+    # Wait for the admission secret to be created
+    echo_info "Waiting for admission webhook secret..."
+    local retries=30
+    local count=0
+    while [ $count -lt $retries ]; do
+        if kubectl get secret ingress-nginx-admission -n ingress-nginx >/dev/null 2>&1; then
+            echo_success "Admission webhook secret found"
+            break
+        fi
+        echo_info "Waiting for admission secret... ($((count + 1))/$retries)"
+        sleep 2
+        count=$((count + 1))
+    done
+
+    # Enable debug logging in NGINX ingress controller
+    echo_info "Enabling debug logs in NGINX ingress controller..."
+    kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type='json' -p='[
+        {
+            "op": "add",
+            "path": "/spec/template/spec/containers/0/args/-",
+            "value": "--v=2"
+        },
+        {
+            "op": "add",
+            "path": "/spec/template/spec/containers/0/args/-",
+            "value": "--logtostderr=true"
+        },
+        {
+            "op": "add",
+            "path": "/spec/template/spec/containers/0/env/-",
+            "value": {
+                "name": "NGINX_DEBUG",
+                "value": "true"
+            }
+        }
+    ]' || echo_warning "Debug logging patch failed, continuing..."
+
+    # Give time for the patch to take effect
+    sleep 5
+
     # Wait for ingress controller to be ready
     echo_info "Waiting for NGINX Ingress Controller to be ready..."
     kubectl wait --namespace ingress-nginx \
         --for=condition=ready pod \
         --selector=app.kubernetes.io/component=controller \
         --timeout=300s
-    
-    echo_success "NGINX Ingress Controller installed and ready"
 }
 
 # Function to create namespace
 create_namespace() {
     echo_info "Creating namespace: $NAMESPACE"
-    
+
     if kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
         echo_warning "Namespace '$NAMESPACE' already exists"
     else
@@ -215,15 +317,15 @@ create_namespace() {
 # Function to deploy Helm chart
 deploy_helm_chart() {
     echo_info "Deploying ROS-OCP Helm chart..."
-    
+
     cd "$SCRIPT_DIR"
-    
+
     # Check if Helm chart directory exists
     if [ ! -d "../helm/ros-ocp" ]; then
         echo_error "Helm chart directory not found: ../helm/ros-ocp"
         return 1
     fi
-    
+
     # Install or upgrade the Helm release
     helm upgrade --install "$HELM_RELEASE_NAME" ../helm/ros-ocp \
         --namespace "$NAMESPACE" \
@@ -231,7 +333,7 @@ deploy_helm_chart() {
         --set global.storageClass="$STORAGE_CLASS" \
         --timeout=600s \
         --wait
-    
+
     if [ $? -eq 0 ]; then
         echo_success "Helm chart deployed successfully"
     else
@@ -243,32 +345,32 @@ deploy_helm_chart() {
 # Function to wait for pods to be ready
 wait_for_pods() {
     echo_info "Waiting for pods to be ready..."
-    
+
     # Wait for all pods to be ready (excluding jobs)
     kubectl wait --for=condition=ready pod -l "app.kubernetes.io/instance=$HELM_RELEASE_NAME" \
         --namespace "$NAMESPACE" \
         --timeout=600s \
         --field-selector=status.phase!=Succeeded
-    
+
     echo_success "All pods are ready"
 }
 
 # Function to create NodePort services for external access
 create_nodeport_services() {
     echo_info "Creating NodePort services for external access..."
-    
+
     # Ingress service
     kubectl patch service "${HELM_RELEASE_NAME}-ingress" -n "$NAMESPACE" \
         -p '{"spec":{"type":"NodePort","ports":[{"port":3000,"nodePort":30080,"targetPort":"http","protocol":"TCP","name":"http"}]}}'
-    
+
     # ROS-OCP API service
     kubectl patch service "${HELM_RELEASE_NAME}-rosocp-api" -n "$NAMESPACE" \
         -p '{"spec":{"type":"NodePort","ports":[{"port":8000,"nodePort":30081,"targetPort":"http","protocol":"TCP","name":"http"},{"port":9000,"nodePort":30082,"targetPort":"metrics","protocol":"TCP","name":"metrics"}]}}'
-    
+
     # Kruize service
     kubectl patch service "${HELM_RELEASE_NAME}-kruize" -n "$NAMESPACE" \
         -p '{"spec":{"type":"NodePort","ports":[{"port":8080,"nodePort":30090,"targetPort":"http","protocol":"TCP","name":"http"}]}}'
-    
+
     # MinIO service (API and Console)
     kubectl patch service "${HELM_RELEASE_NAME}-minio" -n "$NAMESPACE" \
         --type='json' \
@@ -277,7 +379,7 @@ create_nodeport_services() {
           {"op": "add", "path": "/spec/ports/0/nodePort", "value": 30091},
           {"op": "add", "path": "/spec/ports/1/nodePort", "value": 30099}
         ]'
-    
+
     echo_success "NodePort services created"
 }
 
@@ -285,24 +387,24 @@ create_nodeport_services() {
 show_status() {
     echo_info "Deployment Status"
     echo_info "=================="
-    
+
     echo_info "Cluster: kind-${KIND_CLUSTER_NAME}"
     echo_info "Namespace: $NAMESPACE"
     echo_info "Helm Release: $HELM_RELEASE_NAME"
     echo ""
-    
+
     echo_info "Pods:"
     kubectl get pods -n "$NAMESPACE" -o wide
     echo ""
-    
+
     echo_info "Services:"
     kubectl get services -n "$NAMESPACE"
     echo ""
-    
+
     echo_info "Storage:"
     kubectl get pvc -n "$NAMESPACE"
     echo ""
-    
+
     echo_info "Access Points:"
     echo_info "  - Ingress API: http://localhost:30080/api/ingress/v1/version"
     echo_info "  - ROS-OCP API: http://localhost:30081/status"
@@ -310,7 +412,7 @@ show_status() {
     echo_info "  - MinIO API: http://localhost:30091 (S3 API)"
     echo_info "  - MinIO Console: http://localhost:30099 (Web UI - minioaccesskey/miniosecretkey)"
     echo ""
-    
+
     echo_info "Useful Commands:"
     echo_info "  - View logs: kubectl logs -n $NAMESPACE -l app.kubernetes.io/instance=$HELM_RELEASE_NAME"
     echo_info "  - Port forward ingress: kubectl port-forward -n $NAMESPACE svc/${HELM_RELEASE_NAME}-ingress 3000:3000"
@@ -322,9 +424,9 @@ show_status() {
 # Function to run health checks
 run_health_checks() {
     echo_info "Running health checks..."
-    
+
     local failed_checks=0
-    
+
     # Check if ingress is accessible
     if curl -f -s http://localhost:30080/api/ingress/v1/version >/dev/null; then
         echo_success "Ingress API is accessible"
@@ -332,7 +434,7 @@ run_health_checks() {
         echo_error "Ingress API is not accessible"
         failed_checks=$((failed_checks + 1))
     fi
-    
+
     # Check if ROS-OCP API is accessible
     if curl -f -s http://localhost:30081/status >/dev/null; then
         echo_success "ROS-OCP API is accessible"
@@ -340,7 +442,7 @@ run_health_checks() {
         echo_error "ROS-OCP API is not accessible"
         failed_checks=$((failed_checks + 1))
     fi
-    
+
     # Check if Kruize is accessible
     if curl -f -s http://localhost:30090/listPerformanceProfiles >/dev/null; then
         echo_success "Kruize API is accessible"
@@ -356,20 +458,20 @@ run_health_checks() {
         echo_error "MinIO console is not accessible"
         failed_checks=$((failed_checks + 1))
     fi
-    
+
     if [ $failed_checks -eq 0 ]; then
         echo_success "All health checks passed!"
     else
         echo_warning "$failed_checks health check(s) failed"
     fi
-    
+
     return $failed_checks
 }
 
 # Function to cleanup
 cleanup() {
     echo_info "Cleaning up..."
-    
+
     if [ "${1:-}" = "--all" ]; then
         echo_info "Deleting KIND cluster..."
         kind delete cluster --name "$KIND_CLUSTER_NAME"
@@ -388,62 +490,62 @@ cleanup() {
 main() {
     echo_info "ROS-OCP Kubernetes Deployment for KIND"
     echo_info "======================================="
-    
+
     # Check prerequisites
     if ! check_prerequisites; then
         exit 1
     fi
-    
+
     echo_info "Configuration:"
     echo_info "  KIND Cluster: $KIND_CLUSTER_NAME"
     echo_info "  Helm Release: $HELM_RELEASE_NAME"
     echo_info "  Namespace: $NAMESPACE"
     echo_info "  Storage Class: $STORAGE_CLASS"
     echo ""
-    
+
     # Create KIND cluster
     if ! create_kind_cluster; then
         exit 1
     fi
-    
+
     # Install storage provisioner
     if ! install_storage_provisioner; then
         exit 1
     fi
-    
+
     # Install ingress controller
     if ! install_ingress_controller; then
         exit 1
     fi
-    
+
     # Create namespace
     if ! create_namespace; then
         exit 1
     fi
-    
+
     # Deploy Helm chart
     if ! deploy_helm_chart; then
         exit 1
     fi
-    
+
     # Wait for pods to be ready
     if ! wait_for_pods; then
         echo_warning "Some pods may not be ready. Continuing..."
     fi
-    
+
     # Create NodePort services
     if ! create_nodeport_services; then
         echo_warning "Failed to create NodePort services. You may need to use port-forwarding."
     fi
-    
+
     # Show deployment status
     show_status
-    
+
     # Run health checks
     echo_info "Waiting 30 seconds for services to stabilize before running health checks..."
     sleep 30
     run_health_checks
-    
+
     echo ""
     echo_success "ROS-OCP deployment completed!"
     echo_info "The services are now running in KIND cluster '$KIND_CLUSTER_NAME'"
@@ -479,6 +581,10 @@ case "${1:-}" in
         echo "  HELM_RELEASE_NAME - Name of Helm release (default: ros-ocp)"
         echo "  NAMESPACE         - Kubernetes namespace (default: ros-ocp)"
         echo "  STORAGE_CLASS     - Storage class name (default: standard)"
+        echo ""
+        echo "Requirements:"
+        echo "  - Docker must be running (default container runtime)"
+        echo "  - kubectl, helm, and kind must be installed"
         exit 0
         ;;
 esac

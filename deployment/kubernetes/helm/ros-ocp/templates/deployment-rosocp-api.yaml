@@ -28,24 +28,28 @@ spec:
       {{- end }}
       initContainers:
         - name: wait-for-db-ros
-          image: busybox:1.35
-          command: ['sh', '-c']
+          image: "{{ .Values.global.initContainers.waitFor.repository }}:{{ .Values.global.initContainers.waitFor.tag }}"
+          command: ['bash', '-c']
           args:
             - |
-              until nc -z {{ include "ros-ocp.fullname" . }}-db-ros {{ .Values.database.ros.port }}; do
-                echo "Waiting for ROS database..."
+              echo "Waiting for ROS database at {{ include "ros-ocp.fullname" . }}-db-ros:{{ .Values.database.ros.port }}..."
+              until timeout 3 bash -c "echo > /dev/tcp/{{ include "ros-ocp.fullname" . }}-db-ros/{{ .Values.database.ros.port }}" 2>/dev/null; do
+                echo "Database not ready yet, retrying in 5 seconds..."
                 sleep 5
               done
               echo "ROS database is ready"
+              echo "ROS database is ready"
         - name: wait-for-kafka
-          image: busybox:1.35
-          command: ['sh', '-c']
+          image: "{{ .Values.global.initContainers.waitFor.repository }}:{{ .Values.global.initContainers.waitFor.tag }}"
+          command: ['bash', '-c']
           args:
             - |
-              until nc -z {{ include "ros-ocp.fullname" . }}-kafka {{ .Values.kafka.broker.port }}; do
-                echo "Waiting for Kafka..."
+              echo "Waiting for Kafka at {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}..."
+              until timeout 3 bash -c "echo > /dev/tcp/{{ include "ros-ocp.fullname" . }}-kafka/{{ .Values.kafka.broker.port }}" 2>/dev/null; do
+                echo "Kafka not ready yet, retrying in 5 seconds..."
                 sleep 5
               done
+              echo "Kafka is ready"
               echo "Kafka is ready"
       containers:
         - name: rosocp-api
