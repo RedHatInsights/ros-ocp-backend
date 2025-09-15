@@ -30,7 +30,9 @@ func Setup_kruize_performance_profile() {
 		if err != nil {
 			log.Errorf("An Error Occured %v \n", err)
 		} else {
-			defer response.Body.Close()
+			defer func() {
+				_ = response.Body.Close()
+			}()
 			create_performance_profile_url := cfg.KruizeUrl + "/createPerformanceProfile"
 			postBody, err := os.ReadFile("./resource_optimization_openshift.json")
 			if err != nil {
@@ -41,7 +43,9 @@ func Setup_kruize_performance_profile() {
 			if e != nil {
 				log.Errorf("unable to create performance profile in kruize: %v \n", e)
 			}
-			defer res.Body.Close()
+			defer func() {
+				_ = res.Body.Close()
+			}()
 			if res.StatusCode == 201 {
 				log.Infof("Performance profile created successfully")
 				return
@@ -69,7 +73,9 @@ func ReadCSVFromUrl(url string) ([][]string, error) {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	reader := csv.NewReader(resp.Body)
 	data, err := reader.ReadAll()
 	if err != nil {

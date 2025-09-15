@@ -170,7 +170,7 @@ func determine_k8s_object_type(df dataframe.DataFrame) dataframe.DataFrame {
 	return df
 }
 
-// dummy implementation of an interface with ErrorF method
+// dummy implementation of an interface with ErrorF method.
 type dummyt struct{}
 
 func (t dummyt) Errorf(string, ...interface{}) {}

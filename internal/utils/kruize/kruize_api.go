@@ -54,7 +54,9 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 	}
 	createExperimentRequest.Inc()
 	if res.StatusCode != 201 {
-		defer res.Body.Close()
+		defer func() {
+			_ = res.Body.Close()
+		}()
 		body, _ := io.ReadAll(res.Body)
 		resdata := map[string]interface{}{}
 		if err := json.Unmarshal(body, &resdata); err != nil {
@@ -106,7 +108,9 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
 	}
 	updateResultRequest.Inc()
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	body, _ := io.ReadAll(res.Body)
 	log.Debugf("\n Respose from API /updateResult - %s \n", string(body))
 	if res.StatusCode != 201 {
@@ -158,7 +162,9 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 		kruizeAPIException.WithLabelValues("/updateRecommendations").Inc()
 		return nil, fmt.Errorf("error Occured while calling /updateRecommendations API %v", err)
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	body, _ := io.ReadAll(res.Body)
 	log.Debugf("\nResponse from /updateRecommendations - %s \n", string(body))
 	if res.StatusCode == 400 {
@@ -217,7 +223,9 @@ func Delete_experiment_from_kruize(experiment_name string) {
 		deletion_err_log(err)
 		return
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	if res.StatusCode == 201 {
 		log.Infof("Experiment - %s deleted successfully", experiment_name)
 	} else {

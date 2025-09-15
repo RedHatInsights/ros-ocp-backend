@@ -58,8 +58,8 @@ func GetRecommendationSetList(c echo.Context) error {
 	var orderHow string
 	var orderBy string
 	// Default values
-	var limit int = 10
-	var offset int = 0
+	limit := 10
+	offset := 0
 
 	orderBy = c.QueryParam("order_by")
 	if orderBy != "" {

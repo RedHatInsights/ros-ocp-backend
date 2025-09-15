@@ -76,7 +76,7 @@ func StartConsumer(kafka_topic string, handler func(msg *kafka.Message, consumer
 		select {
 		case sig := <-sigchan:
 			log.Infof("Caught Signal %v: terminating", sig)
-			consumer.Close()
+			_ = consumer.Close()
 			os.Exit(1)
 		default:
 			msg, err := consumer.ReadMessage(time.Second)
@@ -92,5 +92,5 @@ func StartConsumer(kafka_topic string, handler func(msg *kafka.Message, consumer
 			}
 		}
 	}
-	consumer.Close()
+	_ = consumer.Close()
 }

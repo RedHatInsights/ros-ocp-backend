@@ -37,7 +37,9 @@ var (
 			if err != nil {
 				panic(err.Error())
 			}
-			defer f.Close()
+			defer func() {
+				_ = f.Close()
+			}()
 
 			csv := csv.NewReader(f)
 			records, err := csv.ReadAll()

@@ -94,7 +94,9 @@ func request_user_access(url, encodedIdentity string) []types.RbacData {
 	if err != nil {
 		log.Errorf("error Occured while calling RBAC API %v", err)
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	body, _ := io.ReadAll(res.Body)
 	response := types.RbacResponse{}
 	if err := json.Unmarshal(body, &response); err != nil {
