@@ -18,9 +18,24 @@ spec:
         app.kubernetes.io/component: setup
     spec:
       restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
+        seccompProfile:
+          type: RuntimeDefault
+        {{- end }}
       initContainers:
         - name: wait-for-minio
           image: "{{ .Values.global.initContainers.waitFor.repository }}:{{ .Values.global.initContainers.waitFor.tag }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
+            seccompProfile:
+              type: RuntimeDefault
+            {{- end }}
           command: ['bash', '-c']
           args:
             - |
@@ -34,6 +49,18 @@ spec:
         - name: minio-buckets
           image: "{{ .Values.global.initContainers.minioMc.repository }}:{{ .Values.global.initContainers.minioMc.tag }}"
           imagePullPolicy: {{ .Values.global.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
+            seccompProfile:
+              type: RuntimeDefault
+            {{- end }}
+          volumeMounts:
+            - name: mc-config
+              mountPath: /.mc
           env:
             - name: MINIO_ACCESS_KEY
               valueFrom:
@@ -64,3 +91,6 @@ spec:
               /usr/bin/mc anonymous set public myminio/{{ . }}
               {{- end }}
               echo 'MinIO bucket setup completed successfully'
+      volumes:
+        - name: mc-config
+          emptyDir: {}

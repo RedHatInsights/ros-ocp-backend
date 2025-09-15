@@ -102,7 +102,7 @@ spec:
             - name: DB_NAME
               value: {{ .Values.database.ros.name | quote }}
             - name: DB_USER
-              value: {{ .Values.database.ros.username | quote }}
+              value: {{ .Values.database.ros.user | quote }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:

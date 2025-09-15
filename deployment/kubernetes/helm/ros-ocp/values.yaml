@@ -2,7 +2,7 @@
 
 global:
   # Storage class for persistent volumes
-  storageClass: "standard"
+  storageClass:
   # Pull policy for images
   pullPolicy: IfNotPresent
   # Pull secrets for private registries
@@ -17,6 +17,7 @@ global:
       tag: "RELEASE.2025-07-21T05-28-08Z"
 
 serviceAccount:
+  create: true
   name: ros-ocp-backend
 
 # Database configurations
@@ -44,9 +45,9 @@ database:
     host: internal  # Use "internal" for the built-in database service, or specify external hostname
     port: 5432
     name: postgres
-    username: postgres
+    user: postgres
     password: postgres
-    adminUsername: postgres
+    adminUser: postgres
     adminPassword: postgres
     sslMode: disable
 
@@ -59,7 +60,7 @@ database:
     host: internal  # Use "internal" for the built-in database service, or specify external hostname
     port: 5432
     name: sources_api_development
-    username: postgres
+    user: postgres
     password: postgres
 
 # Kafka and Zookeeper (using insights-onprem images)
@@ -109,12 +110,7 @@ minio:
     - koku-bucket
     - ros-data
 
-# Nginx
-nginx:
-  image:
-    repository: quay.io/insights-onprem/nginx
-    tag: "1.28.0-alpine"
-  port: 80
+# NGINX configuration removed - static test samples are no longer part of the Helm chart
 
 # Ingress Service
 ingress:
@@ -258,18 +254,30 @@ rosocp:
 # Service configuration
 service:
   type: ClusterIP
-  annotations: {}
 
-# Ingress configuration for external access
+# Ingress configuration for external access (used in vanilla Kubernetes)
 serviceIngress:
-  className: ""
-  annotations: {}
   hosts:
-    - host: ros-ocp.local
+    - host: localhost
       paths:
         - path: /
           pathType: Prefix
-  tls: []
+
+# Route configuration for external access (automatically used on OpenShift)
+serviceRoute:
+  annotations:
+    # OpenShift-specific route annotations
+    haproxy.router.openshift.io/timeout: "30s"
+    haproxy.router.openshift.io/rewrite-target: ""
+  hosts:
+    - host: ""  # Empty host uses cluster's default route domain
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    # Uncomment to enable TLS termination
+    # termination: edge
+    # insecureEdgeTerminationPolicy: Redirect
 
 # Resource limits and requests
 resources:

@@ -72,7 +72,7 @@ spec:
               protocol: TCP
           env:
             - name: DATABASE_USER
-              value: {{ .Values.database.sources.username | quote }}
+              value: {{ .Values.database.sources.user | quote }}
             - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:

@@ -10,12 +10,12 @@ data:
     {
       "database": {
         "adminPassword": "{{ .Values.database.ros.password }}",
-        "adminUsername": "{{ .Values.database.ros.username }}",
+        "adminUsername": "{{ .Values.database.ros.user }}",
         "hostname": "{{ include "ros-ocp.databaseHost" . }}",
         "name": "{{ .Values.database.ros.name }}",
         "password": "{{ .Values.database.ros.password }}",
         "port": {{ .Values.database.ros.port }},
-        "username": "{{ .Values.database.ros.username }}",
+        "username": "{{ .Values.database.ros.user }}",
         "sslMode": "{{ .Values.database.ros.sslMode }}"
       },
       "kafka": {

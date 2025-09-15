@@ -120,7 +120,7 @@ jobs:
           kind get clusters | xargs -I {} kind delete cluster --name {} || true
           docker system prune -f || true
 
-      - name: Deploy KIND cluster and Helm chart
+      - name: Setup KIND cluster
         run: |
           cd deployment/kubernetes/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
@@ -128,11 +128,11 @@ jobs:
           export NAMESPACE=${{ env.NAMESPACE }}
           export CONTAINER_RUNTIME=podman
 
-          # Make script executable
+          # Make scripts executable
           chmod +x deploy-kind.sh
 
-          # Run deployment with verbose output
-          echo "Starting KIND cluster deployment..."
+          # Setup KIND cluster
+          echo "Setting up KIND cluster..."
           ./deploy-kind.sh
 
           # Verify cluster is running
@@ -140,6 +140,19 @@ jobs:
           kind get clusters
           kubectl cluster-info
           kubectl get nodes -o wide
+
+      - name: Install Helm chart
+        run: |
+          cd deployment/kubernetes/scripts
+          export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
+          export NAMESPACE=${{ env.NAMESPACE }}
+
+          # Make script executable
+          chmod +x install-helm-chart.sh
+
+          # Deploy Helm chart
+          echo "Installing ROS-OCP Helm chart..."
+          ./install-helm-chart.sh
 
       - name: Wait for services to stabilize
         run: |
