@@ -2,7 +2,7 @@
 
 # ROS-OCP Kubernetes Deployment Script for KIND
 # This script deploys the ROS-OCP Helm chart on a KIND cluster with proper storage and dependencies
-# Container Runtime: Docker (default)
+# Container Runtime: Auto-detects Docker or Podman (configurable via CONTAINER_RUNTIME)
 
 set -e  # Exit on any error
 
@@ -19,6 +19,7 @@ KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ros-ocp-cluster}
 HELM_RELEASE_NAME=${HELM_RELEASE_NAME:-ros-ocp}
 NAMESPACE=${NAMESPACE:-ros-ocp}
 STORAGE_CLASS=${STORAGE_CLASS:-standard}
+CONTAINER_RUNTIME=${CONTAINER_RUNTIME:-auto}
 
 echo_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -41,6 +42,31 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Function to detect container runtime
+detect_container_runtime() {
+    local runtime="$CONTAINER_RUNTIME"
+
+    if [ "$runtime" = "auto" ]; then
+        if command_exists podman; then
+            runtime="podman"
+        elif command_exists docker; then
+            runtime="docker"
+        else
+            echo_error "No supported container runtime found. Please install Docker or Podman."
+            return 1
+        fi
+    fi
+
+    if ! command_exists "$runtime"; then
+        echo_error "$runtime specified but not found. Please install $runtime."
+        return 1
+    fi
+
+    export DETECTED_RUNTIME="$runtime"
+    echo_info "Using $runtime as container runtime"
+    return 0
+}
+
 # Function to check prerequisites
 check_prerequisites() {
     echo_info "Checking prerequisites..."
@@ -59,8 +85,8 @@ check_prerequisites() {
         missing_tools+=("helm")
     fi
 
-    if ! command_exists docker; then
-        missing_tools+=("docker")
+    if ! detect_container_runtime; then
+        return 1
     fi
 
     if [ ${#missing_tools[@]} -gt 0 ]; then
@@ -99,18 +125,32 @@ check_prerequisites() {
         return 1
     fi
 
-    # Ensure Docker is running and set as default container runtime
-    echo_info "Configuring Docker as default container runtime..."
-    if ! docker info >/dev/null 2>&1; then
-        echo_error "Docker is not running. Please start Docker and try again."
-        return 1
+    # Check container runtime is running
+    if [ "$DETECTED_RUNTIME" = "docker" ]; then
+        if ! docker info >/dev/null 2>&1; then
+            echo_error "Docker is not running. Please start Docker and try again."
+            return 1
+        fi
+    elif [ "$DETECTED_RUNTIME" = "podman" ]; then
+        if ! podman info >/dev/null 2>&1; then
+            echo_error "Podman is not accessible. Please ensure Podman is running."
+            return 1
+        fi
+        export KIND_EXPERIMENTAL_PROVIDER=podman
+
+        # Warn about PID limits
+        if ! grep -q "pids_limit.*=.*0" /etc/containers/containers.conf 2>/dev/null; then
+            echo_warning "Podman may encounter PID limit issues with nginx-ingress controller"
+            echo_info "To fix this, create or edit /etc/containers/containers.conf and add:"
+            echo_info "  [containers]"
+            echo_info "  pids_limit = 0"
+            echo_info ""
+            echo_info "This removes PID limits for containers, allowing nginx to start properly."
+            echo_info "After editing, restart your session or run: systemctl --user restart podman.socket"
+        fi
     fi
 
-    # Set KIND to use Docker explicitly
-    export KIND_EXPERIMENTAL_PROVIDER=docker
-    export DOCKER_CLI_EXPERIMENTAL=enabled
-
-    echo_success "All prerequisites are installed and Docker configured as default"
+    echo_success "All prerequisites are installed"
     return 0
 }
 
@@ -147,12 +187,6 @@ nodes:
       cpu: "0.5"
       memory: "1Gi"
   extraPortMappings:
-  - containerPort: 80
-    hostPort: 80
-    protocol: TCP
-  - containerPort: 443
-    hostPort: 443
-    protocol: TCP
   - containerPort: 30080
     hostPort: 30080
     protocol: TCP
@@ -170,6 +204,12 @@ nodes:
     protocol: TCP
   - containerPort: 30099
     hostPort: 30099
+    protocol: TCP
+  - containerPort: 30443
+    hostPort: 30443
+    protocol: TCP
+  - containerPort: 30083
+    hostPort: 30083
     protocol: TCP
 EOF
 )
@@ -222,8 +262,20 @@ install_storage_provisioner() {
 install_ingress_controller() {
     echo_info "Installing NGINX Ingress Controller..."
 
-    # Install NGINX Ingress Controller for KIND (using older stable version)
-    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/kind/deploy.yaml
+    # Install NGINX Ingress Controller
+    if [ "$DETECTED_RUNTIME" = "podman" ]; then
+        # Use cloud deployment + NodePort patch for Podman compatibility
+        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/cloud/deploy.yaml
+        sleep 5
+        kubectl patch service ingress-nginx-controller -n ingress-nginx --type='json' -p='[
+            {"op": "replace", "path": "/spec/type", "value": "NodePort"},
+            {"op": "add", "path": "/spec/ports/0/nodePort", "value": 30080},
+            {"op": "add", "path": "/spec/ports/1/nodePort", "value": 30443}
+        ]'
+    else
+        # Use KIND-specific deployment for Docker
+        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/kind/deploy.yaml
+    fi
 
     # Wait additional time for API server to be fully stable
     echo_info "Waiting for API server to be fully stable before ingress controller starts..."
@@ -254,19 +306,6 @@ install_ingress_controller() {
         --for=condition=complete job/ingress-nginx-admission-patch \
         --timeout=60s || true
 
-    # Wait for the admission secret to be created
-    echo_info "Waiting for admission webhook secret..."
-    local retries=30
-    local count=0
-    while [ $count -lt $retries ]; do
-        if kubectl get secret ingress-nginx-admission -n ingress-nginx >/dev/null 2>&1; then
-            echo_success "Admission webhook secret found"
-            break
-        fi
-        echo_info "Waiting for admission secret... ($((count + 1))/$retries)"
-        sleep 2
-        count=$((count + 1))
-    done
 
     # Enable debug logging in NGINX ingress controller
     echo_info "Enabling debug logs in NGINX ingress controller..."
@@ -280,14 +319,6 @@ install_ingress_controller() {
             "op": "add",
             "path": "/spec/template/spec/containers/0/args/-",
             "value": "--logtostderr=true"
-        },
-        {
-            "op": "add",
-            "path": "/spec/template/spec/containers/0/env/-",
-            "value": {
-                "name": "NGINX_DEBUG",
-                "value": "true"
-            }
         }
     ]' || echo_warning "Debug logging patch failed, continuing..."
 
@@ -361,7 +392,7 @@ create_nodeport_services() {
 
     # Ingress service
     kubectl patch service "${HELM_RELEASE_NAME}-ingress" -n "$NAMESPACE" \
-        -p '{"spec":{"type":"NodePort","ports":[{"port":3000,"nodePort":30080,"targetPort":"http","protocol":"TCP","name":"http"}]}}'
+        -p '{"spec":{"type":"NodePort","ports":[{"port":3000,"nodePort":30083,"targetPort":"http","protocol":"TCP","name":"http"}]}}'
 
     # ROS-OCP API service
     kubectl patch service "${HELM_RELEASE_NAME}-rosocp-api" -n "$NAMESPACE" \
@@ -406,7 +437,13 @@ show_status() {
     echo ""
 
     echo_info "Access Points:"
-    echo_info "  - Ingress API: http://localhost:30080/api/ingress/v1/version"
+    echo_info "  - Nginx Ingress: http://localhost:30080 (404 response is normal - no ingress rules configured)"
+    
+    # Get the actual port used for ros-ocp-ingress
+    local ros_ingress_port
+    ros_ingress_port=$(kubectl get service "${HELM_RELEASE_NAME}-ingress" -n "$NAMESPACE" -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30083")
+    echo_info "  - ROS-OCP Ingress: http://localhost:${ros_ingress_port}"
+    echo_info "  - Ingress API: http://localhost:${ros_ingress_port}/api/ingress/v1/version"
     echo_info "  - ROS-OCP API: http://localhost:30081/status"
     echo_info "  - Kruize API: http://localhost:30090/listPerformanceProfiles"
     echo_info "  - MinIO API: http://localhost:30091 (S3 API)"
@@ -427,11 +464,22 @@ run_health_checks() {
 
     local failed_checks=0
 
-    # Check if ingress is accessible
-    if curl -f -s http://localhost:30080/api/ingress/v1/version >/dev/null; then
-        echo_success "Ingress API is accessible"
+    # Check if nginx ingress controller is accessible
+    local nginx_response
+    nginx_response=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:30080/" 2>/dev/null || echo "000")
+
+    if [ "$nginx_response" = "000" ] || [ -z "$nginx_response" ]; then
+        echo_error "Nginx Ingress is not accessible on port 30080"
+        failed_checks=$((failed_checks + 1))
     else
-        echo_error "Ingress API is not accessible"
+        echo_success "Ingress API is accessible on port 30080 (HTTP ${nginx_response})"
+    fi
+
+    # Check if ROS-OCP ingress API is accessible
+    if curl -f -s "http://localhost:30083/api/ingress/v1/version" >/dev/null 2>&1; then
+        echo_success "ROS-OCP Ingress API is accessible on port 30083"
+    else
+        echo_error "ROS-OCP Ingress API is not accessible on port 30083"
         failed_checks=$((failed_checks + 1))
     fi
 
@@ -501,6 +549,7 @@ main() {
     echo_info "  Helm Release: $HELM_RELEASE_NAME"
     echo_info "  Namespace: $NAMESPACE"
     echo_info "  Storage Class: $STORAGE_CLASS"
+    echo_info "  Container Runtime: $DETECTED_RUNTIME"
     echo ""
 
     # Create KIND cluster
@@ -581,9 +630,10 @@ case "${1:-}" in
         echo "  HELM_RELEASE_NAME - Name of Helm release (default: ros-ocp)"
         echo "  NAMESPACE         - Kubernetes namespace (default: ros-ocp)"
         echo "  STORAGE_CLASS     - Storage class name (default: standard)"
+        echo "  CONTAINER_RUNTIME - Container runtime: auto, docker, podman (default: auto)"
         echo ""
         echo "Requirements:"
-        echo "  - Docker must be running (default container runtime)"
+        echo "  - Docker or Podman must be running (auto-detected by default)"
         echo "  - kubectl, helm, and kind must be installed"
         exit 0
         ;;

@@ -126,6 +126,7 @@ jobs:
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
+          export CONTAINER_RUNTIME=podman
 
           # Make script executable
           chmod +x deploy-kind.sh
