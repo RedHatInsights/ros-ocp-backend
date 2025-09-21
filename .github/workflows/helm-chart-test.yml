@@ -11,22 +11,27 @@ on:
     paths:
       - 'deployment/kubernetes/helm/**'
       - 'deployment/kubernetes/scripts/**'
-      - '.github/workflows/helm-chart-test.yml'
+      - '.github/workflows/helm-chart-test*.yml'
+  push:
+    branches:
+      - add_ocp_support
+    paths:
+      - 'deployment/kubernetes/helm/**'
+      - 'deployment/kubernetes/scripts/**'
+      - '.github/workflows/helm-chart-test*.yml'
+  workflow_dispatch:
 
 jobs:
   helm-chart-test:
     name: Test Helm Chart Deployment
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      CONTAINER_RUNTIME: podman
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -42,29 +47,36 @@ jobs:
         env:
           AWS_DEFAULT_REGION: us-east-1
 
-      - name: Verify Docker is running
+      - name: Install Podman
         run: |
-          echo "Docker version:"
-          docker --version
-          echo "Docker info:"
-          docker info
-          echo "Docker daemon status:"
-          docker system info --format '{{.ServerVersion}}'
-          echo "Testing Docker connectivity:"
-          docker run --rm hello-world
+          # Install Podman
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+          # Verify Podman installation
+          echo "Podman version:"
+          podman --version
+          echo "Podman info:"
+          podman info
+          echo "Testing Podman connectivity:"
+          podman run --rm quay.io/podman/hello
 
       - name: Install KIND
         run: |
-          # Download and install Kind v0.20.0 (stable version)
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          # Get the latest KIND version
+          KIND_VERSION=$(curl -s https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "Latest KIND version: $KIND_VERSION"
+
+          # Download and install the latest KIND version
+          curl -Lo ./kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
 
           # Verify installation
           kind version
 
-          # Configure Kind to use Docker explicitly
-          echo "Docker driver will be used by Kind"
+          # Configure Kind to use Podman explicitly
+          echo "Podman driver will be used by Kind"
 
       - name: Install kubectl
         run: |
@@ -78,55 +90,19 @@ jobs:
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
           helm version
 
-      - name: Set up environment and Docker configuration
+      - name: Set up environment and Podman configuration
         run: |
           echo "KIND_CLUSTER_NAME=ros-ocp-test-cluster" >> $GITHUB_ENV
           echo "HELM_RELEASE_NAME=ros-ocp-test" >> $GITHUB_ENV
           echo "NAMESPACE=ros-ocp-test" >> $GITHUB_ENV
 
-          # Ensure Docker daemon is accessible
-          echo "Current user: $(whoami)"
-          echo "Docker group members:"
-          getent group docker || echo "Docker group not found"
-
-          # Set Docker environment variables for Kind
-          echo "DOCKER_HOST=" >> $GITHUB_ENV
-          echo "KIND_EXPERIMENTAL_DOCKER_NETWORK=bridge" >> $GITHUB_ENV
-
-      - name: Pre-pull required Docker images
-        run: |
-          echo "Pre-pulling essential images from alternative registries to avoid docker.io rate limits..."
-
-          # Use Kind's official registry mirror when available
-          docker pull kindest/node:v1.27.3 &
-
-          # Use public.ecr.aws mirrors when available, fallback to docker.io
-          docker pull public.ecr.aws/docker/library/postgres:13 || docker pull postgres:13 &
-          docker pull public.ecr.aws/docker/library/redis:7-alpine || docker pull redis:7-alpine &
-
-          # Quay.io images (already using alternative registry)
-          docker pull quay.io/minio/minio:latest &
-
-          # Confluent images (try GitHub Container Registry first)
-          docker pull ghcr.io/confluentinc/cp-kafka:7.5.3 || docker pull confluentinc/cp-kafka:7.5.3 &
-          docker pull ghcr.io/confluentinc/cp-zookeeper:7.4.10 || docker pull confluentinc/cp-zookeeper:7.4.10 &
-
-          wait
-          echo "Image pre-pulling completed"
-
-      - name: Clean up any existing Kind clusters
-        run: |
-          # Clean up any existing clusters to avoid conflicts
-          kind get clusters | xargs -I {} kind delete cluster --name {} || true
-          docker system prune -f || true
-
       - name: Setup KIND cluster
+        timeout-minutes: 15
         run: |
           cd deployment/kubernetes/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
-          export CONTAINER_RUNTIME=podman
 
           # Make scripts executable
           chmod +x deploy-kind.sh
@@ -141,18 +117,28 @@ jobs:
           kubectl cluster-info
           kubectl get nodes -o wide
 
-      - name: Install Helm chart
+
+      - name: Deploy Helm Chart
+        timeout-minutes: 15
         run: |
+          # Trigger new build to test MinIO buckets job fix
           cd deployment/kubernetes/scripts
+          export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
 
-          # Make script executable
+          # Make scripts executable
           chmod +x install-helm-chart.sh
 
           # Deploy Helm chart
-          echo "Installing ROS-OCP Helm chart..."
+          echo "Deploying Helm chart..."
           ./install-helm-chart.sh
+
+          # Verify deployment
+          echo "Verifying Helm chart deployment..."
+          kubectl get pods -n $NAMESPACE
+          kubectl get services -n $NAMESPACE
+          kubectl get ingress -n $NAMESPACE
 
       - name: Wait for services to stabilize
         run: |
@@ -172,31 +158,36 @@ jobs:
           kubectl get pods -n ${{ env.NAMESPACE }} -o wide
           kubectl get services -n ${{ env.NAMESPACE }}
 
-          echo "=== Docker Container Status ==="
-          docker ps --filter "label=io.x-k8s.kind.cluster=${{ env.KIND_CLUSTER_NAME }}"
+          echo "=== Container Status ==="
+          ${{ env.CONTAINER_RUNTIME }} ps --filter "label=io.x-k8s.kind.cluster=${{ env.KIND_CLUSTER_NAME }}"
 
           echo "=== Resource Usage ==="
           df -h
           free -h
 
-      - name: Run dataflow test
+      - name: Run Dataflow Test
         timeout-minutes: 15
         run: |
           cd deployment/kubernetes/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
+
+          # Make scripts executable
           chmod +x test-k8s-dataflow.sh
+
+          # Run dataflow test
+          echo "Running dataflow test..."
           ./test-k8s-dataflow.sh
 
       - name: Show cluster status on failure
         if: failure()
         run: |
-          echo "=== Docker Status ==="
-          docker --version || true
-          docker info || true
-          docker ps -a || true
-          docker images | head -10 || true
+          echo "=== Container Runtime Status ==="
+          ${{ env.CONTAINER_RUNTIME }} --version || true
+          ${{ env.CONTAINER_RUNTIME }} info || true
+          ${{ env.CONTAINER_RUNTIME }} ps -a || true
+          ${{ env.CONTAINER_RUNTIME }} images | head -10 || true
 
           echo "=== Kind Status ==="
           kind version || true
@@ -231,10 +222,10 @@ jobs:
             kubectl logs -n ${{ env.NAMESPACE }} $pod --previous --tail=10 || true
           done
 
-          echo "=== Docker Container Logs ==="
-          for container in $(docker ps --filter "label=io.x-k8s.kind.cluster=${{ env.KIND_CLUSTER_NAME }}" --format "{{.Names}}" | head -3); do
-            echo "--- Docker logs for $container ---"
-            docker logs $container --tail=20 || true
+          echo "=== Container Logs ==="
+          for container in $(${{ env.CONTAINER_RUNTIME }} ps --filter "label=io.x-k8s.kind.cluster=${{ env.KIND_CLUSTER_NAME }}" --format "{{.Names}}" | head -3); do
+            echo "--- ${{ env.CONTAINER_RUNTIME }} logs for $container ---"
+            ${{ env.CONTAINER_RUNTIME }} logs $container --tail=20 || true
           done
 
           echo "=== System Resources ==="

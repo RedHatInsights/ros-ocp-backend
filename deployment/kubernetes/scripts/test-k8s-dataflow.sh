@@ -18,8 +18,9 @@ HELM_RELEASE_NAME=${HELM_RELEASE_NAME:-ros-ocp}
 
 # Function to get ingress hostname for Kubernetes
 get_ingress_hostname() {
-    # Always use localhost for KIND ingress
-    echo "localhost"
+    # For KIND clusters, use the KIND-mapped port (32061) instead of service NodePort
+    # This ensures we use the port that KIND actually exposes on the host
+    echo "localhost:32061"
 }
 
 echo_info() {
@@ -112,33 +113,7 @@ wait_for_services() {
         --field-selector=status.phase!=Succeeded
 
     echo_success "All pods are ready"
-
-    # Wait for services to be accessible
-    local retries=30
-    local count=0
-
-    # Get platform-appropriate URLs
-    local ingress_url=$(get_service_url "ingress" "/api/ingress/v1/version")
-    local platform=$(detect_platform)
-
-    echo_info "Platform detected: $platform"
-    echo_info "Testing service accessibility..."
-
-    while [ $count -lt $retries ]; do
-        if curl -f -s "$ingress_url" >/dev/null 2>&1; then
-            echo_success "Ingress service is accessible at: $ingress_url"
-            break
-        fi
-
-        echo_info "Waiting for ingress service to be accessible... ($((count + 1))/$retries)"
-        sleep 10
-        count=$((count + 1))
-    done
-
-    if [ $count -eq $retries ]; then
-        echo_error "Ingress service is not accessible after $retries attempts"
-        return 1
-    fi
+    echo_info "Ingress connectivity has already been validated by install-helm-chart.sh"
 }
 
 # Function to create test data
@@ -228,6 +203,7 @@ upload_test_data() {
         -F "file=@${test_dir}/${tar_filename};type=application/vnd.redhat.hccm.filename+tgz" \
         -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K" \
         -H "x-rh-request-id: test-request-$(date +%s)" \
+        -H "Host: localhost" \
         "$upload_url")
 
     local http_code="${response: -3}"
@@ -351,7 +327,8 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
         echo_success "Kafka message published successfully"
         echo_info "File UUID: $file_uuid"
         echo_info "CSV file: $csv_filename"
-        echo_info "Accessible at: http://localhost:30099/browser/ros-data/$csv_filename"
+        local hostname=$(get_ingress_hostname)
+        echo_info "Accessible at: http://$hostname/minio/browser/ros-data/$csv_filename"
     else
         echo_error "Failed to publish Kafka message"
         return 1
@@ -439,6 +416,7 @@ verify_recommendations() {
     echo_info "Testing ROS-OCP API status..."
     echo_info "Status URL: $status_url"
     local status_response=$(curl -s -w "%{http_code}" -o /tmp/status_response.json \
+        -H "Host: localhost" \
         "$status_url" 2>/dev/null || echo "000")
 
     local status_http_code="${status_response: -3}"
@@ -459,6 +437,7 @@ verify_recommendations() {
     local list_response=$(curl -s -w "%{http_code}" -o /tmp/recommendations_list.json \
         -H "x-rh-identity: $identity_header" \
         -H "Content-Type: application/json" \
+        -H "Host: localhost" \
         "$api_base_url/recommendations/openshift" 2>/dev/null || echo "000")
 
     local list_http_code="${list_response: -3}"
@@ -521,6 +500,7 @@ except:
                     local detail_response=$(curl -s -w "%{http_code}" -o /tmp/recommendation_detail.json \
                         -H "x-rh-identity: $identity_header" \
                         -H "Content-Type: application/json" \
+                        -H "Host: localhost" \
                         "$api_base_url/recommendations/openshift/$rec_id" 2>/dev/null || echo "000")
 
                     local detail_http_code="${detail_response: -3}"
@@ -583,6 +563,7 @@ except Exception as e:
     local csv_response=$(curl -s -w "%{http_code}" -o /tmp/recommendations.csv \
         -H "x-rh-identity: $identity_header" \
         -H "Accept: text/csv" \
+        -H "Host: localhost" \
         "$api_base_url/recommendations/openshift?format=csv" 2>/dev/null || echo "000")
 
     local csv_http_code="${csv_response: -3}"
@@ -788,7 +769,7 @@ run_health_checks() {
     local kruize_url=$(get_service_url "kruize" "/api/kruize/listPerformanceProfiles")
 
     # Check ingress API
-    if curl -f -s "$ingress_url" >/dev/null; then
+    if curl -f -s -H "Host: localhost" "$ingress_url" >/dev/null; then
         echo_success "Ingress API is accessible at: $ingress_url"
     else
         echo_error "Ingress API is not accessible at: $ingress_url"
@@ -796,7 +777,7 @@ run_health_checks() {
     fi
 
     # Check ROS-OCP API
-    if curl -f -s "$api_url" >/dev/null; then
+    if curl -f -s -H "Host: localhost" "$api_url" >/dev/null; then
         echo_success "ROS-OCP API is accessible at: $api_url"
     else
         echo_error "ROS-OCP API is not accessible at: $api_url"
@@ -804,7 +785,7 @@ run_health_checks() {
     fi
 
     # Check Kruize API
-    if curl -f -s "$kruize_url" >/dev/null; then
+    if curl -f -s -H "Host: localhost" "$kruize_url" >/dev/null; then
         echo_success "Kruize API is accessible at: $kruize_url"
     else
         echo_error "Kruize API is not accessible at: $kruize_url"

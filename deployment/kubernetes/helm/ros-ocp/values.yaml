@@ -257,6 +257,7 @@ service:
 
 # Ingress configuration for external access (used in vanilla Kubernetes)
 serviceIngress:
+  className: nginx
   hosts:
     - host: localhost
       paths:

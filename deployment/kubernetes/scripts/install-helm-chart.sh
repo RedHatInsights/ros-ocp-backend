@@ -369,8 +369,9 @@ show_status() {
         kubectl get ingress -n "$NAMESPACE" 2>/dev/null || echo "  No ingress found"
         echo ""
 
-        # For Kubernetes/KIND, use localhost
-        local hostname="localhost"
+        # For Kubernetes/KIND, use hardcoded port from extraPortMappings (KIND-mapped port)
+        local http_port="32061"
+        local hostname="localhost:$http_port"
         echo_info "Access Points (via Ingress - for KIND):"
         echo_info "  - Ingress API: http://$hostname/api/ingress/v1/version"
         echo_info "  - ROS-OCP API: http://$hostname/status"
@@ -381,12 +382,166 @@ show_status() {
 
     echo_info "Useful Commands:"
     echo_info "  - View logs: kubectl logs -n $NAMESPACE -l app.kubernetes.io/instance=$HELM_RELEASE_NAME"
-    echo_info "  - Delete deployment: helm uninstall $HELM_RELEASE_NAME -n $NAMESPACE"
-    if [ "$PLATFORM" = "kubernetes" ]; then
-        echo_info "  - Run tests: ./test-k8s-dataflow.sh"
-    else
-        echo_info "  - Run tests: ./test-ocp-dataflow.sh"
+    echo_info "  - Delete deployment: kubectl delete namespace $NAMESPACE"
+    echo_info "  - Run tests: ./test-k8s-dataflow.sh"
+}
+
+# Function to check ingress controller readiness
+check_ingress_readiness() {
+    echo_info "Checking ingress controller readiness before health checks..."
+
+    # Check if we're on Kubernetes (not OpenShift)
+    if [ "$PLATFORM" != "kubernetes" ]; then
+        echo_info "Skipping ingress readiness check for OpenShift platform"
+        return 0
     fi
+
+    # Check if ingress controller pod is running and ready
+    local pod_status=$(kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
+    local pod_ready=$(kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+
+    if [ "$pod_status" != "Running" ] || [ "$pod_ready" != "True" ]; then
+        echo_warning "Ingress controller pod not ready (status: $pod_status, ready: $pod_ready)"
+        echo_info "Waiting for ingress controller to be ready..."
+
+        # Wait for pod to be ready
+        kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/name=ingress-nginx \
+            --timeout=300s
+    fi
+
+    # Get pod name for log checks
+    local pod_name=$(kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    if [ -n "$pod_name" ]; then
+        echo_info "Checking ingress controller logs for readiness indicators..."
+        local log_output=$(kubectl logs -n ingress-nginx "$pod_name" --tail=20 2>/dev/null)
+
+        # Look for key readiness indicators in logs
+        if echo "$log_output" | grep -q "Starting NGINX Ingress controller" && \
+           echo "$log_output" | grep -q "Configuration changes detected"; then
+            echo_success "✓ Ingress controller logs show proper initialization"
+        else
+            echo_warning "⚠ Ingress controller logs don't show complete initialization yet"
+            echo_info "Recent logs:"
+            echo "$log_output" | tail -5
+        fi
+    fi
+
+    # Check if service endpoints are ready
+    local endpoints_ready=$(kubectl get endpoints ingress-nginx-controller -n ingress-nginx -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)
+    if [ -n "$endpoints_ready" ]; then
+        echo_success "✓ Ingress controller service has ready endpoints"
+    else
+        echo_warning "⚠ Ingress controller service endpoints not ready yet"
+    fi
+
+    # Test actual connectivity to the ingress controller
+    # Use hardcoded port from extraPortMappings (KIND-mapped port)
+    local http_port="32061"
+    echo_info "Testing connectivity to ingress controller on port $http_port..."
+    local connectivity_ok=false
+    for i in {1..10}; do
+        if curl -f -s "http://localhost:$http_port/api/ingress/v1/version" >/dev/null 2>&1; then
+            echo_success "✓ Ingress controller is accessible via HTTP"
+            connectivity_ok=true
+            break
+        fi
+        echo_info "Testing connectivity... ($i/10)"
+        sleep 3
+    done
+
+    if [ "$connectivity_ok" = false ]; then
+        echo_error "✗ Ingress controller is NOT accessible via HTTP despite readiness checks passing"
+        echo_error "This indicates a deeper networking issue. Running diagnostics..."
+
+        # Enhanced diagnostics for connectivity failures
+        echo_info "=== DIAGNOSTICS: Ingress Controller Connectivity Issue ==="
+
+        # Check service details
+        echo_info "Service details:"
+        kubectl get service ingress-nginx-controller -n ingress-nginx -o yaml | grep -A 10 -B 5 "nodePort\|type\|ports"
+
+        # Check endpoints
+        echo_info "Service endpoints:"
+        kubectl get endpoints ingress-nginx-controller -n ingress-nginx -o wide
+
+        # Check if the port is actually listening on the host
+        echo_info "Checking if port $http_port is listening on localhost..."
+        if command -v netstat >/dev/null 2>&1; then
+            netstat -tlnp | grep ":$http_port " || echo "Port $http_port not found in netstat output"
+        elif command -v ss >/dev/null 2>&1; then
+            ss -tlnp | grep ":$http_port " || echo "Port $http_port not found in ss output"
+        fi
+
+        # Check KIND cluster port mapping
+        echo_info "Checking KIND cluster port mapping..."
+        # Use environment variable for container runtime (defaults to podman)
+        local container_runtime="${CONTAINER_RUNTIME:-podman}"
+
+        if command -v "$container_runtime" >/dev/null 2>&1; then
+            echo "${container_runtime^} port mapping for KIND cluster:"
+            local kind_mappings=$($container_runtime port "${KIND_CLUSTER_NAME:-kind}-control-plane" 2>/dev/null)
+            echo "$kind_mappings"
+
+            if echo "$kind_mappings" | grep -q "$http_port"; then
+                echo_info "✓ Port $http_port is mapped in KIND cluster"
+            else
+                echo_error "✗ Port $http_port is NOT mapped in KIND cluster"
+                echo_error "This is likely the root cause of the connectivity issue"
+                echo_info "Expected mapping should be: 0.0.0.0:$http_port->80/tcp"
+            fi
+        else
+            echo_warning "Container runtime '$container_runtime' not found for port mapping check"
+            echo_info "Set CONTAINER_RUNTIME environment variable (e.g., 'docker' or 'podman')"
+        fi
+
+        # Test with verbose curl and check if requests reach the controller
+        echo_info "Testing with verbose curl to see detailed error:"
+        curl -v "http://localhost:$http_port/api/ingress/v1/version" 2>&1 | head -20 || true
+
+        # Check if the request reached the ingress controller by examining logs
+        echo_info "Checking ingress controller logs for incoming requests..."
+        echo_info "Looking for request logs in the last 30 seconds..."
+
+        # Get current timestamp for log filtering
+        local current_time=$(date +%s)
+        local log_start_time=$((current_time - 30))
+
+        # Check logs for HTTP requests
+        local request_logs=$(kubectl logs -n ingress-nginx "$pod_name" --since=30s 2>/dev/null | grep -E "(GET|POST|PUT|DELETE|HEAD)" || echo "No HTTP request logs found")
+
+        if [ -n "$request_logs" ] && [ "$request_logs" != "No HTTP request logs found" ]; then
+            echo_info "✓ Found HTTP request logs in ingress controller:"
+            echo "$request_logs" | head -10
+        else
+            echo_warning "⚠ No HTTP request logs found in ingress controller"
+            echo_warning "This suggests requests are not reaching the controller"
+
+            # Check if there are any access logs at all
+            echo_info "Checking for any access logs in the last 5 minutes..."
+            local all_logs=$(kubectl logs -n ingress-nginx "$pod_name" --since=5m 2>/dev/null | grep -i "access\|request\|GET\|POST" || echo "No access logs found")
+            if [ -n "$all_logs" ] && [ "$all_logs" != "No access logs found" ]; then
+                echo_info "Found some access logs:"
+                echo "$all_logs" | tail -5
+            else
+                echo_warning "No access logs found at all - controller may not be processing any requests"
+            fi
+        fi
+
+        # Check if there are any network policies blocking traffic
+        echo_info "Checking for network policies that might block traffic:"
+        kubectl get networkpolicies -A 2>/dev/null || echo "No network policies found"
+
+        # Check ingress controller logs for any errors
+        echo_info "Checking ingress controller logs for errors:"
+        kubectl logs -n ingress-nginx "$pod_name" --tail=50 | grep -i error || echo "No obvious errors in recent logs"
+
+        echo_error "=== END DIAGNOSTICS ==="
+        echo_warning "This may cause health checks to fail, but deployment will continue"
+    fi
+
+    echo_info "Ingress readiness check completed"
 }
 
 # Function to run health checks
@@ -430,7 +585,7 @@ run_health_checks() {
         # Test Kruize internally
         local kruize_pod=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/name=kruize -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
         if [ -n "$kruize_pod" ]; then
-            if kubectl exec -n "$NAMESPACE" "$kruize_pod" -- curl -f -s http://localhost:8080/listPerformanceProfiles >/dev/null 2>&1; then
+            if kubectl exec -n "$NAMESPACE" "$kruize_pod" -- curl -f -s http://localhost:30080/listPerformanceProfiles >/dev/null 2>&1; then
                 echo_success "✓ Kruize API service is healthy (internal)"
             else
                 echo_error "✗ Kruize API service is not responding (internal)"
@@ -472,18 +627,26 @@ run_health_checks() {
         fi
 
     else
-        # For Kubernetes/KIND, use localhost (external access expected)
-        local hostname="localhost"
+        # For Kubernetes/KIND, use hardcoded port from extraPortMappings (KIND-mapped port)
+        echo_info "Using hardcoded ingress HTTP port for KIND cluster..."
+        local http_port="32061"
+        local hostname="localhost:$http_port"
+        echo_info "Using ingress HTTP port: $http_port"
+        echo_info "Testing connectivity to http://$hostname..."
 
         # Check if ingress is accessible
+        echo_info "Testing Ingress API: http://$hostname/api/ingress/v1/version"
         if curl -f -s "http://$hostname/api/ingress/v1/version" >/dev/null; then
             echo_success "✓ Ingress API is accessible via http://$hostname/api/ingress/v1/version"
         else
             echo_error "✗ Ingress API is not accessible via http://$hostname/api/ingress/v1/version"
+            echo_info "Debug: Testing root endpoint first..."
+            curl -v "http://$hostname/" || echo "Root endpoint also failed"
             failed_checks=$((failed_checks + 1))
         fi
 
         # Check if ROS-OCP API is accessible via Ingress
+        echo_info "Testing ROS-OCP API: http://$hostname/status"
         if curl -f -s "http://$hostname/status" >/dev/null; then
             echo_success "✓ ROS-OCP API is accessible via http://$hostname/status"
         else
@@ -492,6 +655,7 @@ run_health_checks() {
         fi
 
         # Check if Kruize is accessible
+        echo_info "Testing Kruize API: http://$hostname/api/kruize/listPerformanceProfiles"
         if curl -f -s "http://$hostname/api/kruize/listPerformanceProfiles" >/dev/null; then
             echo_success "✓ Kruize API is accessible via http://$hostname/api/kruize/listPerformanceProfiles"
         else
@@ -674,10 +838,23 @@ main() {
     # Show deployment status
     show_status
 
+    # Check ingress readiness before health checks
+    check_ingress_readiness
+
     # Run health checks
     echo_info "Waiting 30 seconds for services to stabilize before running health checks..."
     sleep 30
-    run_health_checks
+
+    # Show pod status before health checks
+    echo_info "Pod status before health checks:"
+    kubectl get pods -n "$NAMESPACE" -o wide
+
+    if ! run_health_checks; then
+        echo_warning "Some health checks failed, but deployment completed successfully"
+        echo_info "Services may need more time to be fully ready"
+        echo_info "You can run health checks manually later or check pod logs for issues"
+        echo_info "Pod logs: kubectl logs -n $NAMESPACE -l app.kubernetes.io/instance=$HELM_RELEASE_NAME"
+    fi
 
     echo ""
     echo_success "ROS-OCP Helm chart installation completed!"

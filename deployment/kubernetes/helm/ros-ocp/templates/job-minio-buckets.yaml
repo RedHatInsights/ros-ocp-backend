@@ -19,7 +19,14 @@ spec:
     spec:
       restartPolicy: OnFailure
       securityContext:
+        {{- if eq (include "ros-ocp.isOpenShift" .) "false" }}
+        runAsNonRoot: false
+        {{- else }}
         runAsNonRoot: true
+        {{- end }}
+        {{- if eq (include "ros-ocp.isOpenShift" .) "false" }}
+        runAsUser: 1001
+        {{- end }}
         {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
         seccompProfile:
           type: RuntimeDefault
@@ -32,6 +39,9 @@ spec:
             capabilities:
               drop:
                 - ALL
+            {{- if eq (include "ros-ocp.isOpenShift" .) "false" }}
+            runAsNonRoot: false
+            {{- end }}
             {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
             seccompProfile:
               type: RuntimeDefault
@@ -54,6 +64,9 @@ spec:
             capabilities:
               drop:
                 - ALL
+            {{- if eq (include "ros-ocp.isOpenShift" .) "false" }}
+            runAsUser: 1001
+            {{- end }}
             {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
             seccompProfile:
               type: RuntimeDefault

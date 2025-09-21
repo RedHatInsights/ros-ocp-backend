@@ -1006,7 +1006,7 @@ case "${1:-}" in
         echo_info "Checking route accessibility for health checks..."
         set +e  # Temporarily disable exit on error
         test_route_accessibility >/dev/null
-        local health_accessibility_result=$?
+        health_accessibility_result=$?
         set -e  # Re-enable exit on error
 
         case $health_accessibility_result in

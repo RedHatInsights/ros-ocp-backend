@@ -290,37 +290,132 @@ Usage: {{ include "ros-ocp.databaseStorageClass" . }}
 {{- end }}
 
 {{/*
-Detect volume mode by querying the actual StorageClass provisioner
-Falls back to safe defaults if storage class cannot be found (e.g., during dry-run)
+Detect volume mode by platform-aware analysis of storage class capabilities
+Handles OpenShift, vanilla Kubernetes, KIND, and other distributions appropriately
 Usage: {{ include "ros-ocp.volumeModeForStorageClass" (list . "storage-class-name") }}
 */}}
 {{- define "ros-ocp.volumeModeForStorageClass" -}}
 {{- $root := index . 0 -}}
 {{- $storageClassName := index . 1 -}}
+{{- $isOpenShift := eq (include "ros-ocp.isOpenShift" $root) "true" -}}
+
+{{- /* Strategy 1: Check existing PVs for this storage class to see what volume modes are actually working */ -}}
+{{- $existingPVs := lookup "v1" "PersistentVolume" "" "" -}}
+{{- $filesystemPVs := 0 -}}
+{{- $blockPVs := 0 -}}
+{{- if and $existingPVs $existingPVs.items -}}
+{{- range $existingPVs.items -}}
+{{- if and .spec.storageClassName (eq .spec.storageClassName $storageClassName) -}}
+{{- if eq .spec.volumeMode "Filesystem" -}}
+{{- $filesystemPVs = add $filesystemPVs 1 -}}
+{{- else if eq .spec.volumeMode "Block" -}}
+{{- $blockPVs = add $blockPVs 1 -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- /* If we found existing PVs, use the mode that's actually working */ -}}
+{{- if gt $filesystemPVs 0 -}}
+{{- /* Filesystem volumes are working for this storage class */ -}}
+Filesystem
+{{- else if gt $blockPVs 0 -}}
+{{- /* Block volumes are working for this storage class */ -}}
+Block
+{{- else -}}
+{{- /* Strategy 2: Platform-aware storage class analysis */ -}}
 {{- $storageClass := lookup "storage.k8s.io/v1" "StorageClass" "" $storageClassName -}}
 {{- if $storageClass -}}
 {{- $provisioner := $storageClass.provisioner -}}
-{{- if or (contains "no-provisioner" $provisioner) (contains "local" $provisioner) -}}
-{{- /* Local storage usually requires checking the actual PV */ -}}
-Block
-{{- else if or (contains "rbd" $provisioner) (contains "ceph-rbd" $provisioner) -}}
+{{- $parameters := $storageClass.parameters -}}
+
+{{- /* Check for explicit volume mode configuration in storage class parameters */ -}}
+{{- if and $parameters $parameters.volumeMode -}}
+{{- $parameters.volumeMode -}}
+{{- else if and $parameters $parameters.fstype -}}
+{{- /* If fstype is specified, it's definitely filesystem */ -}}
 Filesystem
-{{- else if or (contains "ebs" $provisioner) (contains "disk" $provisioner) -}}
+{{- else -}}
+{{- /* Strategy 3: Platform-specific provisioner analysis */ -}}
+{{- if $isOpenShift -}}
+{{- /* OpenShift-specific logic */ -}}
+{{- if or (contains "rbd" $provisioner) (contains "ceph-rbd" $provisioner) -}}
+{{- /* OpenShift OCS typically uses filesystem for databases */ -}}
+Filesystem
+{{- else if contains "nfs" $provisioner -}}
+{{- /* NFS provisioners are filesystem */ -}}
+Filesystem
+{{- else if or (contains "ebs" $provisioner) (contains "gce" $provisioner) (contains "azure" $provisioner) -}}
+{{- /* Cloud storage provisioners typically support filesystem */ -}}
+Filesystem
+{{- else -}}
+{{- /* Default to filesystem for OpenShift (most workloads expect filesystem) */ -}}
+Filesystem
+{{- end -}}
+{{- else -}}
+{{- /* Vanilla Kubernetes/KIND-specific logic */ -}}
+{{- if contains "no-provisioner" $provisioner -}}
+{{- /* No provisioner - check if it's a local volume with filesystem support */ -}}
+{{- if and $parameters $parameters.path -}}
+{{- /* Local path volumes are filesystem */ -}}
+Filesystem
+{{- else -}}
+{{- /* Other no-provisioner volumes might be block */ -}}
+Block
+{{- end -}}
+{{- else if contains "local-path" $provisioner -}}
+{{- /* rancher.io/local-path (KIND default) always supports filesystem */ -}}
+Filesystem
+{{- else if or (contains "hostpath" $provisioner) (contains "host-path" $provisioner) -}}
+{{- /* Host path volumes are filesystem */ -}}
 Filesystem
 {{- else if or (contains "nfs" $provisioner) (contains "rgw" $provisioner) (contains "bucket" $provisioner) -}}
+{{- /* Network filesystem provisioners */ -}}
+Filesystem
+{{- else if or (contains "ebs" $provisioner) (contains "gce" $provisioner) (contains "azure" $provisioner) -}}
+{{- /* Cloud storage provisioners typically support filesystem */ -}}
+Filesystem
+{{- else if or (contains "rbd" $provisioner) (contains "ceph-rbd" $provisioner) -}}
+{{- /* Ceph RBD can support both, but filesystem is more common for databases */ -}}
+Filesystem
+{{- else if contains "iscsi" $provisioner -}}
+{{- /* iSCSI typically uses block volumes */ -}}
+Block
+{{- else if contains "fc" $provisioner -}}
+{{- /* Fibre Channel typically uses block volumes */ -}}
+Block
+{{- else -}}
+{{- /* Default to filesystem for vanilla Kubernetes (safer for most workloads) */ -}}
+Filesystem
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- else -}}
+{{- /* Strategy 4: Fallback based on platform and storage class name patterns */ -}}
+{{- if $isOpenShift -}}
+{{- /* OpenShift fallback - prefer filesystem */ -}}
+{{- if or (contains "rbd" $storageClassName) (contains "ceph" $storageClassName) -}}
 Filesystem
 {{- else -}}
 Filesystem
 {{- end -}}
 {{- else -}}
-{{- /* Storage class not found - use safe defaults based on known patterns */ -}}
+{{- /* Vanilla Kubernetes fallback */ -}}
 {{- if or (contains "local" $storageClassName) (contains "no-provisioner" $storageClassName) -}}
+{{- /* Check if it's a local-path type by name */ -}}
+{{- if contains "local-path" $storageClassName -}}
+Filesystem
+{{- else -}}
+{{- /* Other local storage - default to block but this is risky */ -}}
 Block
+{{- end -}}
 {{- else if or (contains "rbd" $storageClassName) (contains "ceph" $storageClassName) -}}
 Filesystem
 {{- else -}}
-{{- /* Default to Filesystem for most cloud storage and during dry-run */ -}}
+{{- /* Default to filesystem for most storage classes */ -}}
 Filesystem
+{{- end -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- end }}
