@@ -10,12 +10,12 @@ data:
     {
       "database": {
         "adminPassword": "{{ .Values.database.kruize.adminPassword }}",
-        "adminUsername": "{{ .Values.database.kruize.adminUsername }}",
+        "adminUsername": "{{ .Values.database.kruize.adminUser }}",
         "hostname": "{{ include "ros-ocp.kruizeDatabaseHost" . }}",
         "name": "{{ .Values.database.kruize.name }}",
         "password": "{{ .Values.database.kruize.password }}",
         "port": {{ .Values.database.kruize.port }},
-        "username": "{{ .Values.database.kruize.username }}",
+        "username": "{{ .Values.database.kruize.user }}",
         "sslMode": "{{ .Values.database.kruize.sslMode }}"
       },
       "kafka": {

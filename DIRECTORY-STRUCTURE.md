@@ -31,7 +31,8 @@ All deployment-related artifacts organized by deployment method:
 
 - **`kubernetes/`** - Kubernetes deployment using Helm
   - `helm/ros-ocp/` - Helm chart (renamed from ros-ocp-helm)
-  - `scripts/deploy-kind.sh` - KIND cluster deployment script
+  - `scripts/deploy-kind.sh` - KIND cluster setup script
+  - `scripts/install-helm-chart.sh` - Helm chart deployment script (works with any cluster)
   - `scripts/test-k8s-dataflow.sh` - End-to-end Kubernetes testing
   - `docs/KUBERNETES-QUICKSTART.md` - Complete Kubernetes guide
 
@@ -44,13 +45,11 @@ Centralized documentation:
 
 ### Kubernetes Deployment
 ```bash
-# Deploy to KIND cluster
+# Two-step deployment to KIND cluster
 cd deployment/kubernetes/scripts/
-./deploy-kind.sh
-
-# Test the deployment
-cd deployment/kubernetes/scripts/
-./test-k8s-dataflow.sh
+./deploy-kind.sh           # Setup KIND cluster
+./install-helm-chart.sh    # Deploy ROS-OCP
+./test-k8s-dataflow.sh     # Test deployment
 ```
 
 ### Docker Compose Deployment

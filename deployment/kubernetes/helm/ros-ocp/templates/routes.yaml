@@ -1,0 +1,112 @@
+{{- if eq (include "ros-ocp.isOpenShift" .) "true" }}
+{{- /*
+ROUTES CONFIGURATION for test-k8s-dataflow.sh compatibility
+
+This file contains only the essential routes required for the dataflow test to pass:
+
+1. Main route (/) - ROS-OCP API status and recommendations endpoints
+2. Ingress route (/api/ingress) - File upload and version check
+3. Kruize route (/api/kruize) - Kruize API health check
+
+REMOVED ROUTES (previously supplementary, not tested):
+- ROS API route (/api/ros) - Alternative API path
+- Sources API route (/api/sources) - Sources integration
+- MinIO Console route (/minio) - Admin console access
+
+These routes can be added back if needed for additional functionality.
+*/ -}}
+---
+# Main route for ROS-OCP API (serves as main entry point in OCP)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-main
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: main
+  annotations:
+    {{- with .Values.serviceRoute.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- with (index .Values.serviceRoute.hosts 0) }}
+  {{- if .host }}
+  host: {{ .host | quote }}
+  {{- end }}
+  {{- end }}
+  path: /
+  to:
+    kind: Service
+    name: {{ include "ros-ocp.fullname" . }}-rosocp-api
+    weight: 100
+  port:
+    targetPort: http
+  {{- if and .Values.serviceRoute.tls .Values.serviceRoute.tls.termination }}
+  tls:
+    termination: {{ .Values.serviceRoute.tls.termination }}
+    {{- if .Values.serviceRoute.tls.insecureEdgeTerminationPolicy }}
+    insecureEdgeTerminationPolicy: {{ .Values.serviceRoute.tls.insecureEdgeTerminationPolicy }}
+    {{- end }}
+  {{- end }}
+---
+# Route for file upload service
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingress
+spec:
+  {{- with (index .Values.serviceRoute.hosts 0) }}
+  {{- if .host }}
+  host: {{ .host | quote }}
+  {{- end }}
+  {{- end }}
+  path: /api/ingress
+  to:
+    kind: Service
+    name: {{ include "ros-ocp.fullname" . }}-ingress
+    weight: 100
+  port:
+    targetPort: http
+  {{- if and .Values.serviceRoute.tls .Values.serviceRoute.tls.termination }}
+  tls:
+    termination: {{ .Values.serviceRoute.tls.termination }}
+    {{- if .Values.serviceRoute.tls.insecureEdgeTerminationPolicy }}
+    insecureEdgeTerminationPolicy: {{ .Values.serviceRoute.tls.insecureEdgeTerminationPolicy }}
+    {{- end }}
+  {{- end }}
+---
+# Route for Kruize API
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-kruize
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kruize
+spec:
+  {{- with (index .Values.serviceRoute.hosts 0) }}
+  {{- if .host }}
+  host: {{ .host | quote }}
+  {{- end }}
+  {{- end }}
+  path: /api/kruize
+  to:
+    kind: Service
+    name: {{ include "ros-ocp.fullname" . }}-kruize
+    weight: 100
+  port:
+    targetPort: http
+  {{- if and .Values.serviceRoute.tls .Values.serviceRoute.tls.termination }}
+  tls:
+    termination: {{ .Values.serviceRoute.tls.termination }}
+    {{- if .Values.serviceRoute.tls.insecureEdgeTerminationPolicy }}
+    insecureEdgeTerminationPolicy: {{ .Values.serviceRoute.tls.insecureEdgeTerminationPolicy }}
+    {{- end }}
+  {{- end }}
+{{- end }}

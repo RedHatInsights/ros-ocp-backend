@@ -1,10 +1,26 @@
 #!/bin/bash
 
-# ROS-OCP Kubernetes Deployment Script for KIND
-# This script deploys the ROS-OCP Helm chart on a KIND cluster with proper storage and dependencies
-# Container Runtime: Auto-detects Docker or Podman (configurable via CONTAINER_RUNTIME)
+# ROS-OCP KIND Cluster Setup Script
+# This script sets up a KIND cluster for ROS-OCP deployment
+# For Helm chart deployment, use ./install-helm-chart.sh
+# Container Runtime: Configurable via CONTAINER_RUNTIME variable (default: podman)
+#
+# MEMORY REQUIREMENTS:
+# - Container Runtime: Minimum 6GB memory allocation required
+# - KIND node: Fixed 6GB memory limit for deterministic deployment
+# - Allocatable: ~5.2GB after system reservations
+# - Full deployment: ~4.5GB for all ROS-OCP services
 
 set -e  # Exit on any error
+
+# Debug: Show script start
+echo "=== SCRIPT START ==="
+echo "Script: $0"
+echo "Arguments: $@"
+echo "Working directory: $(pwd)"
+echo "User: $(whoami)"
+echo "PATH: $PATH"
+echo "==================="
 
 # Color codes for output
 RED='\033[0;31m'
@@ -16,10 +32,7 @@ NC='\033[0m' # No Color
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ros-ocp-cluster}
-HELM_RELEASE_NAME=${HELM_RELEASE_NAME:-ros-ocp}
-NAMESPACE=${NAMESPACE:-ros-ocp}
-STORAGE_CLASS=${STORAGE_CLASS:-standard}
-CONTAINER_RUNTIME=${CONTAINER_RUNTIME:-auto}
+CONTAINER_RUNTIME=${CONTAINER_RUNTIME:-podman}
 
 echo_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -44,7 +57,7 @@ command_exists() {
 
 # Function to detect container runtime
 detect_container_runtime() {
-    local runtime="$CONTAINER_RUNTIME"
+    local runtime="${CONTAINER_RUNTIME:-podman}"
 
     if [ "$runtime" = "auto" ]; then
         if command_exists podman; then
@@ -119,6 +132,12 @@ check_prerequisites() {
                         echo_info "  macOS: brew install --cask docker"
                     fi
                     ;;
+                "podman")
+                    echo_info "  Install Podman: https://podman.io/getting-started/installation"
+                    if [[ "$OSTYPE" == "darwin"* ]]; then
+                        echo_info "  macOS: brew install podman"
+                    fi
+                    ;;
             esac
         done
 
@@ -126,19 +145,14 @@ check_prerequisites() {
     fi
 
     # Check container runtime is running
-    if [ "$DETECTED_RUNTIME" = "docker" ]; then
-        if ! docker info >/dev/null 2>&1; then
-            echo_error "Docker is not running. Please start Docker and try again."
-            return 1
-        fi
-    elif [ "$DETECTED_RUNTIME" = "podman" ]; then
-        if ! podman info >/dev/null 2>&1; then
-            echo_error "Podman is not accessible. Please ensure Podman is running."
-            return 1
-        fi
-        export KIND_EXPERIMENTAL_PROVIDER=podman
+    if ! $DETECTED_RUNTIME info >/dev/null 2>&1; then
+        echo_error "$DETECTED_RUNTIME is not accessible. Please ensure $DETECTED_RUNTIME is running."
+        return 1
+    fi
+    export KIND_EXPERIMENTAL_PROVIDER=$DETECTED_RUNTIME
 
-        # Warn about PID limits
+    # Warn about PID limits for podman
+    if [ "$DETECTED_RUNTIME" = "podman" ]; then
         if ! grep -q "pids_limit.*=.*0" /etc/containers/containers.conf 2>/dev/null; then
             echo_warning "Podman may encounter PID limit issues with nginx-ingress controller"
             echo_info "To fix this, create or edit /etc/containers/containers.conf and add:"
@@ -167,7 +181,7 @@ create_kind_cluster() {
         exit 1
     fi
 
-    # Create KIND cluster configuration with increased file descriptor limits
+    # Create KIND cluster configuration - using the most common approach
     local kind_config=$(cat <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -180,69 +194,117 @@ nodes:
     nodeRegistration:
       kubeletExtraArgs:
         node-labels: "ingress-ready=true"
-  - |
-    kind: KubeletConfiguration
-    maxPods: 250
-    systemReserved:
-      cpu: "0.5"
-      memory: "1Gi"
   extraPortMappings:
-  - containerPort: 30080
-    hostPort: 30080
+  # Primary ingress entry point - HTTP traffic (bind to all interfaces)
+  - containerPort: 80
+    hostPort: 32061
     protocol: TCP
-  - containerPort: 30081
-    hostPort: 30081
+    listenAddress: "0.0.0.0"
+  # HTTPS traffic (bind to all interfaces)
+  - containerPort: 443
+    hostPort: 30325
     protocol: TCP
-  - containerPort: 30082
-    hostPort: 30082
-    protocol: TCP
-  - containerPort: 30090
-    hostPort: 30090
-    protocol: TCP
-  - containerPort: 30091
-    hostPort: 30091
-    protocol: TCP
-  - containerPort: 30099
-    hostPort: 30099
-    protocol: TCP
-  - containerPort: 30443
-    hostPort: 30443
-    protocol: TCP
-  - containerPort: 30083
-    hostPort: 30083
-    protocol: TCP
+    listenAddress: "0.0.0.0"
 EOF
 )
 
-    echo "$kind_config" | kind create cluster --config=-
-
-    if [ $? -eq 0 ]; then
-        echo_success "KIND cluster '$KIND_CLUSTER_NAME' created successfully"
+    # Create cluster with standard configuration
+    if [ "$DETECTED_RUNTIME" = "podman" ]; then
+        echo "$kind_config" | KIND_EXPERIMENTAL_PROVIDER=$DETECTED_RUNTIME kind create cluster --config=-
     else
+        echo "$kind_config" | KIND_EXPERIMENTAL_DOCKER_NETWORK="" kind create cluster --config=-
+    fi
+
+    if [ $? -ne 0 ]; then
         echo_error "Failed to create KIND cluster"
         return 1
+    fi
+    echo_success "KIND cluster '$KIND_CLUSTER_NAME' created successfully"
+
+    # Wait a moment for the container to fully initialize before applying memory constraints
+    echo_info "Waiting for KIND container to initialize..."
+    sleep 10
+
+    # Set memory limit on the KIND node container to 6GB for deterministic deployment
+    echo_info "Configuring KIND node with 6GB memory limit..."
+    if [ "$DETECTED_RUNTIME" = "docker" ]; then
+        if $DETECTED_RUNTIME update --memory=6g "${KIND_CLUSTER_NAME}-control-plane" >/dev/null 2>&1; then
+            echo_success "Memory limit set to 6GB"
+            # Give the container a moment to adjust to the new memory limit
+            sleep 5
+        else
+            echo_warning "Could not set 6GB memory limit on KIND container."
+            echo_warning "This may cause deployment issues if container runtime has insufficient memory."
+            echo_info "Continuing with default container runtime memory allocation..."
+
+            # Check actual container runtime memory available
+            local actual_memory=$($DETECTED_RUNTIME system info --format '{{.MemTotal}}' 2>/dev/null || echo "0")
+            if [ "$actual_memory" -gt 0 ]; then
+                local actual_gb=$((actual_memory / 1024 / 1024 / 1024))
+                echo_info "Container runtime has ${actual_gb}GB memory available"
+                if [ "$actual_gb" -lt 5 ]; then
+                    echo_error "Container runtime has less than 5GB memory. Deployment may fail due to resource constraints."
+                    echo_error "Please increase container runtime memory allocation and try again."
+                    return 1
+                fi
+            fi
+        fi
+    else
+        echo_info "Podman detected - memory limits are handled by systemd/cgroups"
+        echo_info "Continuing with system memory allocation..."
     fi
 
     # Set kubectl context
     kubectl cluster-info --context "kind-${KIND_CLUSTER_NAME}"
     echo_success "kubectl context set to kind-${KIND_CLUSTER_NAME}"
 
-    # Wait for API server to be fully ready
+    # Simple check that KIND cluster is working
+    echo_info "Verifying KIND cluster is working..."
+    if kubectl get nodes >/dev/null 2>&1; then
+        echo_success "✓ KIND cluster is accessible"
+    else
+        echo_error "✗ KIND cluster is not accessible"
+        return 1
+    fi
+
+    # Wait for API server to be fully ready with extended timeout for 6GB constrained environment
     echo_info "Waiting for API server to be fully ready..."
-    local retries=30
+
+    # First check if the KIND container is running
+    if ! $DETECTED_RUNTIME ps --filter "name=${KIND_CLUSTER_NAME}-control-plane" --filter "status=running" | grep -q "${KIND_CLUSTER_NAME}-control-plane"; then
+        echo_error "KIND container ${KIND_CLUSTER_NAME}-control-plane is not running"
+        $DETECTED_RUNTIME ps --filter "name=${KIND_CLUSTER_NAME}-control-plane"
+        return 1
+    fi
+
+    local retries=60  # Increased to 5 minutes for memory-constrained environment
     local count=0
     while [ $count -lt $retries ]; do
         if kubectl get --raw /healthz >/dev/null 2>&1; then
             echo_success "API server is ready"
             break
         fi
-        echo_info "Waiting for API server... ($((count + 1))/$retries)"
+
+        # Show progress every 10 attempts (50 seconds)
+        if [ $((count % 10)) -eq 0 ] && [ $count -gt 0 ]; then
+            echo_info "Still waiting for API server... (${count}/${retries} - $((count * 5 / 60))m ${count * 5 % 60}s elapsed)"
+            # Show container status for debugging
+            echo_info "KIND container status: $($DETECTED_RUNTIME inspect --format='{{.State.Status}}' ${KIND_CLUSTER_NAME}-control-plane 2>/dev/null || echo 'unknown')"
+        else
+            echo_info "Waiting for API server... ($((count + 1))/$retries)"
+        fi
+
         sleep 5
         count=$((count + 1))
     done
 
     if [ $count -eq $retries ]; then
-        echo_error "API server not ready after $retries attempts"
+        echo_error "API server not ready after $retries attempts (5 minutes)"
+        echo_error "Debugging information:"
+        echo_info "KIND container status:"
+        $DETECTED_RUNTIME ps --filter "name=${KIND_CLUSTER_NAME}-control-plane"
+        echo_info "KIND container logs (last 20 lines):"
+        $DETECTED_RUNTIME logs --tail 20 "${KIND_CLUSTER_NAME}-control-plane" 2>/dev/null || echo "Could not retrieve container logs"
         return 1
     fi
 }
@@ -260,96 +322,28 @@ install_storage_provisioner() {
 
 # Function to install NGINX Ingress Controller
 install_ingress_controller() {
-    echo_info "Installing NGINX Ingress Controller..."
+    echo_info "Installing KIND-specific NGINX Ingress Controller..."
 
-    # Install NGINX Ingress Controller
-    if [ "$DETECTED_RUNTIME" = "podman" ]; then
-        # Use cloud deployment + NodePort patch for Podman compatibility
-        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/cloud/deploy.yaml
-        sleep 5
-        kubectl patch service ingress-nginx-controller -n ingress-nginx --type='json' -p='[
-            {"op": "replace", "path": "/spec/type", "value": "NodePort"},
-            {"op": "add", "path": "/spec/ports/0/nodePort", "value": 30080},
-            {"op": "add", "path": "/spec/ports/1/nodePort", "value": 30443}
-        ]'
-    else
-        # Use KIND-specific deployment for Docker
-        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/kind/deploy.yaml
-    fi
+    # Install KIND-specific ingress controller (designed for extraPortMappings)
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 
-    # Wait additional time for API server to be fully stable
-    echo_info "Waiting for API server to be fully stable before ingress controller starts..."
-    sleep 30
-
-    # Wait for the deployment to be created before patching
+    # Wait a moment for the deployment to be created and pods to be scheduled
     echo_info "Waiting for ingress controller deployment to be created..."
-    local retries=30
-    local count=0
-    while [ $count -lt $retries ]; do
-        if kubectl get deployment ingress-nginx-controller -n ingress-nginx >/dev/null 2>&1; then
-            echo_success "Ingress controller deployment found"
-            break
-        fi
-        echo_info "Waiting for deployment... ($((count + 1))/$retries)"
-        sleep 2
-        count=$((count + 1))
-    done
+    sleep 10
 
-    # Wait for admission webhook job to complete (creates the certificate secret)
-    echo_info "Waiting for admission webhook setup to complete..."
-    kubectl wait --namespace ingress-nginx \
-        --for=condition=complete job/ingress-nginx-admission-create \
-        --timeout=120s || true
-
-    # Wait for admission webhook patch job if it exists
-    kubectl wait --namespace ingress-nginx \
-        --for=condition=complete job/ingress-nginx-admission-patch \
-        --timeout=60s || true
-
-
-    # Enable debug logging in NGINX ingress controller
-    echo_info "Enabling debug logs in NGINX ingress controller..."
-    kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type='json' -p='[
-        {
-            "op": "add",
-            "path": "/spec/template/spec/containers/0/args/-",
-            "value": "--v=2"
-        },
-        {
-            "op": "add",
-            "path": "/spec/template/spec/containers/0/args/-",
-            "value": "--logtostderr=true"
-        }
-    ]' || echo_warning "Debug logging patch failed, continuing..."
-
-    # Give time for the patch to take effect
-    sleep 5
-
-    # Wait for ingress controller to be ready
-    echo_info "Waiting for NGINX Ingress Controller to be ready..."
+    # Wait for the deployment to be ready
+    echo_info "Waiting for ingress-nginx controller deployment to be ready..."
     kubectl wait --namespace ingress-nginx \
         --for=condition=ready pod \
         --selector=app.kubernetes.io/component=controller \
         --timeout=300s
-}
 
-# Function to create namespace
-create_namespace() {
-    echo_info "Creating namespace: $NAMESPACE"
-
-    if kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
-        echo_warning "Namespace '$NAMESPACE' already exists"
-    else
-        kubectl create namespace "$NAMESPACE"
-        echo_success "Namespace '$NAMESPACE' created"
-    fi
+    echo_success "NGINX Ingress Controller is ready"
 }
 
 # Function to deploy Helm chart
 deploy_helm_chart() {
     echo_info "Deploying ROS-OCP Helm chart..."
-
-    cd "$SCRIPT_DIR"
 
     # Check if Helm chart directory exists
     if [ ! -d "../helm/ros-ocp" ]; then
@@ -386,75 +380,134 @@ wait_for_pods() {
     echo_success "All pods are ready"
 }
 
-# Function to create NodePort services for external access
-create_nodeport_services() {
-    echo_info "Creating NodePort services for external access..."
+# Function to check ingress controller readiness
+check_ingress_readiness() {
+    echo_info "Checking ingress controller readiness..."
 
-    # Ingress service
-    kubectl patch service "${HELM_RELEASE_NAME}-ingress" -n "$NAMESPACE" \
-        -p '{"spec":{"type":"NodePort","ports":[{"port":3000,"nodePort":30083,"targetPort":"http","protocol":"TCP","name":"http"}]}}'
+    local max_attempts=60
+    local attempt=0
+    local all_ready=false
 
-    # ROS-OCP API service
-    kubectl patch service "${HELM_RELEASE_NAME}-rosocp-api" -n "$NAMESPACE" \
-        -p '{"spec":{"type":"NodePort","ports":[{"port":8000,"nodePort":30081,"targetPort":"http","protocol":"TCP","name":"http"},{"port":9000,"nodePort":30082,"targetPort":"metrics","protocol":"TCP","name":"metrics"}]}}'
+    while [ $attempt -lt $max_attempts ]; do
+        echo_info "Ingress readiness check attempt $((attempt + 1))/$max_attempts"
 
-    # Kruize service
-    kubectl patch service "${HELM_RELEASE_NAME}-kruize" -n "$NAMESPACE" \
-        -p '{"spec":{"type":"NodePort","ports":[{"port":8080,"nodePort":30090,"targetPort":"http","protocol":"TCP","name":"http"}]}}'
+        # Check if ingress controller pod is running and ready
+        local pod_status=$(kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
+        local pod_ready=$(kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
 
-    # MinIO service (API and Console)
-    kubectl patch service "${HELM_RELEASE_NAME}-minio" -n "$NAMESPACE" \
-        --type='json' \
-        -p='[
-          {"op": "replace", "path": "/spec/type", "value": "NodePort"},
-          {"op": "add", "path": "/spec/ports/0/nodePort", "value": 30091},
-          {"op": "add", "path": "/spec/ports/1/nodePort", "value": 30099}
-        ]'
+        if [ "$pod_status" = "Running" ] && [ "$pod_ready" = "True" ]; then
+            echo_success "✓ Ingress controller pod is running and ready"
 
-    echo_success "NodePort services created"
+            # Check pod logs for readiness indicators
+            local pod_name=$(kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+            if [ -n "$pod_name" ]; then
+                echo_info "Checking ingress controller logs for readiness indicators..."
+                local log_output=$(kubectl logs -n ingress-nginx "$pod_name" --tail=20 2>/dev/null)
+
+                # Look for key readiness indicators in logs
+                if echo "$log_output" | grep -q "Starting NGINX Ingress controller" && \
+                   echo "$log_output" | grep -q "Configuration changes detected" && \
+                   echo "$log_output" | grep -q "Configuration changes applied"; then
+                    echo_success "✓ Ingress controller logs show proper initialization"
+                else
+                    echo_warning "⚠ Ingress controller logs don't show complete initialization yet"
+                    echo_info "Recent logs:"
+                    echo "$log_output" | tail -5
+                fi
+            fi
+
+            # Check if service endpoints are ready
+            local endpoints_ready=$(kubectl get endpoints ingress-nginx-controller -n ingress-nginx -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)
+            if [ -n "$endpoints_ready" ]; then
+                echo_success "✓ Ingress controller service has ready endpoints"
+            else
+                echo_warning "⚠ Ingress controller service endpoints not ready yet"
+            fi
+
+            # Test actual connectivity to the ingress controller using KIND-mapped port
+            local test_port="32061"
+            echo_info "Testing connectivity to ingress controller on KIND-mapped port $test_port..."
+            if curl -f -s "http://localhost:$test_port/" >/dev/null 2>&1; then
+                echo_success "✓ Ingress controller is accessible via HTTP"
+                all_ready=true
+                break
+            else
+                echo_warning "⚠ Ingress controller not yet accessible via HTTP"
+            fi
+
+            # Check for any recent events that might indicate issues
+            echo_info "Checking for recent ingress controller events..."
+            local recent_events=$(kubectl get events -n ingress-nginx --sort-by='.lastTimestamp' --field-selector involvedObject.name="$pod_name" 2>/dev/null | tail -3)
+            if [ -n "$recent_events" ]; then
+                echo_info "Recent events:"
+                echo "$recent_events"
+            fi
+
+        else
+            echo_info "Pod status: $pod_status, Ready: $pod_ready"
+            echo_info "Waiting for ingress controller pod to be ready..."
+        fi
+
+        sleep 5
+        attempt=$((attempt + 1))
+    done
+
+    if [ "$all_ready" = true ]; then
+        echo_success "✓ Ingress controller is fully ready and operational"
+        return 0
+    else
+        echo_error "✗ Ingress controller failed to become ready after $max_attempts attempts"
+        echo_error "Pod status:"
+        kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -o wide
+        echo_error "Service status:"
+        kubectl get service ingress-nginx-controller -n ingress-nginx -o wide
+        echo_error "Recent events:"
+        kubectl get events -n ingress-nginx --sort-by='.lastTimestamp' | tail -10
+        return 1
+    fi
 }
+
+# Note: All external access is handled through the nginx ingress controller (port auto-detected)
+# Individual services are accessed via path-based routing through the ingress
 
 # Function to show deployment status
 show_status() {
-    echo_info "Deployment Status"
-    echo_info "=================="
+    echo_info "KIND Cluster Status"
+    echo_info "==================="
 
     echo_info "Cluster: kind-${KIND_CLUSTER_NAME}"
-    echo_info "Namespace: $NAMESPACE"
-    echo_info "Helm Release: $HELM_RELEASE_NAME"
+    echo_info "Context: $(kubectl config current-context)"
     echo ""
 
-    echo_info "Pods:"
-    kubectl get pods -n "$NAMESPACE" -o wide
+    echo_info "Cluster Info:"
+    kubectl cluster-info
     echo ""
 
-    echo_info "Services:"
-    kubectl get services -n "$NAMESPACE"
+    echo_info "Nodes:"
+    kubectl get nodes -o wide
     echo ""
 
-    echo_info "Storage:"
-    kubectl get pvc -n "$NAMESPACE"
+    echo_info "Storage Classes:"
+    kubectl get storageclass
     echo ""
+
+    # Use hardcoded port from extraPortMappings (KIND-mapped port)
+    local http_port="32061"
 
     echo_info "Access Points:"
-    echo_info "  - Nginx Ingress: http://localhost:30080 (404 response is normal - no ingress rules configured)"
-    
-    # Get the actual port used for ros-ocp-ingress
-    local ros_ingress_port
-    ros_ingress_port=$(kubectl get service "${HELM_RELEASE_NAME}-ingress" -n "$NAMESPACE" -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30083")
-    echo_info "  - ROS-OCP Ingress: http://localhost:${ros_ingress_port}"
-    echo_info "  - Ingress API: http://localhost:${ros_ingress_port}/api/ingress/v1/version"
-    echo_info "  - ROS-OCP API: http://localhost:30081/status"
-    echo_info "  - Kruize API: http://localhost:30090/listPerformanceProfiles"
-    echo_info "  - MinIO API: http://localhost:30091 (S3 API)"
-    echo_info "  - MinIO Console: http://localhost:30099 (Web UI - minioaccesskey/miniosecretkey)"
+    echo_info "  - Ingress Entry Point: http://localhost:$http_port"
+    echo_info "    All services are accessible through path-based routing:"
+    echo_info "    - Ingress API: http://localhost:$http_port/api/ingress/v1/version"
+    echo_info "    - ROS-OCP API: http://localhost:$http_port/status"
+    echo_info "    - Kruize API: http://localhost:$http_port/api/kruize/listPerformanceProfiles"
+    echo_info "    - MinIO Console: http://localhost:$http_port/minio (Web UI - minioaccesskey/miniosecretkey)"
+    echo_info "Ingress Controller:"
+    kubectl get pods -n ingress-nginx
     echo ""
 
     echo_info "Useful Commands:"
-    echo_info "  - View logs: kubectl logs -n $NAMESPACE -l app.kubernetes.io/instance=$HELM_RELEASE_NAME"
-    echo_info "  - Port forward ingress: kubectl port-forward -n $NAMESPACE svc/${HELM_RELEASE_NAME}-ingress 3000:3000"
-    echo_info "  - Port forward API: kubectl port-forward -n $NAMESPACE svc/${HELM_RELEASE_NAME}-rosocp-api 8001:8000"
-    echo_info "  - Delete deployment: helm uninstall $HELM_RELEASE_NAME -n $NAMESPACE"
+    echo_info "  - Deploy Helm chart: ./install-helm-chart.sh"
+    echo_info "  - Test deployment: ./test-k8s-dataflow.sh"
     echo_info "  - Delete cluster: kind delete cluster --name $KIND_CLUSTER_NAME"
 }
 
@@ -464,46 +517,51 @@ run_health_checks() {
 
     local failed_checks=0
 
-    # Check if nginx ingress controller is accessible
+    # Use hardcoded port from extraPortMappings (KIND-mapped port)
+    local http_port="32061"
+
+    echo_info "Using KIND-mapped HTTP port: $http_port"
+
+    # Check if nginx ingress controller is accessible on entry point
     local nginx_response
-    nginx_response=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:30080/" 2>/dev/null || echo "000")
+    nginx_response=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$http_port/" 2>/dev/null || echo "000")
 
     if [ "$nginx_response" = "000" ] || [ -z "$nginx_response" ]; then
-        echo_error "Nginx Ingress is not accessible on port 30080"
+        echo_error "Ingress Entry Point is not accessible on port $http_port"
         failed_checks=$((failed_checks + 1))
     else
-        echo_success "Ingress API is accessible on port 30080 (HTTP ${nginx_response})"
+        echo_success "Ingress Entry Point is accessible on port $http_port (HTTP ${nginx_response})"
     fi
 
-    # Check if ROS-OCP ingress API is accessible
-    if curl -f -s "http://localhost:30083/api/ingress/v1/version" >/dev/null 2>&1; then
-        echo_success "ROS-OCP Ingress API is accessible on port 30083"
+    # Check if ROS-OCP ingress API is accessible via ingress
+    if curl -f -s "http://localhost:$http_port/api/ingress/v1/version" >/dev/null 2>&1; then
+        echo_success "ROS-OCP Ingress API is accessible via ingress on port $http_port"
     else
-        echo_error "ROS-OCP Ingress API is not accessible on port 30083"
-        failed_checks=$((failed_checks + 1))
-    fi
-
-    # Check if ROS-OCP API is accessible
-    if curl -f -s http://localhost:30081/status >/dev/null; then
-        echo_success "ROS-OCP API is accessible"
-    else
-        echo_error "ROS-OCP API is not accessible"
+        echo_error "ROS-OCP Ingress API is not accessible via ingress on port $http_port"
         failed_checks=$((failed_checks + 1))
     fi
 
-    # Check if Kruize is accessible
-    if curl -f -s http://localhost:30090/listPerformanceProfiles >/dev/null; then
-        echo_success "Kruize API is accessible"
+    # Check if ROS-OCP API is accessible via ingress
+    if curl -f -s "http://localhost:$http_port/status" >/dev/null; then
+        echo_success "ROS-OCP API is accessible via ingress on port $http_port"
     else
-        echo_error "Kruize API is not accessible"
+        echo_error "ROS-OCP API is not accessible via ingress on port $http_port"
         failed_checks=$((failed_checks + 1))
     fi
 
-    # Check if MinIO console is accessible
-    if curl -f -s http://localhost:30099/ >/dev/null; then
-        echo_success "MinIO console is accessible"
+    # Check if Kruize is accessible via ingress
+    if curl -f -s "http://localhost:$http_port/api/kruize/listPerformanceProfiles" >/dev/null; then
+        echo_success "Kruize API is accessible via ingress on port $http_port"
     else
-        echo_error "MinIO console is not accessible"
+        echo_error "Kruize API is not accessible via ingress on port $http_port"
+        failed_checks=$((failed_checks + 1))
+    fi
+
+    # Check if MinIO console is accessible via ingress
+    if curl -f -s "http://localhost:$http_port/minio/" >/dev/null; then
+        echo_success "MinIO console is accessible via ingress on port $http_port"
+    else
+        echo_error "MinIO console is not accessible via ingress on port $http_port"
         failed_checks=$((failed_checks + 1))
     fi
 
@@ -518,86 +576,78 @@ run_health_checks() {
 
 # Function to cleanup
 cleanup() {
-    echo_info "Cleaning up..."
-
     if [ "${1:-}" = "--all" ]; then
         echo_info "Deleting KIND cluster..."
         kind delete cluster --name "$KIND_CLUSTER_NAME"
         echo_success "KIND cluster deleted"
     else
-        echo_info "Deleting Helm release..."
-        helm uninstall "$HELM_RELEASE_NAME" -n "$NAMESPACE" || true
-        echo_info "Deleting namespace..."
-        kubectl delete namespace "$NAMESPACE" || true
-        echo_success "Helm release and namespace deleted"
+        echo_warning "This script only manages the KIND cluster."
+        echo_info "For Helm deployment cleanup, use: ./install-helm-chart.sh cleanup"
         echo_info "To delete the entire cluster, run: $0 cleanup --all"
     fi
 }
 
-# Main execution
+
+# Main function
 main() {
-    echo_info "ROS-OCP Kubernetes Deployment for KIND"
-    echo_info "======================================="
+    echo "=== MAIN FUNCTION START ==="
+    echo_info "Starting KIND cluster setup for ROS-OCP..."
 
-    # Check prerequisites
-    if ! check_prerequisites; then
-        exit 1
+    # Check required commands
+    echo_info "Checking required commands..."
+    local missing_commands=()
+
+    echo "Checking kind command..."
+    if ! command -v kind >/dev/null 2>&1; then
+        echo "kind command not found"
+        missing_commands+=("kind")
+    else
+        echo "kind command found: $(which kind)"
     fi
 
-    echo_info "Configuration:"
-    echo_info "  KIND Cluster: $KIND_CLUSTER_NAME"
-    echo_info "  Helm Release: $HELM_RELEASE_NAME"
-    echo_info "  Namespace: $NAMESPACE"
-    echo_info "  Storage Class: $STORAGE_CLASS"
-    echo_info "  Container Runtime: $DETECTED_RUNTIME"
-    echo ""
-
-    # Create KIND cluster
-    if ! create_kind_cluster; then
-        exit 1
+    echo "Checking kubectl command..."
+    if ! command -v kubectl >/dev/null 2>&1; then
+        echo "kubectl command not found"
+        missing_commands+=("kubectl")
+    else
+        echo "kubectl command found: $(which kubectl)"
     fi
 
-    # Install storage provisioner
-    if ! install_storage_provisioner; then
-        exit 1
+        echo "Checking container runtime..."
+        if ! command -v "$CONTAINER_RUNTIME" >/dev/null 2>&1; then
+            echo "$CONTAINER_RUNTIME command not found"
+            missing_commands+=("$CONTAINER_RUNTIME")
+        else
+            echo "$CONTAINER_RUNTIME command found: $(which $CONTAINER_RUNTIME)"
+        fi
+
+    if [ ${#missing_commands[@]} -gt 0 ]; then
+        echo_error "Missing required commands: ${missing_commands[*]}"
+        echo_error "Please install the missing commands and try again"
+        return 1
     fi
+
+    echo_success "✓ All required commands are available"
+
+    # Detect container runtime
+    echo "Calling detect_container_runtime..."
+    detect_container_runtime
+
+    # Setup KIND cluster
+    echo "Calling create_kind_cluster..."
+    create_kind_cluster
 
     # Install ingress controller
-    if ! install_ingress_controller; then
-        exit 1
-    fi
+    echo "Calling install_ingress_controller..."
+    install_ingress_controller
 
-    # Create namespace
-    if ! create_namespace; then
-        exit 1
-    fi
-
-    # Deploy Helm chart
-    if ! deploy_helm_chart; then
-        exit 1
-    fi
-
-    # Wait for pods to be ready
-    if ! wait_for_pods; then
-        echo_warning "Some pods may not be ready. Continuing..."
-    fi
-
-    # Create NodePort services
-    if ! create_nodeport_services; then
-        echo_warning "Failed to create NodePort services. You may need to use port-forwarding."
-    fi
-
-    # Show deployment status
+    # Show final status
+    echo "Calling show_status..."
     show_status
 
-    # Run health checks
-    echo_info "Waiting 30 seconds for services to stabilize before running health checks..."
-    sleep 30
-    run_health_checks
-
-    echo ""
-    echo_success "ROS-OCP deployment completed!"
-    echo_info "The services are now running in KIND cluster '$KIND_CLUSTER_NAME'"
+    echo_success "KIND cluster setup completed successfully!"
+    echo_info "Next step: Run ./install-helm-chart.sh to deploy ROS-OCP"
+    echo "=== MAIN FUNCTION END ==="
 }
 
 # Handle script arguments
@@ -610,31 +660,30 @@ case "${1:-}" in
         show_status
         exit 0
         ;;
-    "health")
-        run_health_checks
-        exit $?
-        ;;
     "help"|"-h"|"--help")
         echo "Usage: $0 [command]"
         echo ""
         echo "Commands:"
-        echo "  (none)          - Deploy ROS-OCP to KIND cluster"
-        echo "  cleanup         - Delete Helm release and namespace"
+        echo "  (none)          - Setup KIND cluster for ROS-OCP"
         echo "  cleanup --all   - Delete entire KIND cluster"
-        echo "  status          - Show deployment status"
-        echo "  health          - Run health checks"
+        echo "  status          - Show cluster status"
         echo "  help            - Show this help message"
         echo ""
         echo "Environment Variables:"
         echo "  KIND_CLUSTER_NAME - Name of KIND cluster (default: ros-ocp-cluster)"
-        echo "  HELM_RELEASE_NAME - Name of Helm release (default: ros-ocp)"
-        echo "  NAMESPACE         - Kubernetes namespace (default: ros-ocp)"
-        echo "  STORAGE_CLASS     - Storage class name (default: standard)"
-        echo "  CONTAINER_RUNTIME - Container runtime: auto, docker, podman (default: auto)"
+        echo "  CONTAINER_RUNTIME - Container runtime to use (default: podman, supports: podman, docker, auto)"
         echo ""
         echo "Requirements:"
-        echo "  - Docker or Podman must be running (auto-detected by default)"
-        echo "  - kubectl, helm, and kind must be installed"
+        echo "  - Container runtime must be installed and running (default: podman)"
+        echo "  - kubectl and kind must be installed"
+        echo "  - Container Runtime: Minimum 6GB memory allocation"
+        echo ""
+        echo "Two-Step Deployment:"
+        echo "  1. ./deploy-kind.sh       - Setup KIND cluster"
+        echo "  2. ./install-helm-chart.sh - Deploy ROS-OCP Helm chart"
+        echo ""
+        echo "Next Steps:"
+        echo "  After successful setup, run ./install-helm-chart.sh to deploy ROS-OCP"
         exit 0
         ;;
 esac

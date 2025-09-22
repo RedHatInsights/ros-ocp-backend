@@ -49,7 +49,8 @@ spec:
         name: zookeeper-storage
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: {{ .Values.global.storageClass }}
+        volumeMode: {{ include "ros-ocp.volumeMode" . }}
+        storageClassName: {{ include "ros-ocp.storageClass" . }}
         resources:
           requests:
             storage: {{ .Values.kafka.zookeeper.storage.size }}

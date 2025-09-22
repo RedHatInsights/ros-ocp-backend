@@ -15,9 +15,13 @@ NC='\033[0m' # No Color
 # Configuration
 NAMESPACE=${NAMESPACE:-ros-ocp}
 HELM_RELEASE_NAME=${HELM_RELEASE_NAME:-ros-ocp}
-INGRESS_PORT=${INGRESS_PORT:-30083}
-API_PORT=${API_PORT:-30081}
-KRUIZE_PORT=${KRUIZE_PORT:-30090}
+
+# Function to get ingress hostname for Kubernetes
+get_ingress_hostname() {
+    # For KIND clusters, use the KIND-mapped port (32061) instead of service NodePort
+    # This ensures we use the port that KIND actually exposes on the host
+    echo "localhost:32061"
+}
 
 echo_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -59,6 +63,45 @@ check_deployment() {
     return 0
 }
 
+# Function to detect platform (OpenShift vs Kubernetes)
+detect_platform() {
+    # Check if OpenShift route API resources actually exist (more than just header line)
+    local route_count=$(kubectl api-resources --api-group=route.openshift.io 2>/dev/null | wc -l)
+    if [ "$route_count" -gt 1 ]; then
+        echo "openshift"
+    else
+        echo "kubernetes"
+    fi
+}
+
+# Function to get service URL based on platform (unified path-based approach)
+get_service_url() {
+    local service_name="$1"
+    local path="$2"
+    local platform=$(detect_platform)
+
+    if [ "$platform" = "openshift" ]; then
+        # OpenShift: Try to get route URL
+        local route_host=$(kubectl get route "$HELM_RELEASE_NAME-$service_name" -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null)
+        if [ -n "$route_host" ]; then
+            # Determine protocol - check if route has TLS
+            local tls_termination=$(kubectl get route "$HELM_RELEASE_NAME-$service_name" -n "$NAMESPACE" -o jsonpath='{.spec.tls.termination}' 2>/dev/null)
+            if [ -n "$tls_termination" ]; then
+                echo "https://$route_host$path"
+            else
+                echo "http://$route_host$path"
+            fi
+        else
+            echo_error "Route not found for $service_name. OpenShift Routes should be configured properly."
+            return 1
+        fi
+    else
+        # Kubernetes: Use Ingress with unified hostname
+        local hostname=$(get_ingress_hostname)
+        echo "http://$hostname$path"
+    fi
+}
+
 # Function to wait for services to be ready
 wait_for_services() {
     echo_info "Waiting for services to be ready..."
@@ -70,26 +113,7 @@ wait_for_services() {
         --field-selector=status.phase!=Succeeded
 
     echo_success "All pods are ready"
-
-    # Wait for services to be accessible
-    local retries=30
-    local count=0
-
-    while [ $count -lt $retries ]; do
-        if curl -f -s http://localhost:${INGRESS_PORT}/api/ingress/v1/version >/dev/null 2>&1; then
-            echo_success "Ingress service is accessible"
-            break
-        fi
-
-        echo_info "Waiting for ingress service to be accessible... ($((count + 1))/$retries)"
-        sleep 10
-        count=$((count + 1))
-    done
-
-    if [ $count -eq $retries ]; then
-        echo_error "Ingress service is not accessible after $retries attempts"
-        return 1
-    fi
+    echo_info "Ingress connectivity has already been validated by install-helm-chart.sh"
 }
 
 # Function to create test data
@@ -172,11 +196,15 @@ upload_test_data() {
     echo_info "Uploading tar.gz file..."
 
     # Upload the tar.gz file using curl with proper headers and content-type
+    local upload_url=$(get_service_url "ingress" "/api/ingress/v1/upload")
+    echo_info "Uploading to: $upload_url"
+
     local response=$(curl -s -w "%{http_code}" \
         -F "file=@${test_dir}/${tar_filename};type=application/vnd.redhat.hccm.filename+tgz" \
         -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K" \
         -H "x-rh-request-id: test-request-$(date +%s)" \
-        http://localhost:${INGRESS_PORT}/api/ingress/v1/upload)
+        -H "Host: localhost" \
+        "$upload_url")
 
     local http_code="${response: -3}"
     local response_body="${response%???}"
@@ -299,7 +327,8 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
         echo_success "Kafka message published successfully"
         echo_info "File UUID: $file_uuid"
         echo_info "CSV file: $csv_filename"
-        echo_info "Accessible at: http://localhost:30099/browser/ros-data/$csv_filename"
+        local hostname=$(get_ingress_hostname)
+        echo_info "Accessible at: http://$hostname/minio/browser/ros-data/$csv_filename"
     else
         echo_error "Failed to publish Kafka message"
         return 1
@@ -378,12 +407,17 @@ verify_recommendations() {
 
     # Base identity header used throughout the script
     local identity_header="eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K"
-    local api_base_url="http://localhost:${API_PORT}/api/cost-management/v1"
+
+    # Get platform-appropriate URLs
+    local status_url=$(get_service_url "rosocp-api" "/status")
+    local api_base_url=$(get_service_url "rosocp-api" "/api/cost-management/v1")
 
     # Test API status endpoint first
     echo_info "Testing ROS-OCP API status..."
+    echo_info "Status URL: $status_url"
     local status_response=$(curl -s -w "%{http_code}" -o /tmp/status_response.json \
-        "http://localhost:${API_PORT}/status" 2>/dev/null || echo "000")
+        -H "Host: localhost" \
+        "$status_url" 2>/dev/null || echo "000")
 
     local status_http_code="${status_response: -3}"
 
@@ -403,6 +437,7 @@ verify_recommendations() {
     local list_response=$(curl -s -w "%{http_code}" -o /tmp/recommendations_list.json \
         -H "x-rh-identity: $identity_header" \
         -H "Content-Type: application/json" \
+        -H "Host: localhost" \
         "$api_base_url/recommendations/openshift" 2>/dev/null || echo "000")
 
     local list_http_code="${list_response: -3}"
@@ -465,6 +500,7 @@ except:
                     local detail_response=$(curl -s -w "%{http_code}" -o /tmp/recommendation_detail.json \
                         -H "x-rh-identity: $identity_header" \
                         -H "Content-Type: application/json" \
+                        -H "Host: localhost" \
                         "$api_base_url/recommendations/openshift/$rec_id" 2>/dev/null || echo "000")
 
                     local detail_http_code="${detail_response: -3}"
@@ -527,6 +563,7 @@ except Exception as e:
     local csv_response=$(curl -s -w "%{http_code}" -o /tmp/recommendations.csv \
         -H "x-rh-identity: $identity_header" \
         -H "Accept: text/csv" \
+        -H "Host: localhost" \
         "$api_base_url/recommendations/openshift?format=csv" 2>/dev/null || echo "000")
 
     local csv_http_code="${csv_response: -3}"
@@ -722,28 +759,36 @@ run_health_checks() {
     echo_info "=== Health Checks ===="
 
     local failed_checks=0
+    local platform=$(detect_platform)
+
+    echo_info "Running health checks for platform: $platform"
+
+    # Get platform-appropriate URLs (only for essential routes)
+    local ingress_url=$(get_service_url "ingress" "/api/ingress/v1/version")
+    local api_url=$(get_service_url "rosocp-api" "/status")
+    local kruize_url=$(get_service_url "kruize" "/api/kruize/listPerformanceProfiles")
 
     # Check ingress API
-    if curl -f -s http://localhost:${INGRESS_PORT}/api/ingress/v1/version >/dev/null; then
-        echo_success "Ingress API is accessible"
+    if curl -f -s -H "Host: localhost" "$ingress_url" >/dev/null; then
+        echo_success "Ingress API is accessible at: $ingress_url"
     else
-        echo_error "Ingress API is not accessible"
+        echo_error "Ingress API is not accessible at: $ingress_url"
         failed_checks=$((failed_checks + 1))
     fi
 
     # Check ROS-OCP API
-    if curl -f -s http://localhost:${API_PORT}/status >/dev/null; then
-        echo_success "ROS-OCP API is accessible"
+    if curl -f -s -H "Host: localhost" "$api_url" >/dev/null; then
+        echo_success "ROS-OCP API is accessible at: $api_url"
     else
-        echo_error "ROS-OCP API is not accessible"
+        echo_error "ROS-OCP API is not accessible at: $api_url"
         failed_checks=$((failed_checks + 1))
     fi
 
     # Check Kruize API
-    if curl -f -s http://localhost:${KRUIZE_PORT}/listPerformanceProfiles >/dev/null; then
-        echo_success "Kruize API is accessible"
+    if curl -f -s -H "Host: localhost" "$kruize_url" >/dev/null; then
+        echo_success "Kruize API is accessible at: $kruize_url"
     else
-        echo_error "Kruize API is not accessible"
+        echo_error "Kruize API is not accessible at: $kruize_url"
         failed_checks=$((failed_checks + 1))
     fi
 
@@ -802,12 +847,21 @@ main() {
         exit 1
     fi
 
+
+    local platform=$(detect_platform)
+
     echo_info "Configuration:"
+    echo_info "  Platform: $platform"
     echo_info "  Namespace: $NAMESPACE"
     echo_info "  Helm Release: $HELM_RELEASE_NAME"
-    echo_info "  Ingress Port: $INGRESS_PORT"
-    echo_info "  API Port: $API_PORT"
-    echo_info "  Kruize Port: $KRUIZE_PORT"
+
+    if [ "$platform" = "kubernetes" ]; then
+        local hostname=$(get_ingress_hostname)
+        echo_info "  Ingress Hostname: $hostname"
+        echo_info "  Access Method: Ingress Controller (path-based routing)"
+    else
+        echo_info "  Access Method: OpenShift Routes (path-based routing)"
+    fi
     echo ""
 
     # Wait for services to be ready
@@ -849,7 +903,7 @@ main() {
     echo_info "Use '$0 logs <service>' to view specific service logs"
     echo_info "Use '$0 recommendations' to verify recommendations via API"
     echo_info "Use '$0 workloads' to verify workloads in database"
-    echo_info "Available services: ingress, rosocp-processor, rosocp-api, kruize, minio, db-ros"
+    echo_info "Available services: ingress, rosocp-processor, rosocp-api, kruize, db-ros"
 }
 
 # Handle script arguments
@@ -884,9 +938,13 @@ case "${1:-}" in
         echo "Environment Variables:"
         echo "  NAMESPACE         - Kubernetes namespace (default: ros-ocp)"
         echo "  HELM_RELEASE_NAME - Helm release name (default: ros-ocp)"
-        echo "  INGRESS_PORT      - Ingress service port (default: 30080)"
-        echo "  API_PORT          - API service port (default: 30081)"
-        echo "  KRUIZE_PORT       - Kruize service port (default: 30090)"
+        echo ""
+        echo "  Kubernetes-specific (Ingress access):"
+        echo "  Hostname: localhost"
+        echo ""
+        echo "Notes:"
+        echo "  - OpenShift: Uses Routes automatically with path-based routing"
+        echo "  - Kubernetes: Uses Ingress with path-based routing (same paths as OpenShift)"
         exit 0
         ;;
 esac

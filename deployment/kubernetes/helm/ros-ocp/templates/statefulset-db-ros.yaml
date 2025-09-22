@@ -38,7 +38,7 @@ spec:
             - name: POSTGRES_DB
               value: {{ .Values.database.ros.name | quote }}
             - name: POSTGRES_USER
-              value: {{ .Values.database.ros.username | quote }}
+              value: {{ .Values.database.ros.user | quote }}
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -54,7 +54,7 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - {{ .Values.database.ros.username }}
+                - {{ .Values.database.ros.user }}
             initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
@@ -64,7 +64,7 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - {{ .Values.database.ros.username }}
+                - {{ .Values.database.ros.user }}
             initialDelaySeconds: 5
             periodSeconds: {{ .Values.probes.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
@@ -76,7 +76,8 @@ spec:
         name: postgres-storage
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: {{ .Values.global.storageClass }}
+        volumeMode: {{ include "ros-ocp.volumeMode" . }}
+        storageClassName: {{ include "ros-ocp.databaseStorageClass" . }}
         resources:
           requests:
             storage: {{ .Values.database.ros.storage.size }}

@@ -58,7 +58,6 @@ The script will:
 - ✅ Check prerequisites
 - ✅ Create KIND cluster with proper networking
 - ✅ Install storage provisioner
-- ✅ Install NGINX Ingress Controller
 - ✅ Deploy Helm chart with all services
 - ✅ Create NodePort services for external access
 - ✅ Run health checks

@@ -26,6 +26,47 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- /*
+      Init container to prepare Kafka data directory structure.
+
+      PROBLEM: Kafka fails when it finds filesystem metadata directories like 'lost+found'
+      in its log directory. These directories are automatically created by certain filesystems
+      (ext2/3/4) at the root of mounted volumes for recovery purposes.
+
+      SOLUTION: Use a subdirectory approach where:
+      - Volume is mounted at /var/lib/kafka/data (may contain lost+found)
+      - Kafka uses /var/lib/kafka/data/logs (clean subdirectory)
+      - This completely isolates Kafka data from filesystem metadata
+
+      BENEFITS:
+      - Works with any storage class (OpenShift OCS, KIND local-path, cloud storage)
+      - No need to clean lost+found on every restart
+      - Cleaner separation of concerns
+      - Compatible with both vanilla Kubernetes and OpenShift
+      */}}
+      initContainers:
+        - name: prepare-kafka-data
+          image: "{{ .Values.global.initContainers.waitFor.repository }}:{{ .Values.global.initContainers.waitFor.tag }}"
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          command: ['sh', '-c']
+          args:
+            - |
+              echo "Preparing Kafka data directory structure..."
+
+              # Create the logs subdirectory where Kafka will store its data
+              mkdir -p /var/lib/kafka/data/logs
+
+              # Set appropriate permissions for Kafka user (UID 1000 in most Kafka images)
+              # Use || true to handle cases where we can't change ownership (some storage classes)
+              chown -R 1000:1000 /var/lib/kafka/data/logs 2>/dev/null || true
+
+              # Show directory structure for debugging
+              echo "Kafka data directory structure:"
+              ls -la /var/lib/kafka/data/
+              echo "Kafka logs directory prepared successfully"
+          volumeMounts:
+            - name: kafka-storage
+              mountPath: /var/lib/kafka/data
       containers:
         - name: kafka
           image: "{{ .Values.kafka.broker.image.repository }}:{{ .Values.kafka.broker.image.tag }}"
@@ -50,7 +91,7 @@ spec:
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: PLAINTEXT:PLAINTEXT
             - name: KAFKA_LOG_DIRS
-              value: /var/lib/kafka/data
+              value: /var/lib/kafka/data/logs
           volumeMounts:
             - name: kafka-storage
               mountPath: /var/lib/kafka/data
@@ -75,7 +116,8 @@ spec:
         name: kafka-storage
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: {{ .Values.global.storageClass }}
+        volumeMode: {{ include "ros-ocp.volumeMode" . }}
+        storageClassName: {{ include "ros-ocp.storageClass" . }}
         resources:
           requests:
             storage: {{ .Values.kafka.broker.storage.size }}
