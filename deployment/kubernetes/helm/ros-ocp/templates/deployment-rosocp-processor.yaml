@@ -86,7 +86,7 @@ spec:
             - name: CLOWDER_ENABLED
               value: "false"
             - name: DB_HOST
-              value: {{ include "ros-ocp.databaseHost" . }}
+              value: {{ include "ros-ocp.databaseHost" (list . "ros") }}
             - name: DB_PORT
               value: {{ .Values.database.ros.port | quote }}
             - name: DB_NAME

@@ -13,8 +13,6 @@ on:
       - 'deployment/kubernetes/scripts/**'
       - '.github/workflows/helm-chart-test*.yml'
   push:
-    branches:
-      - add_ocp_support
     paths:
       - 'deployment/kubernetes/helm/**'
       - 'deployment/kubernetes/scripts/**'
@@ -32,20 +30,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Log in to Public ECR
-        run: |
-          # Login to public.ecr.aws (no authentication required for public images, but login for higher rate limits)
-          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws 2>/dev/null || echo "Public ECR login failed, continuing without auth"
-        env:
-          AWS_DEFAULT_REGION: us-east-1
 
       - name: Install Podman
         run: |
@@ -131,7 +115,7 @@ jobs:
           chmod +x install-helm-chart.sh
 
           # Deploy Helm chart
-          echo "Deploying Helm chart..."
+          echo "Installing ROS-OCP Helm chart..."
           ./install-helm-chart.sh
 
           # Verify deployment

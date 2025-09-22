@@ -87,7 +87,7 @@ After deployment with NodePort services:
 The deployment system provides distinct workflows for different use cases:
 
 ### 1. CI/CD Validation (KIND-based)
-For automated testing and continuous integration using ephemeral KIND clusters:
+For automated testing and continuous integration using ephemeral KIND clusters. KIND can also be used for local development and testing for vanilla Kubernetes environments, providing a lightweight alternative to full Kubernetes clusters.
 
 ```bash
 # CI/CD Setup: Create ephemeral KIND cluster

@@ -11,7 +11,7 @@ data:
       "database": {
         "adminPassword": "{{ .Values.database.ros.password }}",
         "adminUsername": "{{ .Values.database.ros.user }}",
-        "hostname": "{{ include "ros-ocp.databaseHost" . }}",
+        "hostname": "{{ include "ros-ocp.databaseHost" (list . "ros") }}",
         "name": "{{ .Values.database.ros.name }}",
         "password": "{{ .Values.database.ros.password }}",
         "port": {{ .Values.database.ros.port }},
