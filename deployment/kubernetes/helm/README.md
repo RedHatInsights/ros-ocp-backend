@@ -73,6 +73,35 @@ Minimum recommended resources:
 - **CPU**: 4+ cores
 - **Storage**: 10GB+ free disk space
 
+### OpenShift Minimum Requirements
+For OpenShift deployments, the minimum requirements are:
+
+#### Single Node OpenShift (SNO) Cluster
+- **Cluster Type**: Single Node OpenShift (SNO) cluster
+- **OpenShift Data Foundation (ODF)**: Must be installed with block devices
+- **Storage**: Total of 30GB+ block devices for ODF (development environment)
+
+#### Additional Resource Requirements
+**Note**: These are additional resources required beyond SNO's minimum requirements:
+- **Additional Memory**: At least 6GB RAM (for ROS-OCP workloads)
+- **Additional CPU**: At least 2 cores (for ROS-OCP workloads)
+- **Total Node Requirements**: SNO minimum + ROS-OCP requirements
+
+#### Resource Breakdown
+Based on the current deployment analysis:
+- **CPU Requests**: ~2 cores total across all services
+- **Memory Requests**: ~4.5GB total across all services
+- **Storage Requirements**:
+  - PostgreSQL databases: 3 × 5GB = 15GB
+  - Kafka + Zookeeper: 5GB + 3GB = 8GB
+  - MinIO: 10GB
+  - **Total**: ~33GB (recommended 30GB+ for development)
+
+#### ODF Configuration
+- **Storage Class**: `ocs-storagecluster-ceph-rbd` (automatically detected)
+- **Volume Mode**: Filesystem (automatically selected for ODF)
+- **Access Mode**: ReadWriteOnce (RWO)
+
 ## Access Points
 
 After deployment with NodePort services:
