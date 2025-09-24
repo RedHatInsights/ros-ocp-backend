@@ -51,6 +51,7 @@ spec:
               done
               echo "Kafka is ready"
               echo "Kafka is ready"
+      serviceAccountName: insights-ros-ingress
       containers:
         - name: ingress
           image: "{{ .Values.ingress.image.repository }}:{{ .Values.ingress.image.tag }}"
@@ -141,6 +142,21 @@ spec:
               value: {{ .Values.ingress.metrics.path | quote }}
             - name: METRICS_PORT
               value: {{ .Values.ingress.metrics.port | quote }}
+
+            # HCCM Validation configuration
+            # Platform-specific validation settings: disabled for KIND/development, enabled for OpenShift/production
+            - name: HCCM_VALIDATION_ENABLED
+              value: {{ if eq (include "ros-ocp.isOpenShift" .) "true" }}"true"{{ else }}"false"{{ end }}
+            - name: HCCM_VALIDATION_SERVICE_URL
+              value: {{ if eq (include "ros-ocp.isOpenShift" .) "true" }}{{ .Values.ingress.validation.hccm.serviceUrl | quote }}{{ else }}""{{ end }}
+            - name: HCCM_VALIDATION_TIMEOUT
+              value: {{ .Values.ingress.validation.hccm.timeout | quote }}
+            - name: HCCM_VALIDATION_RETRIES
+              value: {{ .Values.ingress.validation.hccm.retries | quote }}
+            - name: PLATFORM_MODE
+              value: {{ if eq (include "ros-ocp.isOpenShift" .) "true" }}"production"{{ else }}"development"{{ end }}
+            - name: VALIDATION_BYPASS_MODE
+              value: {{ if eq (include "ros-ocp.isOpenShift" .) "true" }}"false"{{ else }}"true"{{ end }}
           livenessProbe:
             httpGet:
               path: /health

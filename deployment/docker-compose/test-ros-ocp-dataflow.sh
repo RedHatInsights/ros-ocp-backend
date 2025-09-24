@@ -523,7 +523,7 @@ main() {
     wait_for_service "PostgreSQL (Sources)" "podman exec db-sources_1 pg_isready -U postgres" 90
     wait_for_service "Kafka" "podman exec kafka_1 kafka-broker-api-versions --bootstrap-server localhost:29092" 90
     wait_for_service "MinIO" "curl -f http://localhost:9000/minio/health/live" 60
-    wait_for_service "Redis" "podman exec redis_1 redis-cli ping" 60
+    wait_for_service "Redis" "podman exec redis_1 valkey-cli ping" 60
 
     # Wait for application services
     wait_for_service "Ingress" "curl -f http://localhost:${ACTUAL_INGRESS_PORT}/health" 120

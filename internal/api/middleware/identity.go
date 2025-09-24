@@ -19,8 +19,8 @@ import (
 
 const (
 	// ID Provider config values
-	rhSSOIDProvider = "rhsso"
-	oAuthIDProvider = "oauth"
+	RHSSOIDProvider  = "rhsso"
+	OAuth2IDProvider = "oauth2"
 
 	// ID Provider header values
 	RHSSOIdentityHeader = "X-Rh-Identity"
@@ -95,24 +95,28 @@ func GetIdentityProviderHandlerFunction(idProvider string) (echo.MiddlewareFunc,
 	var err error
 
 	switch idProvider {
-	case oAuthIDProvider:
+	case OAuth2IDProvider:
 		hf, err = newOauthIdentityProvider()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to initialize OAuth identity provider: %v", err)
 		}
-	case rhSSOIDProvider:
+	case RHSSOIDProvider:
 		fallthrough
 	default:
 		hf = NewRHSSOIdentityProvider()
 	}
+
 	return hf.GetHandlerFunction(), nil
 }
 
 func newOauthIdentityProvider() (IdentityProvider, error) {
 	var kubeClient *kubernetes.Clientset
 	var err error
-	if os.Getenv("KUBECONFIG") != "" {
-		cfg, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
+
+	kubeconfig := os.Getenv("KUBECONFIG")
+
+	if kubeconfig != "" {
+		cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			return nil, err
 		}
@@ -126,6 +130,7 @@ func newOauthIdentityProvider() (IdentityProvider, error) {
 			return nil, err
 		}
 	}
+
 	return NewOauthIDProvider(kubeClient), nil
 }
 
@@ -146,10 +151,12 @@ func (r *RHSSOIdentityProvider) rhSSOIdentityHandlerFunction(next echo.HandlerFu
 		if err != nil {
 			return err
 		}
+
 		id, err := identity.NewXRHIDFromHeader(decodedIdentity)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("Unable to marshal %s into struct", RHSSOIdentityHeader))
 		}
+
 		c.Set("Identity", id)
 		return next(c)
 	}

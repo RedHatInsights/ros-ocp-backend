@@ -99,6 +99,8 @@ spec:
               value: {{ include "ros-ocp.databaseUrl" . }}
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: {{ include "ros-ocp.fullname" . }}-kafka:{{ .Values.kafka.broker.port }}
+            - name: ID_PROVIDER
+              value: {{ .Values.auth.provider | quote }}
           livenessProbe:
             httpGet:
               path: /status

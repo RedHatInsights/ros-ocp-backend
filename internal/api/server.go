@@ -52,7 +52,7 @@ func StartAPIServer() {
 	}
 	v1.Use(hf)
 	// Ensure that RBAC is only enabled for non-oauth provider
-	if cfg.RBACEnabled && cfg.IDProvider != ros_middleware.OAuthIdentityHeader {
+	if cfg.RBACEnabled && cfg.IDProvider != ros_middleware.OAuth2IDProvider {
 		v1.Use(ros_middleware.Rbac)
 	}
 	v1.GET("/recommendations/openshift", GetRecommendationSetList)
