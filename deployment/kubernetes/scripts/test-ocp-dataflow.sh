@@ -189,7 +189,7 @@ test_port_forward_connectivity() {
 
         case "$service" in
             "ingress")
-                test_path="/api/ingress/v1/version"
+                test_path="/ready"
                 ;;
             "main")
                 test_path="/status"

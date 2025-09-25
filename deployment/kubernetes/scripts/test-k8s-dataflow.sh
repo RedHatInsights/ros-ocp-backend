@@ -394,11 +394,17 @@ EOF
         fi
     fi
 
-    # If still no token, provide helpful guidance
+    # If still no token, try service account token creation as fallback
     if [ "$auth_setup_ok" = false ]; then
-        echo_warning "No authentication token available"
-        echo_info "Make sure deploy-kind.sh was run to set up authentication"
-        echo_info "Expected token secret: insights-ros-ingress-token in namespace $NAMESPACE"
+        echo_info "Trying to create service account token for upload authentication..."
+        auth_token=$(kubectl create token insights-ros-ingress -n "$NAMESPACE" --duration=1h 2>/dev/null || echo "")
+        if [ -n "$auth_token" ]; then
+            auth_setup_ok=true
+            echo_success "✓ Created temporary service account token for upload"
+        else
+            echo_warning "Could not obtain authentication token for insights-ros-ingress upload"
+            echo_info "Will proceed with OAuth token from ros-ocp-api service account"
+        fi
     fi
 
     # Upload the tar.gz file using curl with proper headers and content-type
@@ -569,24 +575,83 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
         return 1
     fi
 
-    # Publish message to Kafka
-# Construct Kafka message with file information
-    local kafka_message="{"file_uuid":"test-file","csv_filename":"test.csv","cluster_id":"test-cluster","timestamp":"2025-09-23T13:41:49.931941433Z"}"
-    echo_info "Publishing Kafka message:"
-    echo_info "Message: $kafka_message"
+    # Ensure Kafka topic exists before publishing
+    echo_info "Ensuring Kafka topic 'hccm.ros.events' exists..."
+    kubectl exec -n "$NAMESPACE" "$kafka_pod" -- \
+        kafka-topics --create --topic hccm.ros.events --bootstrap-server localhost:29092 \
+        --partitions 1 --replication-factor 1 --if-not-exists 2>/dev/null || echo "Topic creation attempted"
+
+    # Create proper Kafka message matching insights-ros-ingress format
+    echo_info "Creating properly formatted Kafka message for processor validation..."
+
+    # Generate request ID for tracing
+    local request_id=$(uuidgen | tr '[:upper:]' '[:lower:]')
+
+    # Get cluster information (use file_uuid as cluster_id for testing)
+    local cluster_id="$file_uuid"
+    local org_id="1"
+    local account="1"
+
+    # Create minimal base64 identity (legacy field - ignored in OAuth2 but required for validation)
+    local identity="{\"account_number\":\"$account\",\"org_id\":\"$org_id\",\"user\":{\"is_org_admin\":true}}"
+    local b64_identity=$(echo -n "$identity" | base64 -w 0)
+
+    # Create presigned URL matching insights-ros-ingress format
+    local date_partition="$(date +%Y-%m-%d)"
+    local object_key="ros/org_${org_id}/source=${cluster_id}/date=${date_partition}/${csv_filename}"
+    local minio_url="http://ros-ocp-minio:9000/ros-data/${object_key}"
+    local presigned_url="${minio_url}?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioaccesskey%2F$(date +%Y%m%d)%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=$(date +%Y%m%dT%H%M%SZ)&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=test-signature"
+
+    # Construct complete Kafka message as single line (kafka-console-producer sends line-by-line)
+    local kafka_message="{\"request_id\":\"$request_id\",\"b64_identity\":\"$b64_identity\",\"metadata\":{\"account\":\"$account\",\"org_id\":\"$org_id\",\"source_id\":\"$cluster_id\",\"provider_uuid\":\"$cluster_id\",\"cluster_uuid\":\"$cluster_id\",\"cluster_alias\":\"$cluster_id\",\"operator_version\":\"test-1.0.0\"},\"files\":[\"$presigned_url\"],\"object_keys\":[\"$object_key\"]}"
+
+    echo_info "Publishing properly formatted Kafka message:"
+    echo_info "Request ID: $request_id"
+    echo_info "Cluster ID: $cluster_id"
+    echo_info "Files count: 1"
+    echo_info "Object key: $object_key"
+
     echo "$kafka_message" | kubectl exec -i -n "$NAMESPACE" "$kafka_pod" -- \
         kafka-console-producer --broker-list localhost:29092 --topic hccm.ros.events
 
     if [ $? -eq 0 ]; then
         echo_success "Kafka message published successfully"
+        echo_info "Request ID: $request_id"
         echo_info "File UUID: $file_uuid"
 
-        # Check processor logs to see if it received the message
-        echo_info "Checking processor logs for Kafka message processing:"
-        kubectl logs -n "$NAMESPACE" -l app.kubernetes.io/component=processor --tail=10 | grep -E "(kafka|message|processing|hccm)" || echo "No relevant processor logs found"
+        # Wait for processor to handle the message
+        echo_info "Waiting for processor to handle the properly formatted message..."
+        sleep 15
+
+        # Check processor logs for successful processing (not validation errors)
+        echo_info "Checking processor logs for message processing:"
+        local recent_logs=$(kubectl logs -n "$NAMESPACE" -l app.kubernetes.io/component=processor --tail=20 --since=60s)
+
+        if echo "$recent_logs" | grep -q "request_id.*$request_id"; then
+            echo_success "✓ Message with request ID $request_id found in processor logs"
+
+            # Check for validation errors vs successful processing
+            if echo "$recent_logs" | grep -q "Invalid kafka message.*$request_id"; then
+                echo_error "✗ Message validation still failed - check processor logs for details"
+                echo "$recent_logs" | grep -A 2 -B 2 "Invalid kafka message"
+            elif echo "$recent_logs" | grep -q "Error.*$request_id"; then
+                echo_warning "⚠ Message processed but encountered errors during processing"
+                echo "$recent_logs" | grep -A 2 -B 2 "Error.*$request_id"
+            else
+                echo_success "✓ Message appears to have been processed successfully"
+                echo_info "Recent processor activity:"
+                echo "$recent_logs" | grep "$request_id" | tail -3
+            fi
+        else
+            echo_warning "Message may still be processing or not yet visible in logs"
+            echo_info "Recent processor logs (last 5 lines):"
+            echo "$recent_logs" | tail -5
+        fi
+
         echo_info "CSV file: $csv_filename"
         local hostname=$(get_ingress_hostname)
-        echo_info "Accessible at: http://$hostname/minio/browser/ros-data/$csv_filename"
+        echo_info "MinIO object key: $object_key"
+        echo_info "Accessible at: http://$hostname/minio/browser/ros-data/"
     else
         echo_error "Failed to publish Kafka message"
         return 1
@@ -665,7 +730,7 @@ verify_recommendations() {
 
     # Verify that the API is configured for OAuth authentication
     echo_info "Verifying OAuth authentication configuration..."
-    local id_provider=$(kubectl get deployment -l app.kubernetes.io/name=rosocp-api  -n "$NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="ID_PROVIDER")].value}' 2>/dev/null || echo "")
+    local id_provider=$(kubectl get deployment -l app.kubernetes.io/name=rosocp-api  -n "$NAMESPACE" -o jsonpath='{.items[0].spec.template.spec.containers[0].env[?(@.name=="ID_PROVIDER")].value}' 2>/dev/null || echo "")
 
     # Remove quotes if present (Helm templates may add quotes)
     local clean_id_provider=$(echo "$id_provider" | sed 's/^"//;s/"$//')
@@ -674,8 +739,12 @@ verify_recommendations() {
         echo_warning "ID_PROVIDER is not set to 'oauth2' (current: '$id_provider' -> cleaned: '$clean_id_provider')"
         echo_info "Setting ID_PROVIDER=oauth2 for rosocp-api deployment..."
         kubectl set env deployment -l app.kubernetes.io/name=rosocp-api ID_PROVIDER=oauth2 -n "$NAMESPACE"
-        echo_info "Waiting for deployment to restart..."
-        kubectl rollout status deployment -l app.kubernetes.io/name=rosocp-api -n "$NAMESPACE" --timeout=60s
+        echo_info "Waiting for deployment to restart (this may take up to 60 seconds)..."
+        if kubectl rollout status deployment -l app.kubernetes.io/name=rosocp-api -n "$NAMESPACE" --timeout=60s; then
+            echo_success "✓ Deployment updated successfully with oauth2 authentication"
+        else
+            echo_warning "Deployment update may still be in progress - continuing with test"
+        fi
     else
         echo_success "ID_PROVIDER is correctly set to 'oauth2' (raw: '$id_provider')"
     fi
@@ -1046,7 +1115,7 @@ run_health_checks() {
     echo_info "Running health checks for platform: $platform"
 
     # Get platform-appropriate URLs (only for essential routes)
-    local ingress_url=$(get_service_url "ingress" "/health")
+    local ingress_url=$(get_service_url "ingress" "/ready")
     local api_url=$(get_service_url "ros-ocp-rosocp-api" "/status")
     local kruize_url=$(get_service_url "kruize" "/api/kruize/listPerformanceProfiles")
 
