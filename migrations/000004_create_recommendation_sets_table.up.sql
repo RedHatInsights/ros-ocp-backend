@@ -14,6 +14,3 @@ ON DELETE CASCADE;
 
 ALTER TABLE recommendation_sets
 ADD CONSTRAINT UQ_Recommendation UNIQUE (workload_id, container_name);
-
--- GET Recommendations optimization
-CREATE INDEX IF NOT EXISTS idx_recommendation_set_workload_id ON recommendation_sets (workload_id);
