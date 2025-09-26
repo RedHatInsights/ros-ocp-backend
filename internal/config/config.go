@@ -185,7 +185,7 @@ func initConfig() {
 	viper.SetDefault("RECORD_LIMIT_CSV", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
 	// ID Provider Config
-	viper.SetDefault("IDProvider", "rhsso")
+	viper.SetDefault("ID_PROVIDER", "rhsso")
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}

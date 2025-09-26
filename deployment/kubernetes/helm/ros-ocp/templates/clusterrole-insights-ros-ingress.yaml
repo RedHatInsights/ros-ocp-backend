@@ -1,0 +1,13 @@
+{{/* Create ClusterRole for insights-ros-ingress service account */}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "ros-ocp.fullname" . }}-insights-ros-ingress
+  labels:
+    {{- include "ros-ocp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
+rules:
+  # Token validation permissions - only what's needed for authentication
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]

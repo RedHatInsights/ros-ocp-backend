@@ -356,7 +356,7 @@ show_status() {
             echo_info "Access Points (via OpenShift Routes):"
             echo_info "  - Main API: http://$main_route/status"
             if [ -n "$ingress_route" ]; then
-                echo_info "  - Ingress API: http://$ingress_route/api/ingress/v1/version"
+                echo_info "  - Ingress API: http://$ingress_route/ready"
             fi
             if [ -n "$kruize_route" ]; then
                 echo_info "  - Kruize API: http://$kruize_route/api/kruize/listPerformanceProfiles"
@@ -373,7 +373,7 @@ show_status() {
         local http_port="32061"
         local hostname="localhost:$http_port"
         echo_info "Access Points (via Ingress - for KIND):"
-        echo_info "  - Ingress API: http://$hostname/api/ingress/v1/version"
+        echo_info "  - Ingress API: http://$hostname/ready"
         echo_info "  - ROS-OCP API: http://$hostname/status"
         echo_info "  - Kruize API: http://$hostname/api/kruize/listPerformanceProfiles"
         echo_info "  - MinIO Console: http://$hostname/minio (minioaccesskey/miniosecretkey)"
@@ -442,7 +442,7 @@ check_ingress_readiness() {
     echo_info "Testing connectivity to ingress controller on port $http_port..."
     local connectivity_ok=false
     for i in {1..10}; do
-        if curl -f -s "http://localhost:$http_port/api/ingress/v1/version" >/dev/null 2>&1; then
+        if curl -f -s "http://localhost:$http_port/ready" >/dev/null 2>&1; then
             echo_success "✓ Ingress controller is accessible via HTTP"
             connectivity_ok=true
             break
@@ -498,7 +498,7 @@ check_ingress_readiness() {
 
         # Test with verbose curl and check if requests reach the controller
         echo_info "Testing with verbose curl to see detailed error:"
-        curl -v "http://localhost:$http_port/api/ingress/v1/version" 2>&1 | head -20 || true
+        curl -v "http://localhost:$http_port/ready" 2>&1 | head -20 || true
 
         # Check if the request reached the ingress controller by examining logs
         echo_info "Checking ingress controller logs for incoming requests..."
@@ -571,7 +571,7 @@ run_health_checks() {
         # Test Ingress internally
         local ingress_pod=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/name=ingress -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
         if [ -n "$ingress_pod" ]; then
-            if kubectl exec -n "$NAMESPACE" "$ingress_pod" -- curl -f -s http://localhost:3000/api/ingress/v1/version >/dev/null 2>&1; then
+            if kubectl exec -n "$NAMESPACE" "$ingress_pod" -- curl -f -s http://localhost:8080/ready >/dev/null 2>&1; then
                 echo_success "✓ Ingress API service is healthy (internal)"
             else
                 echo_error "✗ Ingress API service is not responding (internal)"
@@ -609,8 +609,8 @@ run_health_checks() {
             external_accessible=$((external_accessible + 1))
         fi
 
-        if [ -n "$ingress_route" ] && curl -f -s "http://$ingress_route/api/ingress/v1/version" >/dev/null 2>&1; then
-            echo_success "  → Ingress API externally accessible: http://$ingress_route/api/ingress/v1/version"
+        if [ -n "$ingress_route" ] && curl -f -s "http://$ingress_route/ready" >/dev/null 2>&1; then
+            echo_success "  → Ingress API externally accessible: http://$ingress_route/ready"
             external_accessible=$((external_accessible + 1))
         fi
 
@@ -635,11 +635,11 @@ run_health_checks() {
         echo_info "Testing connectivity to http://$hostname..."
 
         # Check if ingress is accessible
-        echo_info "Testing Ingress API: http://$hostname/api/ingress/v1/version"
-        if curl -f -s "http://$hostname/api/ingress/v1/version" >/dev/null; then
-            echo_success "✓ Ingress API is accessible via http://$hostname/api/ingress/v1/version"
+        echo_info "Testing Ingress API: http://$hostname/ready"
+        if curl -f -s "http://$hostname/ready" >/dev/null; then
+            echo_success "✓ Ingress API is accessible via http://$hostname/ready"
         else
-            echo_error "✗ Ingress API is not accessible via http://$hostname/api/ingress/v1/version"
+            echo_error "✗ Ingress API is not accessible via http://$hostname/ready"
             echo_info "Debug: Testing root endpoint first..."
             curl -v "http://$hostname/" || echo "Root endpoint also failed"
             failed_checks=$((failed_checks + 1))

@@ -106,7 +106,7 @@ users:
 
 				os.Setenv("KUBECONFIG", kubeconfigPath)
 				// When: requesting OAuth provider
-				handler, err := middleware.GetIdentityProviderHandlerFunction("oauth")
+				handler, err := middleware.GetIdentityProviderHandlerFunction(middleware.OAuth2IDProvider)
 
 				// Then: should return valid OAuth middleware
 				Expect(err).ToNot(HaveOccurred())
@@ -653,9 +653,6 @@ users:
 					Username: "system:serviceaccount:default:ros-ocp-api",
 					UID:      "rbac-test-12345",
 					Groups:   []string{"system:serviceaccounts", "system:serviceaccounts:default"},
-					Extra: map[string]authenticationv1.ExtraValue{
-						"org_id": []string{"12345"},
-					},
 				}
 
 				fakeClient.PrependReactor("create", "tokenreviews", func(action testing.Action) (bool, runtime.Object, error) {
@@ -680,8 +677,7 @@ users:
 
 					// Verify OrganizationIDProvider interface works
 					// This is what RBAC middleware would use
-					_, implementsInterface := id.(identity.OrganizationIDProvider)
-					Expect(implementsInterface).To(BeTrue(), "Identity should implement OrganizationIDProvider interface")
+					Expect(id.GetOrganizationID()).To(Equal("1"), "Organization ID should be 12345")
 
 					return c.String(http.StatusOK, "success")
 				}

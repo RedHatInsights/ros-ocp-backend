@@ -45,6 +45,14 @@ spec:
               name: {{ include "ros-ocp.fullname" $ }}-ingress
               port:
                 number: {{ $.Values.ingress.port }}
+        # Ready endpoint for ingress service health checks
+        - path: /ready
+          pathType: Exact
+          backend:
+            service:
+              name: {{ include "ros-ocp.fullname" $ }}-ingress
+              port:
+                number: {{ $.Values.ingress.port }}
         # ROS-OCP API (main API endpoints) - with Host header fix via server-snippet
         - path: /api/ros
           pathType: Prefix

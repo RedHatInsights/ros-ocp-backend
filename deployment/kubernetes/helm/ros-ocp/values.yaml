@@ -20,6 +20,10 @@ serviceAccount:
   create: true
   name: ros-ocp-backend
 
+# Auth Configuration
+auth:
+  provider: "oauth2"
+
 # Database configurations
 database:
   ros: # Database configuration for ros-ocp services
@@ -115,14 +119,60 @@ minio:
 # Ingress Service
 ingress:
   image:
-    repository: quay.io/insights-onprem/insights-ingress
+    repository: quay.io/insights-onprem/insights-ros-ingress
     tag: "latest"
-  port: 3000
-  validUploadTypes: hccm,rosocp
-  stageBucket: insights-upload-perma
-  openShiftBuildCommit: somestring
-  maxSize: 104857600
-  minioDev: true
+  port: 8080
+  server:
+    port: 8080
+    readTimeout: 30
+    writeTimeout: 30
+    idleTimeout: 120
+    debug: false
+  upload:
+    maxUploadSize: 104857600
+    maxMemory: 33554432
+    tempDir: "/tmp"
+    allowedTypes:
+      - "application/vnd.redhat.hccm.upload"
+    requireAuth: true
+  storage:
+    bucket: "ros-data"
+    useSSL: false
+    urlExpiration: 172800
+    pathPrefix: "ros"
+  kafka:
+    brokers:
+      - "kafka:29092"
+    topic: "hccm.ros.events"
+    securityProtocol: "PLAINTEXT"
+    clientId: "insights-ros-ingress"
+    batchSize: 16384
+    retries: 3
+  auth:
+    enabled: true
+    allowedOrgs: []
+    jwtSecret: "dev-jwt-secret-key-for-ros-ingress"
+  logging:
+    level: "info"
+    format: "json"
+    output: "stdout"
+  metrics:
+    enabled: true
+    path: "/metrics"
+    port: 8080
+
+  # Validation configuration
+  validation:
+    hccm:
+      # Enable hccm validation service (disabled for KIND/development, enabled for OpenShift/production)
+      # This will be overridden by platform detection in deployment-ingress.yaml
+      enabled: false
+      # HCCM validation service URL (empty for development mode)
+      serviceUrl: ""
+      # Validation timeout in seconds
+      timeout: "30"
+      # Number of retries for validation calls
+      retries: "3"
 
 # Sources API
 sourcesApi:
@@ -194,7 +244,8 @@ kruize:
 rosocp:
   processor:
     image:
-      repository: quay.io/insights-onprem/ros-ocp-backend
+#TODO: Change to quay.io/insights-onprem/ros-ocp-backend when access is granted
+      repository: quay.io/jordigilh/ros-ocp-backend
       tag: "latest"
     metricsPort: 9000
     kafkaConsumerGroupId: rosocp-processor
@@ -206,7 +257,8 @@ rosocp:
 
   recommendationPoller:
     image:
-      repository: quay.io/insights-onprem/ros-ocp-backend
+#TODO: Change to quay.io/insights-onprem/ros-ocp-backend when access is granted
+      repository: quay.io/jordigilh/ros-ocp-backend
       tag: "latest"
     metricsPort: 9000
     kafkaConsumerGroupId: rosocp-recommendation-poller
@@ -218,7 +270,8 @@ rosocp:
 
   api:
     image:
-      repository: quay.io/insights-onprem/ros-ocp-backend
+#TODO: Change to quay.io/insights-onprem/ros-ocp-backend when access is granted
+      repository: quay.io/jordigilh/ros-ocp-backend
       tag: "latest"
     port: 8000
     metricsPort: 9000
@@ -231,7 +284,8 @@ rosocp:
 
   housekeeper:
     image:
-      repository: quay.io/insights-onprem/ros-ocp-backend
+#TODO: Change to quay.io/insights-onprem/ros-ocp-backend when access is granted
+      repository: quay.io/jordigilh/ros-ocp-backend
       tag: "latest"
     serviceName: rosocp-housekeeper-sources
     logLevel: INFO
@@ -239,7 +293,8 @@ rosocp:
   partitionCleaner:
     schedule: "0 0 */15 * *"  # Runs at 12:00 AM, every 15 days
     image:
-      repository: quay.io/insights-onprem/ros-ocp-backend
+#TODO: Change to quay.io/insights-onprem/ros-ocp-backend when access is granted
+      repository: quay.io/jordigilh/ros-ocp-backend
       tag: "latest"
     serviceName: rosocp-housekeeper-partition
     logLevel: INFO
