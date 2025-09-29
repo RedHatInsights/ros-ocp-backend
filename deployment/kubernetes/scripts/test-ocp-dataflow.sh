@@ -502,7 +502,7 @@ upload_test_data() {
     local upload_url=$(get_service_url "ingress" "/api/ingress/v1/upload")
     echo_info "Uploading to: $upload_url"
 
-    local response=$(curl -s -w "%{http_code}" \
+    local response=$(curl -s -w "%{http_code}" --connect-timeout 10 --max-time 60 \
         -F "file=@${test_dir}/${tar_filename};type=application/vnd.redhat.hccm.filename+tgz" \
         -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K" \
         -H "x-rh-request-id: test-request-$(date +%s)" \
@@ -597,7 +597,7 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
         echo_info "Verifying file accessibility from processor pod..."
 
         local file_url="http://${HELM_RELEASE_NAME}-minio:9000/ros-data/$csv_filename"
-        local access_test=$(oc exec -n "$NAMESPACE" "$processor_pod" -- curl -s -I "$file_url" | head -1)
+        local access_test=$(oc exec -n "$NAMESPACE" "$processor_pod" -- curl -s -I --connect-timeout 5 --max-time 15 "$file_url" | head -1)
 
         if [[ "$access_test" =~ "200 OK" ]]; then
             echo_success "File is accessible via HTTP"
@@ -683,7 +683,7 @@ verify_recommendations() {
     local kruize_url=$(get_service_url "kruize" "/listPerformanceProfiles")
     echo_info "Checking Kruize API accessibility at: $kruize_url"
 
-    if curl -f -s "$kruize_url" >/dev/null; then
+    if curl -f -s --connect-timeout 5 --max-time 15 "$kruize_url" >/dev/null; then
         echo_success "✓ Kruize API is accessible"
     else
         echo_error "Kruize API is not accessible"
@@ -811,7 +811,7 @@ run_health_checks() {
         local url=$(get_service_url "$service" "$path")
 
         if [ $? -eq 0 ]; then
-            if curl -f -s "$url" >/dev/null; then
+            if curl -f -s --connect-timeout 5 --max-time 15 "$url" >/dev/null; then
                 echo_success "$service is accessible at: $url"
             else
                 echo_error "$service is not accessible at: $url"

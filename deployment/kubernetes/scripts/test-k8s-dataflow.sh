@@ -422,7 +422,7 @@ EOF
     fi
 
     # Build curl command with OAuth Bearer token
-    local curl_cmd="curl -s -w \"%{http_code}\" \
+    local curl_cmd="curl -s -w \"%{http_code}\" --connect-timeout 10 --max-time 60 \
         -F \"file=@${test_dir}/${tar_filename};type=application/vnd.redhat.hccm.upload\" \
         -H \"Authorization: Bearer $upload_bearer_token\" \
         -H \"x-rh-request-id: test-request-$(date +%s)\" \
@@ -764,7 +764,7 @@ verify_recommendations() {
     # Test API status endpoint first
     echo_info "Testing ROS-OCP API status..."
     echo_info "Status URL: $status_url"
-    local status_response=$(curl -s -w "%{http_code}" -o /tmp/status_response.json \
+    local status_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 15 -o /tmp/status_response.json \
         -H "Host: localhost" \
         "$status_url" 2>/dev/null || echo "000")
 
@@ -783,7 +783,7 @@ verify_recommendations() {
 
     # Test recommendations list endpoint
     echo_info "Testing recommendations list endpoint..."
-    local list_response=$(curl -s -w "%{http_code}" -o /tmp/recommendations_list.json \
+    local list_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 30 -o /tmp/recommendations_list.json \
         -H "Authorization: Bearer $bearer_token" \
         -H "Content-Type: application/json" \
         -H "Host: localhost" \
@@ -846,7 +846,7 @@ except:
 
                 if [ -n "$rec_id" ]; then
                     echo_info "Testing individual recommendation endpoint for ID: $rec_id"
-                    local detail_response=$(curl -s -w "%{http_code}" -o /tmp/recommendation_detail.json \
+                    local detail_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 30 -o /tmp/recommendation_detail.json \
                         -H "Authorization: Bearer $bearer_token" \
                         -H "Content-Type: application/json" \
                         -H "Host: localhost" \
@@ -909,7 +909,7 @@ except Exception as e:
 
     # Test CSV export format
     echo_info "Testing CSV export functionality..."
-    local csv_response=$(curl -s -w "%{http_code}" -o /tmp/recommendations.csv \
+    local csv_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 30 -o /tmp/recommendations.csv \
         -H "Authorization: Bearer $bearer_token" \
         -H "Accept: text/csv" \
         -H "Host: localhost" \
@@ -1126,7 +1126,7 @@ run_health_checks() {
     local sa_token=$(kubectl create token insights-ros-ingress -n "$NAMESPACE" --duration=1h 2>/dev/null)
     if [ -z "$sa_token" ]; then
         echo_warning "Could not get service account token, testing without authentication"
-        local response_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: localhost" -X POST "$upload_url" -H "Content-Type: application/vnd.redhat.hccm.upload" --data-binary "test" 2>/dev/null)
+        local response_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 -H "Host: localhost" -X POST "$upload_url" -H "Content-Type: application/vnd.redhat.hccm.upload" --data-binary "test" 2>/dev/null)
         if [ "$response_code" = "405" ] || [ "$response_code" = "401" ]; then
             echo_success "Ingress upload endpoint is accessible at: $upload_url (HTTP $response_code)"
         elif [ "$response_code" = "400" ]; then
@@ -1137,7 +1137,7 @@ run_health_checks() {
         fi
     else
         # Test with authentication
-        local response_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: localhost" -H "Authorization: Bearer $sa_token" -X POST "$upload_url" -H "Content-Type: application/vnd.redhat.hccm.upload" --data-binary "test" 2>/dev/null)
+        local response_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 -H "Host: localhost" -H "Authorization: Bearer $sa_token" -X POST "$upload_url" -H "Content-Type: application/vnd.redhat.hccm.upload" --data-binary "test" 2>/dev/null)
         if [ "$response_code" = "200" ] || [ "$response_code" = "202" ]; then
             echo_success "Ingress upload endpoint is accessible with authentication at: $upload_url (HTTP $response_code)"
         elif [ "$response_code" = "400" ] || [ "$response_code" = "500" ]; then
@@ -1150,7 +1150,7 @@ run_health_checks() {
 
     # Check ROS-OCP API with service account token
     if [ -n "$sa_token" ]; then
-        local api_response_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: localhost" -H "Authorization: Bearer $sa_token" "$api_url" 2>/dev/null)
+        local api_response_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 -H "Host: localhost" -H "Authorization: Bearer $sa_token" "$api_url" 2>/dev/null)
         if [ "$api_response_code" = "200" ]; then
             echo_success "ROS-OCP API is accessible with authentication at: $api_url (HTTP $api_response_code)"
         else
@@ -1159,7 +1159,7 @@ run_health_checks() {
         fi
     else
         # Fallback to unauthenticated check
-        if curl -f -s -H "Host: localhost" "$api_url" >/dev/null; then
+        if curl -f -s --connect-timeout 5 --max-time 15 -H "Host: localhost" "$api_url" >/dev/null; then
             echo_success "ROS-OCP API is accessible at: $api_url"
         else
             echo_error "ROS-OCP API is not accessible at: $api_url"
@@ -1168,7 +1168,7 @@ run_health_checks() {
     fi
 
     # Check Kruize API
-    if curl -f -s -H "Host: localhost" "$kruize_url" >/dev/null; then
+    if curl -f -s --connect-timeout 5 --max-time 15 -H "Host: localhost" "$kruize_url" >/dev/null; then
         echo_success "Kruize API is accessible at: $kruize_url"
     else
         echo_error "Kruize API is not accessible at: $kruize_url"
