@@ -1,6 +1,25 @@
 # ROS-OCP Kubernetes Quick Start Guide
 
-This guide walks you through deploying and testing the ROS-OCP backend services on a KIND cluster using the Helm chart.
+This guide walks you through deploying and testing the ROS-OCP backend services on a KIND cluster using the Helm chart from the [ros-helm-chart repository](https://github.com/insights-onprem/ros-helm-chart).
+
+## Helm Chart Location
+
+The ROS-OCP Helm chart is maintained in a separate repository: **[insights-onprem/ros-helm-chart](https://github.com/insights-onprem/ros-helm-chart)**
+
+### Deployment Methods
+
+The deployment scripts in this repository automatically handle downloading and installing the latest Helm chart release:
+
+1. **Automated Installation** (Recommended): The `deploy-kind.sh` and `install-helm-chart.sh` scripts automatically download the latest chart release from GitHub
+2. **Manual Installation**: You can manually download and install specific chart versions
+3. **Development Mode**: Use `USE_LOCAL_CHART=true` to install from a local chart directory
+
+### Chart Features
+
+- **46 Kubernetes templates** for complete ROS-OCP stack deployment
+- **Platform detection** (Kubernetes vs OpenShift) with appropriate resource selection
+- **Automated CI/CD** with lint validation, version checking, and deployment testing
+- **Comprehensive documentation** and troubleshooting guides
 
 ## Prerequisites
 
@@ -43,12 +62,14 @@ podman --version
 
 ## Quick Deployment
 
-### 1. Navigate to Scripts Directory
+### Option 1: Automated Deployment (Recommended)
+
+#### 1. Navigate to Scripts Directory
 ```bash
-cd /path/to/ros-ocp-backend/scripts/
+cd /path/to/ros-ocp-backend/deployment/kubernetes/scripts/
 ```
 
-### 2. Deploy to KIND Cluster
+#### 2. Deploy to KIND Cluster
 ```bash
 # This will create a KIND cluster and deploy all services
 ./deploy-kind.sh
@@ -58,7 +79,7 @@ The script will:
 - ✅ Check prerequisites
 - ✅ Create KIND cluster with proper networking
 - ✅ Install storage provisioner
-- ✅ Deploy Helm chart with all services
+- ✅ Deploy Helm chart from ros-helm-chart repository with all services
 - ✅ Create NodePort services for external access
 - ✅ Run health checks
 
@@ -72,13 +93,48 @@ The script will:
 [SUCCESS] All health checks passed!
 ```
 
-### 3. Verify Deployment
+#### 3. Verify Deployment
 ```bash
 # Check deployment status
 ./deploy-kind.sh status
 
 # Run health checks
 ./deploy-kind.sh health
+```
+
+### Option 2: Manual Helm Chart Installation
+
+If you prefer to manually install the Helm chart or need a specific version:
+
+#### 1. Create KIND Cluster
+```bash
+# Create KIND cluster with ingress support
+cd /path/to/ros-ocp-backend/deployment/kubernetes/scripts/
+./deploy-kind.sh --cluster-only
+```
+
+#### 2. Install Latest Chart Release
+```bash
+# Download and install latest chart release
+LATEST_URL=$(curl -s https://api.github.com/repos/insights-onprem/ros-helm-chart/releases/latest | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url')
+curl -L -o ros-ocp-latest.tgz "$LATEST_URL"
+helm install ros-ocp ros-ocp-latest.tgz -n ros-ocp --create-namespace
+```
+
+#### 3. Install Specific Chart Version
+```bash
+# Install a specific version (e.g., v0.1.0)
+VERSION="v0.1.0"
+curl -L -o ros-ocp-${VERSION}.tgz "https://github.com/insights-onprem/ros-helm-chart/releases/download/${VERSION}/ros-ocp-${VERSION}.tgz"
+helm install ros-ocp ros-ocp-${VERSION}.tgz -n ros-ocp --create-namespace
+```
+
+#### 4. Development Mode (Local Chart)
+```bash
+# Clone the helm chart repository for development
+git clone https://github.com/insights-onprem/ros-helm-chart.git
+cd ros-helm-chart
+helm install ros-ocp ./ros-ocp -n ros-ocp --create-namespace
 ```
 
 ## Access Points
@@ -234,8 +290,10 @@ resources:
       cpu: "200m"
 EOF
 
-# Upgrade with reduced resources
-helm upgrade ros-ocp ./ros-ocp-helm -n ros-ocp -f low-resource-values.yaml
+# Upgrade with reduced resources (using latest release from ros-helm-chart repository)
+LATEST_URL=$(curl -s https://api.github.com/repos/insights-onprem/ros-helm-chart/releases/latest | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url')
+curl -L -o ros-ocp-latest.tgz "$LATEST_URL"
+helm upgrade ros-ocp ros-ocp-latest.tgz -n ros-ocp -f low-resource-values.yaml
 ```
 
 **Kruize listExperiments API error:**
@@ -257,8 +315,10 @@ This is a common issue affecting multiple services (processor, recommendation-po
 kubectl get pods -n ros-ocp -l app.kubernetes.io/name=kafka
 kubectl logs -n ros-ocp -l app.kubernetes.io/name=kafka --tail=20
 
-# Step 2: Apply the Kafka networking fix and restart
-helm upgrade ros-ocp ./ros-ocp-helm -n ros-ocp
+# Step 2: Apply the Kafka networking fix and restart (using latest release)
+LATEST_URL=$(curl -s https://api.github.com/repos/insights-onprem/ros-helm-chart/releases/latest | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url')
+curl -L -o ros-ocp-latest.tgz "$LATEST_URL"
+helm upgrade ros-ocp ros-ocp-latest.tgz -n ros-ocp
 kubectl rollout restart statefulset/ros-ocp-kafka -n ros-ocp
 
 # Step 3: Wait for Kafka to be ready
@@ -360,8 +420,10 @@ resources:
       cpu: "200m"
 EOF
 
-# Deploy with custom values
-helm upgrade --install ros-ocp ./ros-ocp-helm \
+# Deploy with custom values (using latest release from ros-helm-chart repository)
+LATEST_URL=$(curl -s https://api.github.com/repos/insights-onprem/ros-helm-chart/releases/latest | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url')
+curl -L -o ros-ocp-latest.tgz "$LATEST_URL"
+helm upgrade --install ros-ocp ros-ocp-latest.tgz \
   --namespace ros-ocp \
   --create-namespace \
   -f my-values.yaml
