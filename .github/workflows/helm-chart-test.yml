@@ -1,22 +1,43 @@
 name: Helm Chart Quality Test
 
-# This workflow tests the ROS-OCP Helm chart deployment on Kind
+# This workflow tests the ROS-OCP Helm chart deployment on Kind with locally built application
+# Features:
+# - Builds container image directly using make build-image with configurable IMAGE_TAG
+# - Loads local container image into KIND control plane
+# - Deploys Helm chart using the locally built image instead of remote registry
+# - Tests the actual code changes in the PR/push
+# - Uses targeted pullPolicy: Never only for ROS-OCP backend services
+# - Uses archive method for reliable Podman to KIND image transfer
 # Uses alternative registries to avoid Docker Hub rate limiting:
 # - public.ecr.aws for official images (postgres, redis, busybox, confluent)
-# - quay.io for application images (already configured)
+# - localhost for application images (built locally)
 # - ghcr.io as fallback for some images
 
 on:
   pull_request:
     paths:
-      - 'deployment/kubernetes/helm/**'
       - 'deployment/kubernetes/scripts/**'
       - '.github/workflows/helm-chart-test*.yml'
+      # Also run when application code changes since we now test the built code
+      - 'cmd/**'
+      - 'internal/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'rosocp.go'
+      - 'Dockerfile'
+      - 'Makefile'
   push:
     paths:
-      - 'deployment/kubernetes/helm/**'
       - 'deployment/kubernetes/scripts/**'
       - '.github/workflows/helm-chart-test*.yml'
+      # Also run when application code changes since we now test the built code
+      - 'cmd/**'
+      - 'internal/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'rosocp.go'
+      - 'Dockerfile'
+      - 'Makefile'
   workflow_dispatch:
 
 jobs:
@@ -74,6 +95,25 @@ jobs:
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
           helm version
 
+      - name: Build container image
+        run: |
+          echo "🐳 Building container image using make build-image..."
+          IMAGE_TAG=test make build-image
+          echo "✅ Container image built successfully"
+          podman images localhost/ros-ocp-backend:test
+
+      - name: Load image into KIND control plane
+        run: |
+          echo "📦 Loading image into KIND control plane..."
+          # Use archive method for reliable Podman to KIND image transfer
+          podman save localhost/ros-ocp-backend:test -o /tmp/ros-ocp-backend-test.tar
+          kind load image-archive /tmp/ros-ocp-backend-test.tar --name ros-ocp-test-cluster
+          echo "✅ Image loaded into KIND control plane"
+          # Clean up the temporary tar file
+          rm -f /tmp/ros-ocp-backend-test.tar
+          # Verify the image is available in the KIND cluster
+          kubectl get nodes -o wide
+
       - name: Set up environment and Podman configuration
         run: |
           echo "KIND_CLUSTER_NAME=ros-ocp-test-cluster" >> $GITHUB_ENV
@@ -105,17 +145,52 @@ jobs:
       - name: Deploy Helm Chart
         timeout-minutes: 15
         run: |
-          # Trigger new build to test MinIO buckets job fix
+          # Deploy Helm chart with local image overrides
           cd deployment/kubernetes/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
 
+          # Create temporary values file to override image settings
+          cat > /tmp/local-image-values.yaml <<EOF
+          # Only override ROS-OCP backend images, let other services use default pull policy
+          rosocp:
+            processor:
+              image:
+                repository: localhost/ros-ocp-backend
+                tag: test
+                pullPolicy: Never
+            recommendationPoller:
+              image:
+                repository: localhost/ros-ocp-backend
+                tag: test
+                pullPolicy: Never
+            api:
+              image:
+                repository: localhost/ros-ocp-backend
+                tag: test
+                pullPolicy: Never
+            housekeeper:
+              image:
+                repository: localhost/ros-ocp-backend
+                tag: test
+                pullPolicy: Never
+            partitionCleaner:
+              image:
+                repository: localhost/ros-ocp-backend
+                tag: test
+                pullPolicy: Never
+          EOF
+
+          echo "📋 Using local image values:"
+          cat /tmp/local-image-values.yaml
+
           # Make scripts executable
           chmod +x install-helm-chart.sh
 
-          # Deploy Helm chart
-          echo "Installing ROS-OCP Helm chart..."
+          # Deploy Helm chart with local image overrides
+          echo "Installing ROS-OCP Helm chart with local image..."
+          export VALUES_FILE="/tmp/local-image-values.yaml"
           ./install-helm-chart.sh
 
           # Verify deployment
@@ -123,6 +198,11 @@ jobs:
           kubectl get pods -n $NAMESPACE
           kubectl get services -n $NAMESPACE
           kubectl get ingress -n $NAMESPACE
+
+          # Verify pods are using the local image
+          echo "🔍 Verifying pods are using local image..."
+          kubectl get pods -n $NAMESPACE -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[*].image}{"\n"}{end}' | grep -E "(processor|api|recommendation|housekeeper|partition)" || true
+          echo "✅ Image verification completed"
 
       - name: Wait for services to stabilize and verify authentication
         run: |

@@ -44,8 +44,10 @@ help: ## Display this help message
 	@echo "  ginkgo               Download Ginkgo test framework binary"
 	@echo "  test                 Run tests with Ginkgo"
 	@echo "  clean-test-binaries  Clean up downloaded test binaries"
+	@echo "  clean-build          Clean up build artifacts and Podman images"
 	@echo "  lint                 Run golangci-lint"
-	@echo "  build                Build the application"
+	@echo "  build                Build the application binary inside a container"
+	@echo "  build-image          Build the container image (use IMAGE_REPO and IMAGE_TAG to customize)"
 	@echo "  db-migrate           Run database migrations"
 	@echo "  help                 Show this help message"
 
@@ -107,9 +109,27 @@ run-recommendation-poller:
 run-api-server:
 	PROMETHEUS_PORT=5007 go run rosocp.go start api
 
+# Image configuration
+IMAGE_REPO ?= localhost/ros-ocp-backend
+IMAGE_TAG ?= latest
+IMAGE_PULLSPEC = $(IMAGE_REPO):$(IMAGE_TAG)
+
 .PHONY: build
 build:
-	go build -o bin/rosocp rosocp.go
+	@echo "🔨 Building application inside container..."
+	@mkdir -p bin
+	podman build --target builder -t ros-ocp-builder .
+	podman create --name ros-ocp-temp ros-ocp-builder
+	podman cp ros-ocp-temp:/go/src/app/rosocp ./bin/rosocp
+	podman rm ros-ocp-temp
+	@echo "✅ Build completed: bin/rosocp"
+
+.PHONY: build-image
+build-image:
+	@echo "🐳 Building container image: $(IMAGE_PULLSPEC)"
+	podman build -t $(IMAGE_PULLSPEC) .
+	@echo "✅ Container image built: $(IMAGE_PULLSPEC)"
+
 
 .PHONY: lint
 lint: golangci-lint
@@ -125,6 +145,14 @@ clean-test-binaries:
 	rm -rf $(ENVTEST_BIN_DIR)/k8s
 	rm -f $(SETUP_ENVTEST)
 	rm -f $(GINKGO)
+
+.PHONY: clean-build
+clean-build:
+	@echo "🧹 Cleaning build artifacts..."
+	rm -f bin/rosocp
+	-podman rmi ros-ocp-builder 2>/dev/null || true
+	-podman rmi $(IMAGE_PULLSPEC) 2>/dev/null || true
+	@echo "✅ Build artifacts cleaned"
 
 MCCILINT := $(LOCALBIN)/mc
 .PHONY: archive-to-minio
@@ -154,11 +182,11 @@ endif
 
 .PHONY: upload-msg-to-rosocp
 upload-msg-to-rosocp:
-	echo ${ros_ocp_msg} | docker-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
+	echo ${ros_ocp_msg} | podman-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
 
 .PHONY: upload-msg-to-rosocp-24Hrs
 upload-msg-to-rosocp-24Hrs:
-	echo ${ros_ocp_msg_24Hrs} | docker-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
+	echo ${ros_ocp_msg_24Hrs} | podman-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
 
 
 .PHONY: get-recommendations
