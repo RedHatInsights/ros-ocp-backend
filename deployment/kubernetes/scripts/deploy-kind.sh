@@ -33,6 +33,7 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ros-ocp-cluster}
 CONTAINER_RUNTIME=${CONTAINER_RUNTIME:-podman}
+INGRESS_DEBUG_LEVEL=${INGRESS_DEBUG_LEVEL:-0}
 
 echo_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -347,6 +348,27 @@ install_ingress_controller() {
     echo_info "Waiting for ingress controller deployment to be created..."
     sleep 10
 
+    # Configure debug logging if requested
+    if [ "$INGRESS_DEBUG_LEVEL" -gt 0 ]; then
+        echo_info "Enabling debug logs in NGINX ingress controller (level: $INGRESS_DEBUG_LEVEL)..."
+        kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type='json' -p="[
+            {
+                \"op\": \"add\",
+                \"path\": \"/spec/template/spec/containers/0/args/-\",
+                \"value\": \"--v=$INGRESS_DEBUG_LEVEL\"
+            },
+            {
+                \"op\": \"add\",
+                \"path\": \"/spec/template/spec/containers/0/args/-\",
+                \"value\": \"--logtostderr=true\"
+            }
+        ]" || echo_warning "Debug logging patch failed, continuing..."
+
+        # Give time for the patch to take effect
+        echo_info "Waiting for debug configuration to take effect..."
+        sleep 5
+    fi
+    
     # Wait for the deployment to be ready
     echo_info "Waiting for ingress-nginx controller deployment to be ready..."
     kubectl wait --namespace ingress-nginx \
@@ -840,16 +862,27 @@ case "${1:-}" in
         echo "  (none)          - Setup KIND cluster for ROS-OCP"
         echo "  cleanup --all   - Delete entire KIND cluster"
         echo "  status          - Show cluster status"
+        echo "  health          - Run health checks on existing cluster"
         echo "  help            - Show this help message"
         echo ""
         echo "Environment Variables:"
-        echo "  KIND_CLUSTER_NAME - Name of KIND cluster (default: ros-ocp-cluster)"
-        echo "  CONTAINER_RUNTIME - Container runtime to use (default: podman, supports: podman, docker, auto)"
+        echo "  KIND_CLUSTER_NAME     - Name of KIND cluster (default: ros-ocp-cluster)"
+        echo "  CONTAINER_RUNTIME     - Container runtime to use (default: podman, supports: podman, docker, auto)"
+        echo "  INGRESS_DEBUG_LEVEL   - NGINX ingress debug verbosity level (default: 0=disabled, 1-4=debug levels)"
         echo ""
         echo "Requirements:"
         echo "  - Container runtime must be installed and running (default: podman)"
         echo "  - kubectl and kind must be installed"
         echo "  - Container Runtime: Minimum 6GB memory allocation"
+        echo ""
+        echo "Debug Logging:"
+        echo "  Set INGRESS_DEBUG_LEVEL to enable NGINX ingress controller debug logging:"
+        echo "    0 - Disabled (default)"
+        echo "    1 - Basic info logging"
+        echo "    2 - Detailed info logging (recommended for debugging)"
+        echo "    3 - Very detailed debugging"
+        echo "    4 - Extremely verbose (use with caution)"
+        echo "  Example: INGRESS_DEBUG_LEVEL=2 ./deploy-kind.sh"
         echo ""
         echo "Authentication:"
         echo "  This script sets up authentication tokens required for testing."
