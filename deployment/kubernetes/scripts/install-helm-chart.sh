@@ -762,6 +762,15 @@ run_health_checks() {
             echo_error "✗ Kruize API is not accessible via http://$hostname/api/kruize/listPerformanceProfiles"
             failed_checks=$((failed_checks + 1))
         fi
+
+        # Check if MinIO console is accessible via ingress
+        echo_info "Testing MinIO console: http://$hostname/minio/"
+        if curl -f -s "http://$hostname/minio/" >/dev/null; then
+            echo_success "✓ MinIO console is accessible via http://$hostname/minio/"
+        else
+            echo_error "✗ MinIO console is not accessible via http://$hostname/minio/"
+            failed_checks=$((failed_checks + 1))
+        fi
     fi
 
     if [ $failed_checks -eq 0 ]; then
