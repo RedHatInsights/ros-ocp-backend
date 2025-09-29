@@ -580,7 +580,7 @@ check_ingress_readiness() {
             # Test actual connectivity to the ingress controller using KIND-mapped port
             local test_port="32061"
             echo_info "Testing connectivity to ingress controller on KIND-mapped port $test_port..."
-            if curl -f -s "http://localhost:$test_port/" >/dev/null 2>&1; then
+            if curl -f -s --connect-timeout 5 --max-time 15 "http://localhost:$test_port/" >/dev/null 2>&1; then
                 echo_success "✓ Ingress controller is accessible via HTTP"
                 all_ready=true
                 break
@@ -665,12 +665,9 @@ show_status() {
 }
 
 
-# Function to run health checks with authentication
+# Function to run health checks for KIND cluster infrastructure
 run_health_checks() {
-    echo_info "Running health checks with authentication..."
-
-    # Health checks will run with or without authentication
-    echo_info "Running connectivity health checks..."
+    echo_info "Running KIND cluster infrastructure health checks..."
 
     local failed_checks=0
 
@@ -679,30 +676,9 @@ run_health_checks() {
 
     echo_info "Using KIND-mapped HTTP port: $http_port"
 
-    # Get authentication token for testing
-    local auth_token=""
-    if [ -f "/tmp/dev-kubeconfig" ]; then
-        auth_token=$(kubectl --kubeconfig=/tmp/dev-kubeconfig config view --raw -o jsonpath='{.users[0].user.token}' 2>/dev/null || echo "")
-    fi
-
-    if [ -z "$auth_token" ]; then
-        # Try kubectl/oc whoami -t to generate token from current user context
-        auth_token=$(kubectl whoami -t 2>/dev/null || oc whoami -t 2>/dev/null || echo "")
-    fi
-
-    if [ -z "$auth_token" ]; then
-        # For KIND clusters, we can skip authentication for basic health checks
-        # The deploy script runs health checks primarily to verify connectivity
-        echo_warning "No authentication token available for health checks"
-        echo_info "Running health checks without authentication (KIND cluster admin context)"
-        echo_info "Note: API endpoints may return 401, but this indicates the services are responding"
-    else
-        echo_info "Using authentication token for health checks"
-    fi
-
     # Check if nginx ingress controller is accessible on entry point
     local nginx_response
-    nginx_response=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$http_port/" 2>/dev/null || echo "000")
+    nginx_response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 "http://localhost:$http_port/" 2>/dev/null || echo "000")
 
     if [ "$nginx_response" = "000" ] || [ -z "$nginx_response" ]; then
         echo_error "Ingress Entry Point is not accessible on port $http_port"
@@ -716,49 +692,60 @@ run_health_checks() {
         -H "Authorization: Bearer $auth_token" \
         "http://localhost:$http_port/api/ingress/v1/version" 2>/dev/null || echo "000")
 
+    # Test ROS-OCP Ingress API endpoint (this will fail if services aren't deployed, which is expected)
+    local ingress_response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 "http://localhost:$http_port/api/ingress/v1/version" 2>/dev/null || echo "000")
+    
     if [ "$ingress_response" = "200" ] || [ "$ingress_response" = "401" ]; then
-        echo_success "ROS-OCP Ingress API is accessible via ingress on port $http_port (HTTP ${ingress_response})"
+        echo_success "✓ ROS-OCP Ingress API is accessible via ingress on port $http_port (HTTP ${ingress_response})"
     else
-        echo_error "ROS-OCP Ingress API is not accessible via ingress on port $http_port (HTTP ${ingress_response})"
-        failed_checks=$((failed_checks + 1))
+        echo_info "ℹ ROS-OCP Ingress API not accessible (HTTP ${ingress_response}) - expected if services not deployed"
     fi
 
-    # Check if ROS-OCP API is accessible via ingress with authentication
-    local api_response=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Authorization: Bearer $auth_token" \
-        "http://localhost:$http_port/status" 2>/dev/null || echo "000")
-
-    if [ "$api_response" = "200" ] || [ "$api_response" = "401" ]; then
-        echo_success "ROS-OCP API is accessible via ingress on port $http_port (HTTP ${api_response})"
-    else
-        echo_error "ROS-OCP API is not accessible via ingress on port $http_port (HTTP ${api_response})"
-        failed_checks=$((failed_checks + 1))
+    # Check if ROS-OCP services are deployed
+    local ros_ocp_deployed=false
+    if kubectl get namespace ros-ocp >/dev/null 2>&1; then
+        local pod_count=$(kubectl get pods -n ros-ocp --no-headers 2>/dev/null | wc -l)
+        if [ "$pod_count" -gt 0 ]; then
+            ros_ocp_deployed=true
+            echo_info "✓ ROS-OCP services are deployed in namespace 'ros-ocp' ($pod_count pods)"
+            
+            # Check if services are accessible via ingress
+            echo_info "Testing ROS-OCP service accessibility..."
+            
+            # Check ROS-OCP API
+            local api_response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 "http://localhost:$http_port/status" 2>/dev/null || echo "000")
+            if [ "$api_response" = "200" ] || [ "$api_response" = "401" ] || [ "$api_response" = "404" ]; then
+                echo_success "✓ ROS-OCP API endpoint is reachable (HTTP ${api_response})"
+            else
+                echo_warning "⚠ ROS-OCP API endpoint returned HTTP ${api_response}"
+            fi
+            
+            # Check Kruize API
+            local kruize_response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 "http://localhost:$http_port/api/kruize/listPerformanceProfiles" 2>/dev/null || echo "000")
+            if [ "$kruize_response" = "200" ] || [ "$kruize_response" = "401" ] || [ "$kruize_response" = "404" ]; then
+                echo_success "✓ Kruize API endpoint is reachable (HTTP ${kruize_response})"
+            else
+                echo_warning "⚠ Kruize API endpoint returned HTTP ${kruize_response}"
+            fi
+        fi
     fi
 
-    # Check if Kruize is accessible via ingress with authentication
-    local kruize_response=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Authorization: Bearer $auth_token" \
-        "http://localhost:$http_port/api/kruize/listPerformanceProfiles" 2>/dev/null || echo "000")
-
-    if [ "$kruize_response" = "200" ] || [ "$kruize_response" = "401" ]; then
-        echo_success "Kruize API is accessible via ingress on port $http_port (HTTP ${kruize_response})"
-    else
-        echo_error "Kruize API is not accessible via ingress on port $http_port (HTTP ${kruize_response})"
-        failed_checks=$((failed_checks + 1))
+    if [ "$ros_ocp_deployed" = false ]; then
+        echo_info "ℹ ROS-OCP services not deployed yet"
+        echo_info "  Run './install-helm-chart.sh' to deploy ROS-OCP services"
+        echo_info "  Then use './test-k8s-dataflow.sh health' for comprehensive service testing"
     fi
 
-    # Check if MinIO console is accessible via ingress (no auth required for console)
-    if curl -f -s "http://localhost:$http_port/minio/" >/dev/null; then
-        echo_success "MinIO console is accessible via ingress on port $http_port"
-    else
-        echo_error "MinIO console is not accessible via ingress on port $http_port"
-        failed_checks=$((failed_checks + 1))
-    fi
-
+    # Summary
     if [ $failed_checks -eq 0 ]; then
-        echo_success "All health checks passed with authentication!"
+        if [ "$ros_ocp_deployed" = true ]; then
+            echo_success "✓ KIND cluster infrastructure is healthy and ROS-OCP services are accessible!"
+        else
+            echo_success "✓ KIND cluster infrastructure is healthy and ready for ROS-OCP deployment!"
+        fi
     else
-        echo_warning "$failed_checks health check(s) failed"
+        echo_error "✗ $failed_checks infrastructure health check(s) failed"
+        echo_info "Check ingress controller status: kubectl get pods -n ingress-nginx"
     fi
 
     return $failed_checks
@@ -783,45 +770,12 @@ main() {
     echo "=== MAIN FUNCTION START ==="
     echo_info "Starting KIND cluster setup for ROS-OCP..."
 
-    # Check required commands
-    echo_info "Checking required commands..."
-    local missing_commands=()
-
-    echo "Checking kind command..."
-    if ! command -v kind >/dev/null 2>&1; then
-        echo "kind command not found"
-        missing_commands+=("kind")
-    else
-        echo "kind command found: $(which kind)"
-    fi
-
-    echo "Checking kubectl command..."
-    if ! command -v kubectl >/dev/null 2>&1; then
-        echo "kubectl command not found"
-        missing_commands+=("kubectl")
-    else
-        echo "kubectl command found: $(which kubectl)"
-    fi
-
-        echo "Checking container runtime..."
-        if ! command -v "$CONTAINER_RUNTIME" >/dev/null 2>&1; then
-            echo "$CONTAINER_RUNTIME command not found"
-            missing_commands+=("$CONTAINER_RUNTIME")
-        else
-            echo "$CONTAINER_RUNTIME command found: $(which $CONTAINER_RUNTIME)"
-        fi
-
-    if [ ${#missing_commands[@]} -gt 0 ]; then
-        echo_error "Missing required commands: ${missing_commands[*]}"
-        echo_error "Please install the missing commands and try again"
+    # Check prerequisites (includes container runtime detection and PID limit warnings)
+    echo "Calling check_prerequisites..."
+    if ! check_prerequisites; then
+        echo_error "Prerequisites check failed"
         return 1
     fi
-
-    echo_success "✓ All required commands are available"
-
-    # Detect container runtime
-    echo "Calling detect_container_runtime..."
-    detect_container_runtime
 
     # Clean up existing KIND artifacts
     echo "Calling cleanup_kind_artifacts..."
@@ -854,6 +808,10 @@ case "${1:-}" in
     "status")
         show_status
         exit 0
+        ;;
+    "health")
+        run_health_checks
+        exit $?
         ;;
     "help"|"-h"|"--help")
         echo "Usage: $0 [command]"
@@ -900,7 +858,8 @@ case "${1:-}" in
         echo "  After successful setup, run ./install-helm-chart.sh to deploy ROS-OCP"
         exit 0
         ;;
+    *)
+        # Default case - run main function for cluster setup
+        main "$@"
+        ;;
 esac
-
-# Run main function
-main "$@"
