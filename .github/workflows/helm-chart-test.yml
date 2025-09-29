@@ -102,18 +102,6 @@ jobs:
           echo "✅ Container image built successfully"
           podman images localhost/ros-ocp-backend:test
 
-      - name: Load image into KIND control plane
-        run: |
-          echo "📦 Loading image into KIND control plane..."
-          # Use archive method for reliable Podman to KIND image transfer
-          podman save localhost/ros-ocp-backend:test -o /tmp/ros-ocp-backend-test.tar
-          kind load image-archive /tmp/ros-ocp-backend-test.tar --name ros-ocp-test-cluster
-          echo "✅ Image loaded into KIND control plane"
-          # Clean up the temporary tar file
-          rm -f /tmp/ros-ocp-backend-test.tar
-          # Verify the image is available in the KIND cluster
-          kubectl get nodes -o wide
-
       - name: Set up environment and Podman configuration
         run: |
           echo "KIND_CLUSTER_NAME=ros-ocp-test-cluster" >> $GITHUB_ENV
@@ -141,6 +129,17 @@ jobs:
           kubectl cluster-info
           kubectl get nodes -o wide
 
+      - name: Load image into KIND control plane
+        run: |
+          echo "📦 Loading image into KIND control plane..."
+          # Use archive method for reliable Podman to KIND image transfer
+          podman save localhost/ros-ocp-backend:test -o /tmp/ros-ocp-backend-test.tar
+          kind load image-archive /tmp/ros-ocp-backend-test.tar --name ros-ocp-test-cluster
+          echo "✅ Image loaded into KIND control plane"
+          # Clean up the temporary tar file
+          rm -f /tmp/ros-ocp-backend-test.tar
+          # Verify the image is available in the KIND cluster
+          kubectl get nodes -o wide
 
       - name: Deploy Helm Chart
         timeout-minutes: 15
