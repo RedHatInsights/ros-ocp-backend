@@ -132,12 +132,43 @@ jobs:
       - name: Load image into KIND control plane
         run: |
           echo "📦 Loading image into KIND control plane..."
+          
+          # Debug: Verify image exists and Podman state
+          echo "🔍 Debugging Podman state:"
+          echo "Available images:"
+          podman images
+          echo ""
+          echo "Podman storage info:"
+          podman info | grep -E "(store|root|runroot)" || true
+          echo ""
+          echo "Podman version:"
+          podman --version
+          
+          # Verify specific image exists
+          echo "🔍 Checking for target image:"
+          if ! podman images localhost/ros-ocp-backend:test --format "{{.Repository}}:{{.Tag}}" | grep -q "localhost/ros-ocp-backend:test"; then
+            echo "❌ Image localhost/ros-ocp-backend:test not found!"
+            echo "Available images with 'localhost' repository:"
+            podman images localhost/* || echo "No localhost images found"
+            exit 1
+          fi
+          echo "✅ Target image found"
+          
           # Use archive method for reliable Podman to KIND image transfer
+          echo "💾 Saving image to archive..."
           podman save localhost/ros-ocp-backend:test -o /tmp/ros-ocp-backend-test.tar
+          echo "✅ Image saved to archive"
+          
+          # Verify archive was created
+          ls -la /tmp/ros-ocp-backend-test.tar
+          
+          echo "📥 Loading archive into KIND cluster..."
           kind load image-archive /tmp/ros-ocp-backend-test.tar --name ros-ocp-test-cluster
           echo "✅ Image loaded into KIND control plane"
+          
           # Clean up the temporary tar file
           rm -f /tmp/ros-ocp-backend-test.tar
+          
           # Verify the image is available in the KIND cluster
           kubectl get nodes -o wide
 
