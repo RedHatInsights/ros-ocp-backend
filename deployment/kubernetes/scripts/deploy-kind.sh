@@ -687,62 +687,24 @@ run_health_checks() {
         echo_success "Ingress Entry Point is accessible on port $http_port (HTTP ${nginx_response})"
     fi
 
-    # Check if ROS-OCP ingress API is accessible via ingress with authentication
-    local ingress_response=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Authorization: Bearer $auth_token" \
-        "http://localhost:$http_port/api/ingress/v1/version" 2>/dev/null || echo "000")
-
-    # Test ROS-OCP Ingress API endpoint (this will fail if services aren't deployed, which is expected)
-    local ingress_response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 "http://localhost:$http_port/api/ingress/v1/version" 2>/dev/null || echo "000")
-    
-    if [ "$ingress_response" = "200" ] || [ "$ingress_response" = "401" ]; then
-        echo_success "✓ ROS-OCP Ingress API is accessible via ingress on port $http_port (HTTP ${ingress_response})"
+    # Check ingress controller status
+    echo_info "Checking ingress controller status..."
+    local ingress_pods=$(kubectl get pods -n ingress-nginx --no-headers 2>/dev/null | wc -l)
+    if [ "$ingress_pods" -gt 0 ]; then
+        echo_success "✓ Ingress controller is running ($ingress_pods pods)"
     else
-        echo_info "ℹ ROS-OCP Ingress API not accessible (HTTP ${ingress_response}) - expected if services not deployed"
+        echo_error "✗ Ingress controller not found"
+        failed_checks=$((failed_checks + 1))
     fi
 
-    # Check if ROS-OCP services are deployed
-    local ros_ocp_deployed=false
-    if kubectl get namespace ros-ocp >/dev/null 2>&1; then
-        local pod_count=$(kubectl get pods -n ros-ocp --no-headers 2>/dev/null | wc -l)
-        if [ "$pod_count" -gt 0 ]; then
-            ros_ocp_deployed=true
-            echo_info "✓ ROS-OCP services are deployed in namespace 'ros-ocp' ($pod_count pods)"
-            
-            # Check if services are accessible via ingress
-            echo_info "Testing ROS-OCP service accessibility..."
-            
-            # Check ROS-OCP API
-            local api_response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 "http://localhost:$http_port/status" 2>/dev/null || echo "000")
-            if [ "$api_response" = "200" ] || [ "$api_response" = "401" ] || [ "$api_response" = "404" ]; then
-                echo_success "✓ ROS-OCP API endpoint is reachable (HTTP ${api_response})"
-            else
-                echo_warning "⚠ ROS-OCP API endpoint returned HTTP ${api_response}"
-            fi
-            
-            # Check Kruize API
-            local kruize_response=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 "http://localhost:$http_port/api/kruize/listPerformanceProfiles" 2>/dev/null || echo "000")
-            if [ "$kruize_response" = "200" ] || [ "$kruize_response" = "401" ] || [ "$kruize_response" = "404" ]; then
-                echo_success "✓ Kruize API endpoint is reachable (HTTP ${kruize_response})"
-            else
-                echo_warning "⚠ Kruize API endpoint returned HTTP ${kruize_response}"
-            fi
-        fi
-    fi
-
-    if [ "$ros_ocp_deployed" = false ]; then
-        echo_info "ℹ ROS-OCP services not deployed yet"
-        echo_info "  Run './install-helm-chart.sh' to deploy ROS-OCP services"
-        echo_info "  Then use './test-k8s-dataflow.sh health' for comprehensive service testing"
-    fi
+    # Note about ROS-OCP services
+    echo_info "ℹ This health check only validates KIND cluster infrastructure"
+    echo_info "  To deploy ROS-OCP services: ./install-helm-chart.sh"
+    echo_info "  To test ROS-OCP services: ./install-helm-chart.sh health"
 
     # Summary
     if [ $failed_checks -eq 0 ]; then
-        if [ "$ros_ocp_deployed" = true ]; then
-            echo_success "✓ KIND cluster infrastructure is healthy and ROS-OCP services are accessible!"
-        else
-            echo_success "✓ KIND cluster infrastructure is healthy and ready for ROS-OCP deployment!"
-        fi
+        echo_success "✓ KIND cluster infrastructure is healthy and ready for ROS-OCP deployment!"
     else
         echo_error "✗ $failed_checks infrastructure health check(s) failed"
         echo_info "Check ingress controller status: kubectl get pods -n ingress-nginx"
