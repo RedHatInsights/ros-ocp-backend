@@ -120,7 +120,7 @@ setup_port_forwards() {
         case "$service" in
             "ingress")
                 service_name="$HELM_RELEASE_NAME-ingress"
-                service_port="3000"
+                service_port="8080"
                 ;;
             "main")
                 service_name="$HELM_RELEASE_NAME-rosocp-api"
@@ -460,6 +460,7 @@ upload_test_data() {
     local test_csv=$(create_test_data)
     local test_dir=$(mktemp -d)
     local csv_filename="openshift_usage_report.csv"
+    local manifest_filename="manifest.json"
     local tar_filename="cost-mgmt.tar.gz"
 
     # Copy CSV to temporary directory with expected filename
@@ -470,7 +471,31 @@ upload_test_data() {
         return 1
     fi
 
-    # Verify the file exists and has content
+    # Create required manifest.json file for OpenShift ingress service
+    local file_uuid=$(uuidgen | tr '[:upper:]' '[:lower:]')
+    local cluster_id=$(uuidgen | tr '[:upper:]' '[:lower:]')
+    local current_date=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
+    local start_date=$(date -u +"%Y-%m-%dT%H:00:00Z")
+    local end_date=$(date -u +"%Y-%m-%dT%H:59:59Z")
+    
+    cat > "$test_dir/$manifest_filename" << EOF
+{
+    "uuid": "$file_uuid",
+    "cluster_id": "$cluster_id",
+    "version": "test-version",
+    "date": "$current_date",
+    "files": [
+        "$csv_filename"
+    ],
+    "resource_optimization_files": [
+        "$csv_filename"
+    ],
+    "start": "$start_date",
+    "end": "$end_date"
+}
+EOF
+
+    # Verify the files exist and have content
     if [ ! -f "$test_dir/$csv_filename" ] || [ ! -s "$test_dir/$csv_filename" ]; then
         echo_error "CSV file not found or is empty in temporary directory"
         rm -f "$test_csv"
@@ -478,9 +503,16 @@ upload_test_data() {
         return 1
     fi
 
+    if [ ! -f "$test_dir/$manifest_filename" ] || [ ! -s "$test_dir/$manifest_filename" ]; then
+        echo_error "Manifest file not found or is empty in temporary directory"
+        rm -f "$test_csv"
+        rm -rf "$test_dir"
+        return 1
+    fi
+
     # Create tar.gz file
     echo_info "Creating tar.gz archive..."
-    if ! (cd "$test_dir" && tar -czf "$tar_filename" "$csv_filename"); then
+    if ! (cd "$test_dir" && tar -czf "$tar_filename" "$csv_filename" "$manifest_filename"); then
         echo_error "Failed to create tar.gz archive"
         rm -f "$test_csv"
         rm -rf "$test_dir"
@@ -502,11 +534,41 @@ upload_test_data() {
     local upload_url=$(get_service_url "ingress" "/api/ingress/v1/upload")
     echo_info "Uploading to: $upload_url"
 
-    local response=$(curl -s -w "%{http_code}" \
-        -F "file=@${test_dir}/${tar_filename};type=application/vnd.redhat.hccm.filename+tgz" \
-        -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K" \
-        -H "x-rh-request-id: test-request-$(date +%s)" \
-        "$upload_url")
+    # Get service account token for authentication (OpenShift approach)
+    local sa_token
+    if kubectl get secret -n "$NAMESPACE" | grep -q "ros-ocp-backend-token"; then
+        # Use existing service account token
+        sa_token=$(kubectl get secret -n "$NAMESPACE" -o jsonpath='{.items[?(@.metadata.annotations.kubernetes\.io/service-account\.name=="ros-ocp-backend")].data.token}' | head -1 | base64 -d)
+    else
+        # Create a service account token for testing
+        echo_info "Creating service account token for authentication..."
+        kubectl create token ros-ocp-backend -n "$NAMESPACE" --duration=3600s > /tmp/sa-token 2>/dev/null || {
+            echo_warning "Could not create service account token, using x-rh-identity only"
+            sa_token=""
+        }
+        if [ -f /tmp/sa-token ]; then
+            sa_token=$(cat /tmp/sa-token)
+            rm -f /tmp/sa-token
+        fi
+    fi
+
+    # Build curl command with proper authentication
+    local curl_cmd="curl -s -w \"%{http_code}\" --connect-timeout 10 --max-time 60"
+    curl_cmd="$curl_cmd -F \"file=@${test_dir}/${tar_filename};type=application/vnd.redhat.hccm.filename+tgz\""
+    
+    # Add authentication headers
+    if [ -n "$sa_token" ]; then
+        curl_cmd="$curl_cmd -H \"Authorization: Bearer $sa_token\""
+        echo_info "Using OpenShift service account token for authentication"
+    else
+        echo_info "Using x-rh-identity header for authentication"
+    fi
+    
+    curl_cmd="$curl_cmd -H \"x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K\""
+    curl_cmd="$curl_cmd -H \"x-rh-request-id: test-request-$(date +%s)\""
+    curl_cmd="$curl_cmd \"$upload_url\""
+
+    local response=$(eval $curl_cmd)
 
     local http_code="${response: -3}"
     local response_body="${response%???}"
@@ -597,7 +659,7 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
         echo_info "Verifying file accessibility from processor pod..."
 
         local file_url="http://${HELM_RELEASE_NAME}-minio:9000/ros-data/$csv_filename"
-        local access_test=$(oc exec -n "$NAMESPACE" "$processor_pod" -- curl -s -I "$file_url" | head -1)
+        local access_test=$(oc exec -n "$NAMESPACE" "$processor_pod" -- curl -s -I --connect-timeout 5 --max-time 15 "$file_url" | head -1)
 
         if [[ "$access_test" =~ "200 OK" ]]; then
             echo_success "File is accessible via HTTP"
@@ -683,7 +745,7 @@ verify_recommendations() {
     local kruize_url=$(get_service_url "kruize" "/listPerformanceProfiles")
     echo_info "Checking Kruize API accessibility at: $kruize_url"
 
-    if curl -f -s "$kruize_url" >/dev/null; then
+    if curl -f -s --connect-timeout 5 --max-time 15 "$kruize_url" >/dev/null; then
         echo_success "✓ Kruize API is accessible"
     else
         echo_error "Kruize API is not accessible"
@@ -811,7 +873,7 @@ run_health_checks() {
         local url=$(get_service_url "$service" "$path")
 
         if [ $? -eq 0 ]; then
-            if curl -f -s "$url" >/dev/null; then
+            if curl -f -s --connect-timeout 5 --max-time 15 "$url" >/dev/null; then
                 echo_success "$service is accessible at: $url"
             else
                 echo_error "$service is not accessible at: $url"
