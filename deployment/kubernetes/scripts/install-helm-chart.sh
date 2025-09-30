@@ -2,9 +2,14 @@
 
 # ROS-OCP Helm Chart Installation Script
 # This script deploys the ROS-OCP Helm chart to a Kubernetes cluster
-# Requires: kubectl configured with target cluster context, helm installed
+# By default, it downloads and uses the latest release from GitHub
+# Set USE_LOCAL_CHART=true to use local chart source instead
+# Requires: kubectl configured with target cluster context, helm installed, curl, jq
 
 set -e  # Exit on any error
+
+# Trap to cleanup downloaded charts on script exit
+trap 'cleanup_downloaded_chart' EXIT INT TERM
 
 # Color codes for output
 RED='\033[0;31m'
@@ -18,6 +23,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HELM_RELEASE_NAME=${HELM_RELEASE_NAME:-ros-ocp}
 NAMESPACE=${NAMESPACE:-ros-ocp}
 VALUES_FILE=${VALUES_FILE:-}
+REPO_OWNER="insights-onprem"
+REPO_NAME="ros-helm-chart"
+USE_LOCAL_CHART=${USE_LOCAL_CHART:-false}  # Set to true to use local chart instead of GitHub release
 
 echo_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -137,6 +145,74 @@ create_namespace() {
     else
         kubectl create namespace "$NAMESPACE"
         echo_success "Namespace '$NAMESPACE' created"
+    fi
+}
+
+# Function to download latest chart from GitHub
+download_latest_chart() {
+    echo_info "Downloading latest Helm chart from GitHub..."
+
+    # Create temporary directory for chart download
+    local temp_dir=$(mktemp -d)
+    local chart_path=""
+
+    # Get the latest release info from GitHub API
+    echo_info "Fetching latest release information from GitHub..."
+    local latest_release
+    if ! latest_release=$(curl -s "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"); then
+        echo_error "Failed to fetch release information from GitHub API"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    # Extract the tag name and download URL for the .tgz file
+    local tag_name=$(echo "$latest_release" | jq -r '.tag_name')
+    local download_url=$(echo "$latest_release" | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url')
+    local filename=$(echo "$latest_release" | jq -r '.assets[] | select(.name | endswith(".tgz")) | .name')
+
+    if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
+        echo_error "No .tgz file found in the latest release ($tag_name)"
+        echo_info "Available assets:"
+        echo "$latest_release" | jq -r '.assets[].name' | sed 's/^/  - /'
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    echo_info "Latest release: $tag_name"
+    echo_info "Downloading: $filename"
+    echo_info "From: $download_url"
+
+    # Download the chart
+    if ! curl -L -o "$temp_dir/$filename" "$download_url"; then
+        echo_error "Failed to download chart from GitHub"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    # Verify the download
+    if [ ! -f "$temp_dir/$filename" ]; then
+        echo_error "Downloaded chart file not found: $temp_dir/$filename"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    local file_size=$(stat -c%s "$temp_dir/$filename" 2>/dev/null || stat -f%z "$temp_dir/$filename" 2>/dev/null)
+    echo_success "Downloaded chart: $filename (${file_size} bytes)"
+
+    # Export the chart path for use by deploy_helm_chart function
+    export DOWNLOADED_CHART_PATH="$temp_dir/$filename"
+    export CHART_TEMP_DIR="$temp_dir"
+
+    return 0
+}
+
+# Function to cleanup downloaded chart
+cleanup_downloaded_chart() {
+    if [ -n "$CHART_TEMP_DIR" ] && [ -d "$CHART_TEMP_DIR" ]; then
+        echo_info "Cleaning up downloaded chart..."
+        rm -rf "$CHART_TEMP_DIR"
+        unset DOWNLOADED_CHART_PATH
+        unset CHART_TEMP_DIR
     fi
 }
 
@@ -264,16 +340,40 @@ verify_kafka_topics() {
 deploy_helm_chart() {
     echo_info "Deploying ROS-OCP Helm chart..."
 
-    cd "$SCRIPT_DIR"
+    local chart_source=""
 
-    # Check if Helm chart directory exists
-    if [ ! -d "../helm/ros-ocp" ]; then
-        echo_error "Helm chart directory not found: ../helm/ros-ocp"
-        return 1
+    # Determine chart source
+    if [ "$USE_LOCAL_CHART" = "true" ]; then
+        echo_info "Using local chart source (USE_LOCAL_CHART=true)"
+        cd "$SCRIPT_DIR"
+
+        # Check if Helm chart directory exists
+        if [ ! -d "../ros-ocp" ]; then
+            echo_error "Local Helm chart directory not found: ../ros-ocp"
+            echo_info "Set USE_LOCAL_CHART=false to use GitHub releases, or ensure the local chart exists"
+            return 1
+        fi
+
+        chart_source="../helm/ros-ocp"
+        echo_info "Using local chart: $chart_source"
+    else
+        echo_info "Using GitHub release (USE_LOCAL_CHART=false)"
+
+        # Download latest chart if not already downloaded
+        if [ -z "$DOWNLOADED_CHART_PATH" ]; then
+            if ! download_latest_chart; then
+                echo_error "Failed to download latest chart from GitHub"
+                echo_info "Fallback: Set USE_LOCAL_CHART=true to use local chart"
+                return 1
+            fi
+        fi
+
+        chart_source="$DOWNLOADED_CHART_PATH"
+        echo_info "Using downloaded chart: $chart_source"
     fi
 
     # Build Helm command
-    local helm_cmd="helm upgrade --install \"$HELM_RELEASE_NAME\" ../helm/ros-ocp"
+    local helm_cmd="helm upgrade --install \"$HELM_RELEASE_NAME\" \"$chart_source\""
     helm_cmd="$helm_cmd --namespace \"$NAMESPACE\""
     helm_cmd="$helm_cmd --create-namespace"
     helm_cmd="$helm_cmd --timeout=600s"
@@ -786,6 +886,9 @@ cleanup() {
     fi
 
     echo_success "Cleanup completed"
+
+    # Cleanup any downloaded charts
+    cleanup_downloaded_chart
 }
 
 # Main execution
@@ -865,6 +968,11 @@ main() {
     else
         echo_info "Next: Run ./test-ocp-dataflow.sh to test the deployment"
     fi
+
+    # Cleanup downloaded chart if we used GitHub release
+    if [ "$USE_LOCAL_CHART" != "true" ]; then
+        cleanup_downloaded_chart
+    fi
 }
 
 # Handle script arguments
@@ -908,6 +1016,13 @@ case "${1:-}" in
         echo "  HELM_RELEASE_NAME - Name of Helm release (default: ros-ocp)"
         echo "  NAMESPACE         - Kubernetes namespace (default: ros-ocp)"
         echo "  VALUES_FILE       - Path to custom values file (optional)"
+        echo "  USE_LOCAL_CHART   - Use local chart instead of GitHub release (default: false)"
+        echo ""
+        echo "Chart Source Options:"
+        echo "  - Default: Downloads latest release from GitHub (recommended)"
+        echo "  - Local: Set USE_LOCAL_CHART=true to use local ../ros-ocp directory"
+        echo "  - Always uses the most recent stable release from GitHub"
+        echo "  - Automatic fallback to local chart if GitHub is unavailable"
         echo ""
         echo "Platform Detection:"
         echo "  - Automatically detects Kubernetes vs OpenShift"
