@@ -668,31 +668,21 @@ run_health_checks() {
             failed_checks=$((failed_checks + 1))
         fi
 
-        # Test Ingress internally
-        local ingress_pod=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/name=ingress -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-        if [ -n "$ingress_pod" ]; then
-            if kubectl exec -n "$NAMESPACE" "$ingress_pod" -- curl -f -s http://localhost:8080/ready >/dev/null 2>&1; then
-                echo_success "✓ Ingress API service is healthy (internal)"
-            else
-                echo_error "✗ Ingress API service is not responding (internal)"
-                failed_checks=$((failed_checks + 1))
-            fi
+        # Test Ingress internally via service endpoint
+        echo_info "Testing Ingress API via service endpoint..."
+        if kubectl run curl-test --image=curlimages/curl:latest --rm -i --restart=Never -n "$NAMESPACE" -- curl -f -s http://ros-ocp-ingress:8080/ready >/dev/null 2>&1; then
+            echo_success "✓ Ingress API service is healthy (internal)"
         else
-            echo_error "✗ Ingress API pod not found"
+            echo_error "✗ Ingress API service is not responding (internal)"
             failed_checks=$((failed_checks + 1))
         fi
 
-        # Test Kruize internally
-        local kruize_pod=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/name=kruize -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-        if [ -n "$kruize_pod" ]; then
-            if kubectl exec -n "$NAMESPACE" "$kruize_pod" -- curl -f -s http://localhost:30080/listPerformanceProfiles >/dev/null 2>&1; then
-                echo_success "✓ Kruize API service is healthy (internal)"
-            else
-                echo_error "✗ Kruize API service is not responding (internal)"
-                failed_checks=$((failed_checks + 1))
-            fi
+        # Test Kruize internally via service endpoint
+        echo_info "Testing Kruize API via service endpoint..."
+        if kubectl run curl-test-kruize --image=curlimages/curl:latest --rm -i --restart=Never -n "$NAMESPACE" -- curl -f -s http://ros-ocp-kruize:8080/listPerformanceProfiles >/dev/null 2>&1; then
+            echo_success "✓ Kruize API service is healthy (internal)"
         else
-            echo_error "✗ Kruize API pod not found"
+            echo_error "✗ Kruize API service is not responding (internal)"
             failed_checks=$((failed_checks + 1))
         fi
 
