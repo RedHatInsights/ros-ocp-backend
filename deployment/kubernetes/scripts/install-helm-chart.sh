@@ -26,6 +26,7 @@ VALUES_FILE=${VALUES_FILE:-}
 REPO_OWNER="insights-onprem"
 REPO_NAME="ros-helm-chart"
 USE_LOCAL_CHART=${USE_LOCAL_CHART:-false}  # Set to true to use local chart instead of GitHub release
+LOCAL_CHART_PATH=${LOCAL_CHART_PATH:-../helm/ros-ocp}  # Path to local chart directory
 
 echo_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -348,13 +349,13 @@ deploy_helm_chart() {
         cd "$SCRIPT_DIR"
 
         # Check if Helm chart directory exists
-        if [ ! -d "../ros-ocp" ]; then
-            echo_error "Local Helm chart directory not found: ../ros-ocp"
-            echo_info "Set USE_LOCAL_CHART=false to use GitHub releases, or ensure the local chart exists"
+        if [ ! -d "$LOCAL_CHART_PATH" ]; then
+            echo_error "Local Helm chart directory not found: $LOCAL_CHART_PATH"
+            echo_info "Set USE_LOCAL_CHART=false to use GitHub releases, or set LOCAL_CHART_PATH to the correct chart location (default: ./helm/ros-ocp)"
             return 1
         fi
 
-        chart_source="../helm/ros-ocp"
+        chart_source="$LOCAL_CHART_PATH"
         echo_info "Using local chart: $chart_source"
     else
         echo_info "Using GitHub release (USE_LOCAL_CHART=false)"
@@ -1016,12 +1017,15 @@ case "${1:-}" in
         echo "  NAMESPACE         - Kubernetes namespace (default: ros-ocp)"
         echo "  VALUES_FILE       - Path to custom values file (optional)"
         echo "  USE_LOCAL_CHART   - Use local chart instead of GitHub release (default: false)"
+        echo "  LOCAL_CHART_PATH  - Path to local chart directory (default: ../helm/ros-ocp)"
         echo ""
         echo "Chart Source Options:"
         echo "  - Default: Downloads latest release from GitHub (recommended)"
-        echo "  - Local: Set USE_LOCAL_CHART=true to use local ../ros-ocp directory"
-        echo "  - Always uses the most recent stable release from GitHub"
-        echo "  - Automatic fallback to local chart if GitHub is unavailable"
+        echo "  - Local: Set USE_LOCAL_CHART=true to use local chart directory"
+        echo "  - Chart Path: Set LOCAL_CHART_PATH to specify custom chart location"
+        echo "  - Examples:"
+        echo "    USE_LOCAL_CHART=true LOCAL_CHART_PATH=../helm/ros-ocp $0"
+        echo "    USE_LOCAL_CHART=true LOCAL_CHART_PATH=../ros-helm-chart/ros-ocp $0"
         echo ""
         echo "Platform Detection:"
         echo "  - Automatically detects Kubernetes vs OpenShift"
