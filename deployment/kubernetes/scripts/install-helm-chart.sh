@@ -137,6 +137,27 @@ detect_platform() {
     fi
 }
 
+# Function to detect and validate storage
+detect_storage() {
+    echo_info "Detecting storage configuration..."
+
+    if [ "$PLATFORM" = "openshift" ]; then
+        echo_info "Checking for ODF (OpenShift Data Foundation) installation..."
+        if kubectl get storageclass | grep -q "openshift-storage"; then
+            echo_success "ODF storage class detected - will use ODF for object storage"
+            export STORAGE_TYPE="odf"
+        else
+            echo_error "ODF not detected - ODF is required for OpenShift deployments"
+            echo_error "Please install OpenShift Data Foundation (ODF) before deploying"
+            echo_error "Deployment cannot proceed without ODF on OpenShift"
+            return 1
+        fi
+    else
+        echo_info "Using MinIO for Kubernetes platform"
+        export STORAGE_TYPE="minio"
+    fi
+}
+
 # Function to create namespace
 create_namespace() {
     echo_info "Creating namespace: $NAMESPACE"
@@ -168,8 +189,8 @@ download_latest_chart() {
 
     # Extract the tag name and download URL for the .tgz file
     local tag_name=$(echo "$latest_release" | jq -r '.tag_name')
-    local download_url=$(echo "$latest_release" | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url')
-    local filename=$(echo "$latest_release" | jq -r '.assets[] | select(.name | endswith(".tgz")) | .name')
+    local download_url=$(echo "$latest_release" | jq -r '.assets[] | select(.name | contains("latest")) | .browser_download_url')
+    local filename=$(echo "$latest_release" | jq -r '.assets[] | select(.name | contains("latest")) | .name')
 
     if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
         echo_error "No .tgz file found in the latest release ($tag_name)"
@@ -423,6 +444,7 @@ show_status() {
     echo_info "=================="
 
     echo_info "Platform: $PLATFORM"
+    echo_info "Storage Type: $STORAGE_TYPE"
     echo_info "Namespace: $NAMESPACE"
     echo_info "Helm Release: $HELM_RELEASE_NAME"
     if [ -n "$VALUES_FILE" ]; then
@@ -924,8 +946,9 @@ main() {
         exit 1
     fi
 
-    # Detect platform
+    # Detect platform and storage
     detect_platform
+    detect_storage
 
     echo_info "Configuration:"
     echo_info "  Platform: $PLATFORM"
@@ -1006,11 +1029,13 @@ case "${1:-}" in
         ;;
     "status")
         detect_platform
+        detect_storage
         show_status
         exit 0
         ;;
     "health")
         detect_platform
+        detect_storage
         run_health_checks
         exit $?
         ;;
