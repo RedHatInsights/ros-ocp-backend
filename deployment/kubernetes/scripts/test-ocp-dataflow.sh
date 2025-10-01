@@ -275,6 +275,44 @@ check_deployment() {
     return 0
 }
 
+# Function to create ODF credentials secret
+create_odf_credentials_secret() {
+    echo_info "Creating ODF credentials secret..."
+    
+    # Check if secret already exists
+    if oc get secret "ros-ocp-odf-credentials" -n "$NAMESPACE" >/dev/null 2>&1; then
+        echo_info "ODF credentials secret already exists"
+        return 0
+    fi
+    
+    # Get ODF credentials from noobaa-admin secret
+    local access_key=$(oc get secret -n openshift-storage noobaa-admin -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d 2>/dev/null)
+    local secret_key=$(oc get secret -n openshift-storage noobaa-admin -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d 2>/dev/null)
+    
+    if [ -z "$access_key" ] || [ -z "$secret_key" ]; then
+        echo_error "Failed to get ODF credentials from noobaa-admin secret"
+        echo_error "Please ensure OpenShift Data Foundation is installed and accessible"
+        return 1
+    fi
+    
+    # Create the secret in the deployment namespace
+    oc create secret generic ros-ocp-odf-credentials \
+        --namespace="$NAMESPACE" \
+        --from-literal=access-key="$access_key" \
+        --from-literal=secret-key="$secret_key" \
+        --dry-run=client -o yaml | oc apply -f -
+    
+    if [ $? -eq 0 ]; then
+        echo_success "ODF credentials secret created successfully"
+        echo_info "Secret name: ros-ocp-odf-credentials"
+        echo_info "Namespace: $NAMESPACE"
+        return 0
+    else
+        echo_error "Failed to create ODF credentials secret"
+        return 1
+    fi
+}
+
 # Function to test if a URL is accessible
 test_url_accessible() {
     local url="$1"
@@ -589,9 +627,99 @@ EOF
     return 0
 }
 
+# Function to detect storage backend (MinIO vs ODF)
+detect_storage_backend() {
+    echo_info "Detecting storage backend..."
+    
+    # Check if MinIO pod exists (Kubernetes deployment)
+    local minio_pod=$(oc get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=minio" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    
+    if [ -n "$minio_pod" ]; then
+        echo_info "MinIO storage backend detected"
+        echo "minio"
+        return 0
+    fi
+    
+    # Check if ODF is available (OpenShift deployment)
+    local noobaa_secret=$(oc get secret -n "openshift-storage" "noobaa-admin" -o name 2>/dev/null)
+    
+    if [ -n "$noobaa_secret" ]; then
+        echo_info "ODF storage backend detected"
+        echo "odf"
+        return 0
+    fi
+    
+    echo_error "No storage backend detected (neither MinIO nor ODF found)"
+    return 1
+}
+
+# Function to get storage endpoint based on backend
+get_storage_endpoint() {
+    local storage_backend="$1"
+    
+    case "$storage_backend" in
+        "minio")
+            echo "${HELM_RELEASE_NAME}-minio:9000"
+            ;;
+        "odf")
+            # Try to get ODF S3 endpoint from NooBaa CRD
+            local s3_endpoint=$(oc get noobaa -n openshift-storage -o jsonpath='{.items[0].status.services.serviceS3.internalDNS[0]}' 2>/dev/null | sed 's|https://||' | sed 's|:443||')
+            
+            if [ -n "$s3_endpoint" ]; then
+                # Convert to full cluster DNS if needed
+                if [[ ! "$s3_endpoint" =~ \.cluster\.local$ ]]; then
+                    s3_endpoint="${s3_endpoint}.cluster.local"
+                fi
+                echo "$s3_endpoint:443"
+            else
+                # Fallback to default ODF S3 service
+                echo "s3.openshift-storage.svc.cluster.local:443"
+            fi
+            ;;
+        *)
+            echo_error "Unknown storage backend: $storage_backend"
+            return 1
+            ;;
+    esac
+}
+
+# Function to get storage credentials based on backend
+get_storage_credentials() {
+    local storage_backend="$1"
+    
+    case "$storage_backend" in
+        "minio")
+            echo "minioaccesskey:miniosecretkey"
+            ;;
+        "odf")
+            # Get credentials from noobaa-admin secret
+            local access_key=$(oc get secret -n openshift-storage noobaa-admin -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d 2>/dev/null)
+            local secret_key=$(oc get secret -n openshift-storage noobaa-admin -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d 2>/dev/null)
+            
+            if [ -n "$access_key" ] && [ -n "$secret_key" ]; then
+                echo "$access_key:$secret_key"
+            else
+                echo_error "Failed to get ODF credentials from noobaa-admin secret"
+                return 1
+            fi
+            ;;
+        *)
+            echo_error "Unknown storage backend: $storage_backend"
+            return 1
+            ;;
+    esac
+}
+
 # Function to simulate Koku processing
 simulate_koku_processing() {
     echo_info "=== STEP 2: Simulate Koku Processing ===="
+
+    # Detect storage backend
+    local storage_backend
+    storage_backend=$(detect_storage_backend)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
 
     # Generate unique file UUID for this test
     local file_uuid
@@ -606,6 +734,7 @@ simulate_koku_processing() {
 
     echo_info "Generated file UUID: $file_uuid"
     echo_info "CSV filename: $csv_filename"
+    echo_info "Storage backend: $storage_backend"
 
     # Create test CSV content with current timestamps (multiple data points)
     # Use cross-platform date function
@@ -626,52 +755,136 @@ $now_date,$now_date,$interval_start_1,$interval_end_1,test-container,test-pod-12
 $now_date,$now_date,$interval_start_2,$interval_end_2,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,0.5,0.5,1.0,1.0,0.265423,0.198765,0.345678,0.265423,0.0012,0.0025,0.0012,536870912,536870912,1073741824,1073741824,427891456.123456,422014016,435890624,427891456.123456,407654321.987654,403627568,411681024,407654321.987654
 $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-123,test-deployment,Deployment,test-workload,deployment,test-namespace,quay.io/test/image:latest,worker-node-1,resource-123,0.5,0.5,1.0,1.0,0.289567,0.210987,0.367890,0.289567,0.0008,0.0018,0.0008,536870912,536870912,1073741824,1073741824,445678901.234567,441801728,449556074,445678901.234567,425987654.321098,421960800,430014256,425987654.321098"
 
-    # Copy CSV data to ros-data bucket via MinIO pod
+    # Get storage endpoint and credentials
+    local storage_endpoint
+    storage_endpoint=$(get_storage_endpoint "$storage_backend")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    local storage_credentials
+    storage_credentials=$(get_storage_credentials "$storage_backend")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    local access_key="${storage_credentials%:*}"
+    local secret_key="${storage_credentials#*:}"
+
+    echo_info "Storage endpoint: $storage_endpoint"
     echo_info "Copying CSV to ros-data bucket..."
 
-    local minio_pod=$(oc get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=minio" -o jsonpath='{.items[0].metadata.name}')
+    if [ "$storage_backend" = "minio" ]; then
+        # MinIO approach - use MinIO pod
+        local minio_pod=$(oc get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=minio" -o jsonpath='{.items[0].metadata.name}')
 
-    if [ -z "$minio_pod" ]; then
-        echo_error "MinIO pod not found"
-        return 1
-    fi
-
-    # Create CSV file in MinIO pod and copy to bucket
-    # Use stdin redirection to avoid websocket stream issues with large content
-    echo "$csv_content" | oc exec -i -n "$NAMESPACE" "$minio_pod" -- sh -c "
-        cat > /tmp/$csv_filename
-        /usr/bin/mc alias set myminio http://localhost:9000 minioaccesskey miniosecretkey 2>/dev/null
-        /usr/bin/mc cp /tmp/$csv_filename myminio/ros-data/$csv_filename
-        rm /tmp/$csv_filename
-    "
-
-    if [ $? -ne 0 ]; then
-        echo_error "Failed to copy CSV to ros-data bucket"
-        return 1
-    fi
-
-    echo_success "CSV file copied to ros-data bucket"
-
-    # Verify file accessibility from processor pod
-    local processor_pod=$(oc get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=rosocp-processor" -o jsonpath='{.items[0].metadata.name}')
-
-    if [ -n "$processor_pod" ]; then
-        echo_info "Verifying file accessibility from processor pod..."
-
-        local file_url="http://${HELM_RELEASE_NAME}-minio:9000/ros-data/$csv_filename"
-        local access_test=$(oc exec -n "$NAMESPACE" "$processor_pod" -- curl -s -I --connect-timeout 5 --max-time 15 "$file_url" | head -1)
-
-        if [[ "$access_test" =~ "200 OK" ]]; then
-            echo_success "File is accessible via HTTP"
-        else
-            echo_error "File is not accessible via HTTP: $access_test"
+        if [ -z "$minio_pod" ]; then
+            echo_error "MinIO pod not found"
+            return 1
         fi
+
+        # Create CSV file in MinIO pod and copy to bucket
+        echo "$csv_content" | oc exec -i -n "$NAMESPACE" "$minio_pod" -- sh -c "
+            cat > /tmp/$csv_filename
+            /usr/bin/mc alias set myminio http://localhost:9000 $access_key $secret_key 2>/dev/null
+            /usr/bin/mc cp /tmp/$csv_filename myminio/ros-data/$csv_filename
+            rm /tmp/$csv_filename
+        "
+
+        if [ $? -ne 0 ]; then
+            echo_error "Failed to copy CSV to MinIO bucket"
+            return 1
+        fi
+
+        echo_success "CSV file copied to MinIO bucket"
+
+        # Verify file accessibility from processor pod
+        local processor_pod=$(oc get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=rosocp-processor" -o jsonpath='{.items[0].metadata.name}')
+
+        if [ -n "$processor_pod" ]; then
+            echo_info "Verifying file accessibility from processor pod..."
+
+            local file_url="http://$storage_endpoint/ros-data/$csv_filename"
+            local access_test=$(oc exec -n "$NAMESPACE" "$processor_pod" -- curl -s -I --connect-timeout 5 --max-time 15 "$file_url" | head -1)
+
+            if [[ "$access_test" =~ "200 OK" ]]; then
+                echo_success "File is accessible via HTTP"
+            else
+                echo_error "File is not accessible via HTTP: $access_test"
+            fi
+        fi
+
+    elif [ "$storage_backend" = "odf" ]; then
+        # ODF approach - use ingress service to upload file
+        echo_info "Using ingress service to upload CSV to ODF bucket..."
+
+        # Create a temporary CSV file
+        local temp_csv=$(mktemp)
+        echo "$csv_content" > "$temp_csv"
+
+        # Upload via ingress service (which handles ODF S3)
+        local upload_url=$(get_service_url "ingress" "/api/ingress/v1/upload")
+        echo_info "Uploading CSV to: $upload_url"
+
+        # Get service account token for authentication
+        local sa_token
+        if kubectl get secret -n "$NAMESPACE" | grep -q "ros-ocp-backend-token"; then
+            sa_token=$(kubectl get secret -n "$NAMESPACE" -o jsonpath='{.items[?(@.metadata.annotations.kubernetes\.io/service-account\.name=="ros-ocp-backend")].data.token}' | head -1 | base64 -d)
+        else
+            kubectl create token ros-ocp-backend -n "$NAMESPACE" --duration=3600s > /tmp/sa-token 2>/dev/null || {
+                echo_warning "Could not create service account token, using x-rh-identity only"
+                sa_token=""
+            }
+            if [ -f /tmp/sa-token ]; then
+                sa_token=$(cat /tmp/sa-token)
+                rm -f /tmp/sa-token
+            fi
+        fi
+
+        # Build curl command for CSV upload
+        local curl_cmd="curl -s -w \"%{http_code}\" --connect-timeout 10 --max-time 60"
+        curl_cmd="$curl_cmd -F \"file=@${temp_csv};type=text/csv\""
+        
+        if [ -n "$sa_token" ]; then
+            curl_cmd="$curl_cmd -H \"Authorization: Bearer $sa_token\""
+        fi
+        
+        curl_cmd="$curl_cmd -H \"x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K\""
+        curl_cmd="$curl_cmd -H \"x-rh-request-id: test-csv-$(date +%s)\""
+        curl_cmd="$curl_cmd \"$upload_url\""
+
+        local response=$(eval $curl_cmd)
+        local http_code="${response: -3}"
+        local response_body="${response%???}"
+
+        # Cleanup
+        rm -f "$temp_csv"
+
+        if [ "$http_code" != "202" ]; then
+            echo_error "CSV upload failed with HTTP $http_code"
+            echo_error "Response: $response_body"
+            return 1
+        fi
+
+        echo_success "CSV file uploaded to ODF bucket via ingress service"
+        echo_info "Response: $response_body"
     fi
 
     echo_info "=== STEP 3: Publish Kafka Event ===="
 
-    # Create Kafka message with container network URL (compact JSON)
-    local kafka_message="{\"request_id\":\"test-request-$(date +%s)\",\"b64_identity\":\"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K\",\"metadata\":{\"account\":\"12345\",\"org_id\":\"12345\",\"source_id\":\"test-source-id\",\"cluster_uuid\":\"1b77b73f-1d3e-43c6-9f55-bcd9fb6d1a0c\",\"cluster_alias\":\"test-cluster\"},\"files\":[\"http://${HELM_RELEASE_NAME}-minio:9000/ros-data/$csv_filename\"]}"
+    # Create Kafka message with appropriate storage URL based on backend
+    local storage_url
+    if [ "$storage_backend" = "minio" ]; then
+        storage_url="http://$storage_endpoint/ros-data/$csv_filename"
+    elif [ "$storage_backend" = "odf" ]; then
+        # For ODF, use the ingress service URL since files are uploaded via ingress
+        storage_url="http://${HELM_RELEASE_NAME}-ingress:8080/ros-data/$csv_filename"
+    else
+        echo_error "Unknown storage backend for Kafka message: $storage_backend"
+        return 1
+    fi
+
+    local kafka_message="{\"request_id\":\"test-request-$(date +%s)\",\"b64_identity\":\"eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwidHlwZSI6IlVzZXIiLCJpbnRlcm5hbCI6eyJvcmdfaWQiOiIxMjM0NSJ9fX0K\",\"metadata\":{\"account\":\"12345\",\"org_id\":\"12345\",\"source_id\":\"test-source-id\",\"cluster_uuid\":\"1b77b73f-1d3e-43c6-9f55-bcd9fb6d1a0c\",\"cluster_alias\":\"test-cluster\"},\"files\":[\"$storage_url\"]}"
 
     echo_info "Publishing Kafka message to hccm.ros.events topic"
     echo_info "Message content: $kafka_message"
@@ -951,6 +1164,13 @@ main() {
         exit 1
     fi
 
+    # Create ODF credentials secret if needed (for OpenShift deployments)
+    if oc api-resources --api-group=route.openshift.io >/dev/null 2>&1; then
+        if ! create_odf_credentials_secret; then
+            echo_warning "ODF credentials secret creation failed, but continuing with test..."
+        fi
+    fi
+
     # Setup cleanup trap
     trap cleanup_port_forwards EXIT INT TERM
 
@@ -1106,6 +1326,16 @@ case "${1:-}" in
         cleanup_port_forwards
         exit 0
         ;;
+    "create-secret")
+        if ! check_openshift; then
+            exit 1
+        fi
+        if ! check_deployment; then
+            exit 1
+        fi
+        create_odf_credentials_secret
+        exit $?
+        ;;
     "help"|"-h"|"--help")
         echo "Usage: $0 [command] [options]"
         echo ""
@@ -1115,6 +1345,7 @@ case "${1:-}" in
         echo "  health          Run health checks only"
         echo "  recommendations Verify recommendations via Kruize API"
         echo "  workloads       Verify workloads in database"
+        echo "  create-secret   Create ODF credentials secret (OpenShift only)"
         echo "  cleanup         Clean up any active port-forwards"
         echo "  help            Show this help message"
         echo ""
