@@ -168,8 +168,8 @@ download_latest_chart() {
 
     # Extract the tag name and download URL for the .tgz file
     local tag_name=$(echo "$latest_release" | jq -r '.tag_name')
-    local download_url=$(echo "$latest_release" | jq -r '.assets[] | select(.name | endswith(".tgz")) | .browser_download_url')
-    local filename=$(echo "$latest_release" | jq -r '.assets[] | select(.name | endswith(".tgz")) | .name')
+    local download_url=$(echo "$latest_release" | jq -r '.assets[] | select(.name | contains("latest")) | .browser_download_url')
+    local filename=$(echo "$latest_release" | jq -r '.assets[] | select(.name | contains("latest")) | .name')
 
     if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
         echo_error "No .tgz file found in the latest release ($tag_name)"
