@@ -136,8 +136,9 @@ lint: golangci-lint
 	$(GOLANGCILINT) run --timeout=3m ./...
 
 .PHONY: test
-test: setup-envtest ginkgo
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_BIN_DIR) -p path)" $(GINKGO) $(GINKGO_ARGS) -v ./...
+test:
+	@echo "🧪 Running tests in isolated container..."
+	podman build --no-cache -f Dockerfile.tests -t ros-ocp-backend-tests .
 
 .PHONY: clean-test-binaries
 clean-test-binaries:
