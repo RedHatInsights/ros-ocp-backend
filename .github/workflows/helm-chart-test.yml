@@ -16,9 +16,7 @@ name: Helm Chart Quality Test
 on:
   pull_request:
     paths:
-      - 'deployment/kubernetes/scripts/**'
-      - '.github/workflows/helm-chart-test*.yml'
-      # Also run when application code changes since we now test the built code
+      # Run when application code changes since we test the built code
       - 'cmd/**'
       - 'internal/**'
       - 'go.mod'
@@ -26,11 +24,12 @@ on:
       - 'rosocp.go'
       - 'Dockerfile'
       - 'Makefile'
+      # Run when test scripts change
+      - 'deployment/kubernetes/scripts/test-*.sh'
+      - '.github/workflows/helm-chart-test*.yml'
   push:
     paths:
-      - 'deployment/kubernetes/scripts/**'
-      - '.github/workflows/helm-chart-test*.yml'
-      # Also run when application code changes since we now test the built code
+      # Run when application code changes since we test the built code
       - 'cmd/**'
       - 'internal/**'
       - 'go.mod'
@@ -38,6 +37,9 @@ on:
       - 'rosocp.go'
       - 'Dockerfile'
       - 'Makefile'
+      # Run when test scripts change
+      - 'deployment/kubernetes/scripts/test-*.sh'
+      - '.github/workflows/helm-chart-test*.yml'
   workflow_dispatch:
 
 jobs:
@@ -49,8 +51,17 @@ jobs:
       CONTAINER_RUNTIME: podman
 
     steps:
-      - name: Checkout code
+      - name: Checkout ros-ocp-backend code
         uses: actions/checkout@v4
+        with:
+          path: ros-ocp-backend
+
+      - name: Checkout ros-helm-chart repository
+        uses: actions/checkout@v4
+        with:
+          repository: insights-onprem/ros-helm-chart
+          ref: main
+          path: ros-helm-chart
 
       - name: Install Podman
         run: |
@@ -104,7 +115,7 @@ jobs:
       - name: Setup KIND cluster
         timeout-minutes: 15
         run: |
-          cd deployment/kubernetes/scripts
+          cd ros-helm-chart/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
@@ -133,6 +144,7 @@ jobs:
           echo "🔧 Configured KIND to use Podman runtime: KIND_EXPERIMENTAL_PROVIDER=podman"
 
           echo "🐳 Building container image using make build-image..."
+          cd ros-ocp-backend
           IMAGE_TAG=test make build-image
           echo "✅ Container image built successfully"
 
@@ -179,7 +191,7 @@ jobs:
         timeout-minutes: 15
         run: |
           # Deploy Helm chart with local image overrides
-          cd deployment/kubernetes/scripts
+          cd ros-helm-chart/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
@@ -292,7 +304,7 @@ jobs:
       - name: Run Dataflow Test
         timeout-minutes: 15
         run: |
-          cd deployment/kubernetes/scripts
+          cd ros-ocp-backend/deployment/kubernetes/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
