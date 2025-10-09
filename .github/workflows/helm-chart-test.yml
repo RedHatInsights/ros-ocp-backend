@@ -16,9 +16,7 @@ name: Helm Chart Quality Test
 on:
   pull_request:
     paths:
-      - 'deployment/kubernetes/scripts/**'
-      - '.github/workflows/helm-chart-test*.yml'
-      # Also run when application code changes since we now test the built code
+      # Run when application code changes since we test the built code
       - 'cmd/**'
       - 'internal/**'
       - 'go.mod'
@@ -26,11 +24,12 @@ on:
       - 'rosocp.go'
       - 'Dockerfile'
       - 'Makefile'
+      # Run when test scripts change
+      - 'deployment/kubernetes/scripts/test-*.sh'
+      - '.github/workflows/helm-chart-test*.yml'
   push:
     paths:
-      - 'deployment/kubernetes/scripts/**'
-      - '.github/workflows/helm-chart-test*.yml'
-      # Also run when application code changes since we now test the built code
+      # Run when application code changes since we test the built code
       - 'cmd/**'
       - 'internal/**'
       - 'go.mod'
@@ -38,6 +37,9 @@ on:
       - 'rosocp.go'
       - 'Dockerfile'
       - 'Makefile'
+      # Run when test scripts change
+      - 'deployment/kubernetes/scripts/test-*.sh'
+      - '.github/workflows/helm-chart-test*.yml'
   workflow_dispatch:
 
 jobs:
@@ -49,8 +51,46 @@ jobs:
       CONTAINER_RUNTIME: podman
 
     steps:
-      - name: Checkout code
+      - name: Checkout ros-ocp-backend code
         uses: actions/checkout@v4
+        with:
+          path: ros-ocp-backend
+
+      - name: Download ros-helm-chart scripts and chart from latest release
+        run: |
+          # Fail fast and safely:
+          #  -e : exit immediately if a command fails
+          #  -u : treat unset variables as errors
+          #  -o pipefail : fail if any command in a pipeline fails
+          set -euo pipefail
+      
+          # Get latest release tag
+          RELEASE_TAG=$(curl -s https://api.github.com/repos/insights-onprem/ros-helm-chart/releases/latest | jq -r '.tag_name')
+          echo "Using ros-helm-chart release: $RELEASE_TAG"
+      
+          # Download scripts and chart
+          mkdir -p ros-helm-chart/scripts
+          curl -L -o ros-helm-chart/scripts/deploy-kind.sh \
+            "https://raw.githubusercontent.com/insights-onprem/ros-helm-chart/${RELEASE_TAG}/scripts/deploy-kind.sh"
+          curl -L -o ros-helm-chart/scripts/install-helm-chart.sh \
+            "https://raw.githubusercontent.com/insights-onprem/ros-helm-chart/${RELEASE_TAG}/scripts/install-helm-chart.sh"
+
+          # Download chart
+          CHART_URL=$(curl -s https://api.github.com/repos/insights-onprem/ros-helm-chart/releases/latest | jq -r '.assets[] | select(.name | contains("latest")) | .browser_download_url')
+          curl -L -o /tmp/ros-ocp-chart.tgz "$CHART_URL"
+
+          # Extract chart to directory (script expects ../ros-ocp relative to scripts directory)
+          mkdir -p ros-helm-chart/ros-ocp
+          tar -xzf /tmp/ros-ocp-chart.tgz -C ros-helm-chart/ros-ocp --strip-components=1
+      
+          chmod +x ros-helm-chart/scripts/*.sh
+      
+          # PATCH: force install-helm-chart.sh to use only 'ros-ocp-latest.tgz'
+          sed -i -E 's#ros-ocp-[^ ]*\.tgz#ros-ocp-latest.tgz#g' ros-helm-chart/scripts/install-helm-chart.sh
+          echo "[INFO] Patched install-helm-chart.sh to always use ros-ocp-latest.tgz"
+      
+          # VERIFY PATCH
+          grep -A2 "ros-ocp" ros-helm-chart/scripts/install-helm-chart.sh
 
       - name: Install Podman
         run: |
@@ -104,7 +144,7 @@ jobs:
       - name: Setup KIND cluster
         timeout-minutes: 15
         run: |
-          cd deployment/kubernetes/scripts
+          cd ros-helm-chart/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
@@ -133,6 +173,7 @@ jobs:
           echo "🔧 Configured KIND to use Podman runtime: KIND_EXPERIMENTAL_PROVIDER=podman"
 
           echo "🐳 Building container image using make build-image..."
+          cd ros-ocp-backend
           IMAGE_TAG=test make build-image
           echo "✅ Container image built successfully"
 
@@ -179,7 +220,7 @@ jobs:
         timeout-minutes: 15
         run: |
           # Deploy Helm chart with local image overrides
-          cd deployment/kubernetes/scripts
+          cd ros-helm-chart/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
@@ -218,12 +259,11 @@ jobs:
           echo "📋 Using local image values:"
           cat /tmp/local-image-values.yaml
 
-          # Make scripts executable
-          chmod +x install-helm-chart.sh
-
           # Deploy Helm chart with local image overrides
           echo "Installing ROS-OCP Helm chart with local image..."
           export VALUES_FILE="/tmp/local-image-values.yaml"
+          export USE_LOCAL_CHART=true
+          export LOCAL_CHART_PATH="../ros-ocp"
           ./install-helm-chart.sh
 
           # Verify deployment
@@ -292,7 +332,7 @@ jobs:
       - name: Run Dataflow Test
         timeout-minutes: 15
         run: |
-          cd deployment/kubernetes/scripts
+          cd ros-ocp-backend/deployment/kubernetes/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}

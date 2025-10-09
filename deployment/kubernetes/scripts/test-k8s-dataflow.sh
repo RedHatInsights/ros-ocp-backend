@@ -1242,7 +1242,7 @@ main() {
         echo_info "3. Check that the token secret was created properly"
         echo_info "4. Verify the dev kubeconfig file was generated"
         echo_info ""
-        echo_info "This test requires authentication to function properly."
+        echo_info "This test uses dynamic authentication and will attempt fallback methods."
         exit 1
     fi
 
@@ -1345,6 +1345,11 @@ case "${1:-}" in
         echo "    - Service account 'insights-ros-ingress' with token secret"
         echo "    - Dev kubeconfig file at /tmp/dev-kubeconfig"
         echo "    - insights-ros-ingress pod with service account token"
+        echo ""
+        echo "  Prerequisites:"
+        echo "    - ROS-OCP must be deployed (./install-helm-chart.sh)"
+        echo "    - Service accounts must exist (created by Helm chart)"
+        echo "    - Pods must be running and ready"
         echo ""
         echo "  Kubernetes-specific (Ingress access):"
         echo "  Hostname: localhost"
