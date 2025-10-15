@@ -170,14 +170,14 @@ func determine_k8s_object_type(df dataframe.DataFrame) dataframe.DataFrame {
 	return df
 }
 
-func requiredColumnsFound(requiredColumns []string, csvColumns []string) bool {
+func hasMissingColumns(requiredColumns []string, csvColumns []string) bool {
 	for _, reqCol := range requiredColumns {
 		if !slices.Contains(csvColumns, reqCol) {
 			log.Warnf("missing columns in CSV: %v", reqCol)
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func check_if_all_required_columns_in_CSV(df dataframe.DataFrame) error {
@@ -188,7 +188,7 @@ func check_if_all_required_columns_in_CSV(df dataframe.DataFrame) error {
 	}
 
 	columns_in_csv := df.Names()
-	if !requiredColumnsFound(all_required_columns, columns_in_csv) {
+	if hasMissingColumns(all_required_columns, columns_in_csv) {
 		return fmt.Errorf("CSV file does not have all the required columns")
 	}
 	return nil
