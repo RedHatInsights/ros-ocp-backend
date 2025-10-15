@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-gota/gota/dataframe"
+	"github.com/go-gota/gota/series"
 )
 
 type UsageData struct {
@@ -188,6 +189,20 @@ func Test_check_if_all_required_columns_in_CSV(t *testing.T) {
 	df = df.Drop([]int{5})
 	if err := check_if_all_required_columns_in_CSV(df); err == nil {
 		t.Error("Expecting error to be returned as all required column not present")
+	}
+
+	// Case for covering additional columns in CSV
+	usageData := []UsageData{{}}
+	df = dataframe.LoadStructs(usageData)
+	df = df.Mutate(
+		series.New([]string{"abc"}, series.String, "additional_column_1"),
+	)
+	df = df.Mutate(
+		series.New([]string{"abc_profile"}, series.String, "additional_column_2"),
+	)
+
+	if err := check_if_all_required_columns_in_CSV(df); err != nil {
+		t.Error("additional columns should be ignored but test fails")
 	}
 }
 

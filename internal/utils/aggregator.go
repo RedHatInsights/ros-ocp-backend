@@ -2,11 +2,11 @@ package utils
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-gota/gota/series"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
@@ -170,13 +170,14 @@ func determine_k8s_object_type(df dataframe.DataFrame) dataframe.DataFrame {
 	return df
 }
 
-// dummy implementation of an interface with ErrorF method.
-type dummyt struct{}
-
-func (t dummyt) Errorf(string, ...interface{}) {}
-
-func elementsMatch(listA, listB interface{}) bool {
-	return assert.ElementsMatch(dummyt{}, listA, listB)
+func elementsMatch(requiredColumns []string, csvColumns []string) bool {
+	for _, reqCol := range requiredColumns {
+		if !slices.Contains(csvColumns, reqCol) {
+			log.Warnf("missing columns in CSV: %v", reqCol)
+			return false
+		}
+	}
+	return true
 }
 
 func check_if_all_required_columns_in_CSV(df dataframe.DataFrame) error {
