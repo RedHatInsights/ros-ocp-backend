@@ -65,6 +65,8 @@ objects:
             value: "rosocp-backend"
           - name: LOG_LEVEL
             value: ${LOG_LEVEL}
+          - name: METRICS_ENABLED
+            value: "${METRICS_ENABLED}"
     - name: recommendation-poller
       replicas: ${{POLLER_REPLICA_COUNT}}
       podSpec:
@@ -81,8 +83,8 @@ objects:
         livenessProbe:
           failureThreshold: 3
           httpGet:
-            path: /metrics
-            port: 9000
+            path: /status
+            port: 8000
             scheme: HTTP
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -90,8 +92,8 @@ objects:
           timeoutSeconds: 3
         readinessProbe:
           httpGet:
-            path: /metrics
-            port: 9000
+            path: /status
+            port: 8000
             scheme: HTTP
           initialDelaySeconds: 3
           periodSeconds: 10
@@ -115,6 +117,8 @@ objects:
             value: "rosocp-backend"
           - name: LOG_LEVEL
             value: ${RECOMMENDATION_POLLER_LOG_LEVEL}
+          - name: METRICS_ENABLED
+            value: "${METRICS_ENABLED}"
     - name: api
       replicas: ${{API_REPLICA_COUNT}}
       webServices:
@@ -171,8 +175,8 @@ objects:
             value: "rosocp-api"
           - name: LOG_LEVEL
             value: ${LOG_LEVEL}
-          - name: ID_PROVIDER
-            value: ${ID_PROVIDER}
+          - name: METRICS_ENABLED
+            value: "${METRICS_ENABLED}"
     - name: housekeeper
       replicas: ${{HOUSEKEEPER_REPLICA_COUNT}}
       podSpec:
@@ -308,5 +312,6 @@ parameters:
   value: 'INFO'
 - name: PARTITION_DELETE_INTERVAL
   value: "0 0 */15 * *" # Runs at 12:00 AM, every 15 days.
-- name: ID_PROVIDER # Captures the ID provider used to authenticate the REST API calls. For console.redhat.com it uses rhsso (default value). For on-prem it uses oauth.
-  value: "rhsso"
+- description: Enable or disable Prometheus metrics endpoint
+  name: METRICS_ENABLED
+  value: "true"

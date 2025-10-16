@@ -69,6 +69,7 @@ type Config struct {
 
 	// Prometheus config
 	PrometheusPort string `mapstructure:"PROMETHEUS_PORT"`
+	MetricsEnabled bool   `mapstructure:"METRICS_ENABLED"`
 
 	// Sources-api-go config
 	SourceApiBaseUrl string `mapstructure:"SOURCES_API_BASE_URL"`
@@ -135,6 +136,7 @@ func initConfig() {
 
 		// prometheus config
 		viper.SetDefault("PROMETHEUS_PORT", c.MetricsPort)
+		viper.SetDefault("METRICS_ENABLED", true) // Always enabled in Clowder
 
 	} else {
 		viper.SetDefault("LogFormater", "text")
@@ -162,6 +164,7 @@ func initConfig() {
 
 		// Prometheus config - read from environment variables first, fallback to defaults
 		viper.SetDefault("PROMETHEUS_PORT", getEnvWithDefault("PROMETHEUS_PORT", "5005"))
+		viper.SetDefault("METRICS_ENABLED", getEnvWithDefault("METRICS_ENABLED", "true") == "true") // Enabled by default
 
 		// Sources-api-go config - read from environment variables first, fallback to defaults
 		viper.SetDefault("SOURCES_API_BASE_URL", getEnvWithDefault("SOURCES_API_BASE_URL", "http://127.0.0.1:8002"))
