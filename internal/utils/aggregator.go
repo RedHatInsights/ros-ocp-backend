@@ -171,6 +171,7 @@ func determine_k8s_object_type(df dataframe.DataFrame) dataframe.DataFrame {
 }
 
 func hasMissingColumns(requiredColumns []string, csvColumns []string) bool {
+	slices.Sort(requiredColumns)
 	for _, reqCol := range requiredColumns {
 		if !slices.Contains(csvColumns, reqCol) {
 			log.Warnf("missing columns in CSV: %v", reqCol)
