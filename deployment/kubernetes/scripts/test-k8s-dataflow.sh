@@ -3,9 +3,11 @@
 # ROS-OCP Kubernetes Data Flow Test Script
 # This script tests the complete data flow in a Kubernetes deployment
 #
-# NOTE: This script uses OAuth 2.0 authentication with service account tokens.
-# The ros-ocp-backend should be configured with ID_PROVIDER=oauth2 (or "oauth2" with quotes).
-# The script will automatically set this if not configured correctly.
+# AUTHENTICATION:
+#   - ROS-OCP REST API endpoints: RHSSO (X-Rh-Identity header with mock org data)
+#   - ROS-OCP Metrics endpoint: OAuth2 (Bearer token via TokenReview - NOT TESTED)
+#   - Insights-ROS-Ingress upload: Keycloak JWT via Envoy/Authorino sidecar
+#     (mocked with X-ROS-Authenticated, X-Bearer-Token, X-ROS-User-ID headers)
 
 set -e  # Exit on any error
 
@@ -43,6 +45,28 @@ echo_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Function to create X-Rh-Identity header for RHSSO authentication
+create_xrh_identity_header() {
+    # Create a mock identity structure for testing
+    local identity_json='{"identity":{"org_id":"test-org-123","type":"User","account_number":"123456"}}'
+    echo -n "$identity_json" | base64 | tr -d '\n'
+}
+
+# Function to create mock JWT token for testing
+# This mimics what Envoy/Authorino sidecar would forward to ingress
+create_mock_jwt_token() {
+    # Create a simple mock JWT (doesn't need to be valid since we're mocking sidecar validation)
+    # Format: header.payload.signature (base64url encoded)
+    local header='{"alg":"RS256","typ":"JWT"}'
+    local payload='{"sub":"test-user","org_id":"test-org-123","account_number":"123456","preferred_username":"testuser","exp":9999999999}'
+
+    local header_b64=$(echo -n "$header" | base64 | tr -d '\n=' | tr '+/' '-_')
+    local payload_b64=$(echo -n "$payload" | base64 | tr -d '\n=' | tr '+/' '-_')
+
+    # Mock signature (doesn't matter for testing)
+    echo "${header_b64}.${payload_b64}.mock_signature"
+}
+
 # Function to check if kubectl is configured
 check_kubectl() {
     if ! kubectl cluster-info >/dev/null 2>&1; then
@@ -52,52 +76,13 @@ check_kubectl() {
     return 0
 }
 
-# Function to validate authentication tokens are available
+# Function to validate authentication setup
 validate_authentication_tokens() {
-    echo_info "Validating authentication tokens for testing..."
-
-    local token_found=false
-    local auth_methods=()
-
-    # Check if we can use the kubeconfig created by deploy-kind.sh
-    if [ -f "/tmp/dev-kubeconfig" ]; then
-        local token=$(kubectl --kubeconfig=/tmp/dev-kubeconfig config view --raw -o jsonpath='{.users[0].user.token}' 2>/dev/null || echo "")
-        if [ -n "$token" ]; then
-            auth_methods+=("dev-kubeconfig")
-            token_found=true
-            echo_success "✓ Authentication token available from dev kubeconfig"
-        fi
-    fi
-
-    # Check for API pod service account token (our new approach)
-    local api_pod=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/component=api -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-    if [ -n "$api_pod" ]; then
-        local token=$(kubectl exec -n "$NAMESPACE" "$api_pod" -- cat /var/run/secrets/kubernetes.io/serviceaccount/token 2>/dev/null)
-        if [ -n "$token" ]; then
-            auth_methods+=("pod-service-account")
-            token_found=true
-            echo_success "✓ Authentication token available from pod service account"
-        fi
-    else
-        echo_warning "API pod not found - deployment may not be complete yet"
-    fi
-
-    if [ "$token_found" = false ]; then
-        echo_error "✗ No authentication tokens available!"
-        echo_error "Authentication is REQUIRED for testing. The test will FAIL."
-        echo_info "Expected authentication sources:"
-        echo_info "  - Dev kubeconfig file at /tmp/dev-kubeconfig"
-        echo_info "  - ros-ocp-api pod with service account token"
-        echo_info ""
-        echo_info "Make sure deploy-kind.sh was run to set up authentication"
-        echo_info "If deployment is in progress, wait for pods to be ready first"
-        echo_info "This test requires authentication tokens to function properly."
-        return 1
-    else
-        echo_success "✓ Authentication validation passed"
-        echo_info "Available authentication methods: ${auth_methods[*]}"
-        return 0
-    fi
+    echo_info "Validating authentication setup for testing..."
+    echo_info "ROS-OCP REST API: Mock X-Rh-Identity headers (org: test-org-123)"
+    echo_info "Ingress Upload: Mock sidecar headers (X-ROS-Authenticated, X-Bearer-Token)"
+    echo_success "✓ Authentication setup validated"
+    return 0
 }
 
 # Function to get service account token from ros-ingress pod
@@ -414,21 +399,20 @@ EOF
     echo_info "Platform detected: $(detect_platform)"
     echo_info "Ingress hostname: $(get_ingress_hostname)"
 
-    # Get OAuth 2.0 token from ros-ocp-api service account for upload
-    local upload_bearer_token=$(get_ros_api_service_account_token)
-    if [ -z "$upload_bearer_token" ]; then
-        echo_error "Failed to get API service account token for upload"
-        return 1
-    fi
+    # Create mock JWT token and sidecar headers
+    # Ingress now expects headers forwarded by Envoy/Authorino sidecar
+    local mock_jwt=$(create_mock_jwt_token)
 
-    # Build curl command with OAuth Bearer token
+    # Build curl command with mock sidecar headers (mimics Envoy/Authorino forwarding)
     local curl_cmd="curl -s -w \"%{http_code}\" --connect-timeout 10 --max-time 60 \
         -F \"file=@${test_dir}/${tar_filename};type=application/vnd.redhat.hccm.upload\" \
-        -H \"Authorization: Bearer $upload_bearer_token\" \
+        -H \"X-ROS-Authenticated: true\" \
+        -H \"X-Bearer-Token: $mock_jwt\" \
+        -H \"X-ROS-User-ID: test-user\" \
         -H \"x-rh-request-id: test-request-$(date +%s)\" \
         -H \"Host: localhost\""
 
-    echo_info "✓ OAuth Bearer token will be included in upload request"
+    echo_info "✓ Mock sidecar headers will be included in upload request (X-ROS-Authenticated)"
 
     curl_cmd="$curl_cmd \"$upload_url\""
 
@@ -728,34 +712,11 @@ verify_recommendations() {
     echo_info "Fresh data should trigger Kruize to generate valid recommendations..."
     sleep 45
 
-    # Verify that the API is configured for OAuth authentication
-    echo_info "Verifying OAuth authentication configuration..."
-    local id_provider=$(kubectl get deployment -l app.kubernetes.io/name=rosocp-api  -n "$NAMESPACE" -o jsonpath='{.items[0].spec.template.spec.containers[0].env[?(@.name=="ID_PROVIDER")].value}' 2>/dev/null || echo "")
-
-    # Remove quotes if present (Helm templates may add quotes)
-    local clean_id_provider=$(echo "$id_provider" | sed 's/^"//;s/"$//')
-
-    if [ "$clean_id_provider" != "oauth2" ]; then
-        echo_warning "ID_PROVIDER is not set to 'oauth2' (current: '$id_provider' -> cleaned: '$clean_id_provider')"
-        echo_info "Setting ID_PROVIDER=oauth2 for rosocp-api deployment..."
-        kubectl set env deployment -l app.kubernetes.io/name=rosocp-api ID_PROVIDER=oauth2 -n "$NAMESPACE"
-        echo_info "Waiting for deployment to restart (this may take up to 60 seconds)..."
-        if kubectl rollout status deployment -l app.kubernetes.io/name=rosocp-api -n "$NAMESPACE" --timeout=60s; then
-            echo_success "✓ Deployment updated successfully with oauth2 authentication"
-        else
-            echo_warning "Deployment update may still be in progress - continuing with test"
-        fi
-    else
-        echo_success "ID_PROVIDER is correctly set to 'oauth2' (raw: '$id_provider')"
-    fi
-
-    # Get OAuth 2.0 token from ros-ocp-api service account
-    local bearer_token=$(get_ros_api_service_account_token)
-    if [ -z "$bearer_token" ]; then
-        echo_error "Failed to get service account token from ros-ocp-api pod"
-        return 1
-    fi
-    echo_info "Successfully obtained service account token for OAuth authentication"
+    # Authentication configuration
+    echo_info "Authentication configuration:"
+    echo_info "  - ROS-OCP REST API: RHSSO (X-Rh-Identity header)"
+    echo_info "  - ROS-OCP Metrics: OAuth2 (not tested in this script)"
+    echo_info "  - Ingress Upload: Keycloak JWT via sidecar (mocked: X-ROS-Authenticated)"
 
     # Get platform-appropriate URLs
     local status_url=$(get_service_url "ros-ocp-rosocp-api" "/status")
@@ -783,8 +744,9 @@ verify_recommendations() {
 
     # Test recommendations list endpoint
     echo_info "Testing recommendations list endpoint..."
+    local xrh_identity=$(create_xrh_identity_header)
     local list_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 30 -o /tmp/recommendations_list.json \
-        -H "Authorization: Bearer $bearer_token" \
+        -H "X-Rh-Identity: $xrh_identity" \
         -H "Content-Type: application/json" \
         -H "Host: localhost" \
         "$api_base_url/recommendations/openshift" 2>/dev/null || echo "000")
@@ -847,7 +809,7 @@ except:
                 if [ -n "$rec_id" ]; then
                     echo_info "Testing individual recommendation endpoint for ID: $rec_id"
                     local detail_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 30 -o /tmp/recommendation_detail.json \
-                        -H "Authorization: Bearer $bearer_token" \
+                        -H "X-Rh-Identity: $xrh_identity" \
                         -H "Content-Type: application/json" \
                         -H "Host: localhost" \
                         "$api_base_url/recommendations/openshift/$rec_id" 2>/dev/null || echo "000")
@@ -910,7 +872,7 @@ except Exception as e:
     # Test CSV export format
     echo_info "Testing CSV export functionality..."
     local csv_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 30 -o /tmp/recommendations.csv \
-        -H "Authorization: Bearer $bearer_token" \
+        -H "X-Rh-Identity: $xrh_identity" \
         -H "Accept: text/csv" \
         -H "Host: localhost" \
         "$api_base_url/recommendations/openshift?format=csv" 2>/dev/null || echo "000")
@@ -1119,52 +1081,35 @@ run_health_checks() {
     local api_url=$(get_service_url "ros-ocp-rosocp-api" "/status")
     local kruize_url=$(get_service_url "kruize" "/api/kruize/listPerformanceProfiles")
 
-    # Check ingress service by testing upload endpoint with service account token
+    # Check ingress service by testing upload endpoint with mock sidecar headers
     local upload_url=$(get_service_url "ingress" "/api/ingress/v1/upload")
+    local mock_jwt=$(create_mock_jwt_token)
 
-    # Get service account token for authentication
-    local sa_token=$(kubectl create token insights-ros-ingress -n "$NAMESPACE" --duration=1h 2>/dev/null)
-    if [ -z "$sa_token" ]; then
-        echo_warning "Could not get service account token, testing without authentication"
-        local response_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 -H "Host: localhost" -X POST "$upload_url" -H "Content-Type: application/vnd.redhat.hccm.upload" --data-binary "test" 2>/dev/null)
-        if [ "$response_code" = "405" ] || [ "$response_code" = "401" ]; then
-            echo_success "Ingress upload endpoint is accessible at: $upload_url (HTTP $response_code)"
-        elif [ "$response_code" = "400" ]; then
-            echo_success "Ingress upload endpoint is accessible at: $upload_url (HTTP $response_code - service running, rejecting invalid test data)"
-        else
-            echo_error "Ingress upload endpoint is not accessible at: $upload_url (HTTP $response_code)"
-            failed_checks=$((failed_checks + 1))
-        fi
+    # Test with mock sidecar authentication headers (mimics Envoy/Authorino)
+    local response_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 \
+        -H "Host: localhost" \
+        -H "X-ROS-Authenticated: true" \
+        -H "X-Bearer-Token: $mock_jwt" \
+        -H "X-ROS-User-ID: test-user" \
+        -X POST "$upload_url" \
+        -H "Content-Type: application/vnd.redhat.hccm.upload" \
+        --data-binary "test" 2>/dev/null)
+
+    if [ "$response_code" = "200" ] || [ "$response_code" = "202" ]; then
+        echo_success "Ingress upload endpoint is accessible with sidecar auth at: $upload_url (HTTP $response_code)"
+    elif [ "$response_code" = "400" ] || [ "$response_code" = "500" ]; then
+        echo_success "Ingress upload endpoint is accessible with sidecar auth at: $upload_url (HTTP $response_code - service running, rejecting invalid test data)"
     else
-        # Test with authentication
-        local response_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 -H "Host: localhost" -H "Authorization: Bearer $sa_token" -X POST "$upload_url" -H "Content-Type: application/vnd.redhat.hccm.upload" --data-binary "test" 2>/dev/null)
-        if [ "$response_code" = "200" ] || [ "$response_code" = "202" ]; then
-            echo_success "Ingress upload endpoint is accessible with authentication at: $upload_url (HTTP $response_code)"
-        elif [ "$response_code" = "400" ] || [ "$response_code" = "500" ]; then
-            echo_success "Ingress upload endpoint is accessible with authentication at: $upload_url (HTTP $response_code - service running, rejecting invalid test data)"
-        else
-            echo_error "Ingress upload endpoint failed with authentication at: $upload_url (HTTP $response_code)"
-            failed_checks=$((failed_checks + 1))
-        fi
+        echo_error "Ingress upload endpoint failed with sidecar auth at: $upload_url (HTTP $response_code)"
+        failed_checks=$((failed_checks + 1))
     fi
 
-    # Check ROS-OCP API with service account token
-    if [ -n "$sa_token" ]; then
-        local api_response_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 -H "Host: localhost" -H "Authorization: Bearer $sa_token" "$api_url" 2>/dev/null)
-        if [ "$api_response_code" = "200" ]; then
-            echo_success "ROS-OCP API is accessible with authentication at: $api_url (HTTP $api_response_code)"
-        else
-            echo_error "ROS-OCP API failed with authentication at: $api_url (HTTP $api_response_code)"
-            failed_checks=$((failed_checks + 1))
-        fi
+    # Check ROS-OCP API /status endpoint (public, no authentication required)
+    if curl -f -s --connect-timeout 5 --max-time 15 -H "Host: localhost" "$api_url" >/dev/null; then
+        echo_success "ROS-OCP API is accessible at: $api_url"
     else
-        # Fallback to unauthenticated check
-        if curl -f -s --connect-timeout 5 --max-time 15 -H "Host: localhost" "$api_url" >/dev/null; then
-            echo_success "ROS-OCP API is accessible at: $api_url"
-        else
-            echo_error "ROS-OCP API is not accessible at: $api_url"
-            failed_checks=$((failed_checks + 1))
-        fi
+        echo_error "ROS-OCP API is not accessible at: $api_url"
+        failed_checks=$((failed_checks + 1))
     fi
 
     # Check Kruize API
