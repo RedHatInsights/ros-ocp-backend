@@ -209,7 +209,7 @@ func truncateToThreeDecimalPlaces(value float64) float64 {
 	return value
 }
 
-func ConvertCPUUnit(cpuUnit string, cpuValue float64) float64 {
+func convertCPUUnit(cpuUnit string, cpuValue float64) float64 {
 	var convertedValueCPU float64
 
 	if cpuUnit == "millicores" {
@@ -223,7 +223,7 @@ func ConvertCPUUnit(cpuUnit string, cpuValue float64) float64 {
 	return convertedValueCPU
 }
 
-func ConvertMemoryUnit(memoryUnit string, memoryValue float64) float64 {
+func convertMemoryUnit(memoryUnit string, memoryValue float64) float64 {
 	var convertedValueMemory float64
 
 	if memoryUnit == "MiB" {
@@ -269,7 +269,7 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 			if ok {
 				if memoryValue, ok := memoryObject["amount"].(float64); ok {
 					memoryUnit := unitsToTransform["memory"]
-					convertedMemoryValue := ConvertMemoryUnit(memoryUnit, memoryValue)
+					convertedMemoryValue := convertMemoryUnit(memoryUnit, memoryValue)
 					memoryObject["amount"] = convertedMemoryValue
 					if updateUnitsk8s {
 						memoryObject["format"] = MemoryUnitk8s[memoryUnit]
@@ -283,7 +283,7 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 			if ok {
 				if cpuValue, ok := cpuObject["amount"].(float64); ok {
 					cpuUnit := unitsToTransform["cpu"]
-					convertedCPUValue := ConvertCPUUnit(cpuUnit, cpuValue)
+					convertedCPUValue := convertCPUUnit(cpuUnit, cpuValue)
 					cpuObject["amount"] = convertedCPUValue
 					if updateUnitsk8s {
 						cpuObject["format"] = CPUUnitk8s[cpuUnit]
@@ -345,7 +345,7 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 							}
 							for _, key := range []string{"q1", "q3", "min", "max", "median"} {
 								cpuValue, _ := cpuUsage[key].(float64)
-								cpuUsage[key] = ConvertCPUUnit(cpuUnit, cpuValue)
+								cpuUsage[key] = convertCPUUnit(cpuUnit, cpuValue)
 							}
 						}
 						if memoryUsage, ok := datapointMap["memoryUsage"].(map[string]interface{}); ok {
@@ -359,7 +359,7 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 							}
 							for _, key := range []string{"q1", "q3", "min", "max", "median"} {
 								memoryValue, _ := memoryUsage[key].(float64)
-								memoryUsage[key] = ConvertMemoryUnit(memoryUnit, memoryValue)
+								memoryUsage[key] = convertMemoryUnit(memoryUnit, memoryValue)
 							}
 						}
 					}
@@ -387,7 +387,7 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 							if ok {
 								if memoryValue, ok := memoryObject["amount"].(float64); ok {
 									memoryUnit := unitsToTransform["memory"]
-									convertedMemoryValue := ConvertMemoryUnit(memoryUnit, memoryValue)
+									convertedMemoryValue := convertMemoryUnit(memoryUnit, memoryValue)
 									memoryObject["amount"] = convertedMemoryValue
 									if updateUnitsk8s {
 										memoryObject["format"] = MemoryUnitk8s[memoryUnit]
@@ -401,7 +401,7 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 							if ok {
 								if cpuValue, ok := cpuObject["amount"].(float64); ok {
 									cpuUnit := unitsToTransform["cpu"]
-									convertedCPUValue := ConvertCPUUnit(cpuUnit, cpuValue)
+									convertedCPUValue := convertCPUUnit(cpuUnit, cpuValue)
 									cpuObject["amount"] = convertedCPUValue
 									if updateUnitsk8s {
 										cpuObject["format"] = CPUUnitk8s[cpuUnit]
@@ -485,7 +485,7 @@ func dropBoxPlotsObject(recommendationJSON map[string]interface{}) map[string]in
 	return recommendationJSON
 }
 
-func CalculatePercentage(numerator float64, denominator float64) float64 {
+func calculatePercentage(numerator float64, denominator float64) float64 {
 	if numerator == 0.0 || denominator == 0.0 {
 		// This block avoids below conditions and returns 0.0 instead,
 		// When numerator is 0.0 the Go returns 0.0, valid number however division can be skipped
@@ -565,10 +565,10 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 							if ok {
 								if memoryValue, ok := memoryObject["amount"].(float64); ok {
 									if section == "limits" {
-										percentageMemoryValue := CalculatePercentage(memoryValue, currentMemoryLimits)
+										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryLimits)
 										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
 									} else if section == "requests" {
-										percentageMemoryValue := CalculatePercentage(memoryValue, currentMemoryRequests)
+										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryRequests)
 										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
 									}
 									memoryObject["format"] = "percent"
@@ -579,10 +579,10 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 							if ok {
 								if cpuValue, ok := cpuObject["amount"].(float64); ok {
 									if section == "limits" {
-										percentageCpuValue := CalculatePercentage(cpuValue, currentCpuLimits)
+										percentageCpuValue := calculatePercentage(cpuValue, currentCpuLimits)
 										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
 									} else if section == "requests" {
-										percentageCpuValue := CalculatePercentage(cpuValue, currentCpuRequests)
+										percentageCpuValue := calculatePercentage(cpuValue, currentCpuRequests)
 										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
 									}
 									cpuObject["format"] = "percent"
@@ -657,25 +657,25 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 			}
 
 			variationCPULimitPercentage := truncateToThreeDecimalPlaces(
-				CalculatePercentage(
+				calculatePercentage(
 					truncateToThreeDecimalPlaces(recommendationEngine.Variation.Limits.Cpu.Amount),
 					truncateToThreeDecimalPlaces(recommendationObj.Current.Limits.Cpu.Amount),
 				))
 
 			variationMemoryLimitPercentage := truncateToThreeDecimalPlaces(
-				CalculatePercentage(
+				calculatePercentage(
 					recommendationEngine.Variation.Limits.Memory.Amount,
 					recommendationObj.Current.Limits.Memory.Amount,
 				))
 
 			variationCPURequestPercentage := truncateToThreeDecimalPlaces(
-				CalculatePercentage(
+				calculatePercentage(
 					truncateToThreeDecimalPlaces(recommendationEngine.Variation.Requests.Cpu.Amount),
 					truncateToThreeDecimalPlaces(recommendationObj.Current.Requests.Cpu.Amount),
 				))
 
 			variationMemoryRequestPercentage := truncateToThreeDecimalPlaces(
-				CalculatePercentage(
+				calculatePercentage(
 					recommendationEngine.Variation.Requests.Memory.Amount,
 					recommendationObj.Current.Requests.Memory.Amount,
 				))
@@ -689,11 +689,11 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 				recommendationSet.WorkloadType,
 				recommendationSet.LastReported,
 				recommendationSet.SourceID,
-				formatPrecisionValuesToStr(ConvertCPUUnit("cores", recommendationObj.Current.Limits.Cpu.Amount)),
+				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationObj.Current.Limits.Cpu.Amount)),
 				recommendationObj.Current.Limits.Cpu.Format,
 				fmt.Sprint(recommendationObj.Current.Limits.Memory.Amount),
 				recommendationObj.Current.Limits.Memory.Format,
-				formatPrecisionValuesToStr(ConvertCPUUnit("cores", recommendationObj.Current.Requests.Cpu.Amount)),
+				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationObj.Current.Requests.Cpu.Amount)),
 				recommendationObj.Current.Requests.Cpu.Format,
 				fmt.Sprint(recommendationObj.Current.Requests.Memory.Amount),
 				recommendationObj.Current.Requests.Memory.Format,
@@ -702,11 +702,11 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 				fmt.Sprint(recommendationTerm.DurationInHours),
 				recommendationTerm.MonitoringStartTime.String(),
 				recommendationType,
-				formatPrecisionValuesToStr(ConvertCPUUnit("cores", recommendationEngine.Config.Limits.Cpu.Amount)),
+				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationEngine.Config.Limits.Cpu.Amount)),
 				recommendationEngine.Config.Limits.Cpu.Format,
 				fmt.Sprint(recommendationEngine.Config.Limits.Memory.Amount),
 				recommendationEngine.Config.Limits.Memory.Format,
-				formatPrecisionValuesToStr(ConvertCPUUnit("cores", recommendationEngine.Config.Requests.Cpu.Amount)),
+				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationEngine.Config.Requests.Cpu.Amount)),
 				recommendationEngine.Config.Requests.Cpu.Format,
 				fmt.Sprint(recommendationEngine.Config.Requests.Memory.Amount),
 				recommendationEngine.Config.Requests.Memory.Format,

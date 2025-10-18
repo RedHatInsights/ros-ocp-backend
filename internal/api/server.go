@@ -30,27 +30,13 @@ func StartAPIServer() {
 		},
 	}))
 
-	// Setup OAuth2 authentication for metrics endpoint (if enabled)
-	if cfg.MetricsEnabled {
-		oauth2Handler, err := ros_middleware.GetIdentityProviderHandlerFunction(ros_middleware.OAuth2IDProvider)
-		if err != nil {
-			log.Fatalf("Failed to initialize OAuth2 authentication for metrics endpoint: %v", err)
+	go func() {
+		metrics := echo.New()
+		metrics.GET("/metrics", echoprometheus.NewHandler())
+		if err := metrics.Start(fmt.Sprintf(":%s", cfg.PrometheusPort)); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
 		}
-
-		go func() {
-			metrics := echo.New()
-			// Apply OAuth2 authentication to metrics endpoint (RHSSO not supported)
-			metrics.Use(oauth2Handler)
-			metrics.GET("/metrics", echoprometheus.NewHandler())
-			log.Infof("Starting metrics endpoint on port %s with OAuth2 authentication", cfg.PrometheusPort)
-			if err := metrics.Start(fmt.Sprintf(":%s", cfg.PrometheusPort)); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				log.Fatal(err)
-			}
-		}()
-	} else {
-		log.Info("Metrics endpoint disabled (METRICS_ENABLED=false)")
-	}
-
+	}()
 	app.Use(middleware.Logger())
 	app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowMethods: []string{http.MethodGet},
@@ -59,16 +45,14 @@ func StartAPIServer() {
 	app.GET("/status", GetAppStatus)
 	app.File("/api/cost-management/v1/recommendations/openshift/openapi.json", "openapi.json")
 
-	// Setup RHSSO authentication for REST API endpoints only
-	rhssoHandler, err := ros_middleware.GetIdentityProviderHandlerFunction(ros_middleware.RHSSOIDProvider)
-	if err != nil {
-		log.Fatalf("Failed to initialize RHSSO authentication for REST API endpoints: %v", err)
-	}
-
-	// REST endpoints - RHSSO authentication required
 	v1 := app.Group("/api/cost-management/v1")
-	v1.Use(rhssoHandler)
-	if cfg.RBACEnabled {
+	hf, err := ros_middleware.GetIdentityProviderHandlerFunction(cfg.IDProvider)
+	if err != nil {
+		log.Fatal(err)
+	}
+	v1.Use(hf)
+	// Ensure that RBAC is only enabled for non-oauth provider
+	if cfg.RBACEnabled && cfg.IDProvider != ros_middleware.OAuth2IDProvider {
 		v1.Use(ros_middleware.Rbac)
 	}
 	v1.GET("/recommendations/openshift", GetRecommendationSetList)
