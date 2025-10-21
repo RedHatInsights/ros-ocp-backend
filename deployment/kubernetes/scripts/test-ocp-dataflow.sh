@@ -15,6 +15,7 @@ NC='\033[0m' # No Color
 # Configuration
 NAMESPACE=${NAMESPACE:-ros-ocp}
 HELM_RELEASE_NAME=${HELM_RELEASE_NAME:-ros-ocp}
+KAFKA_NAMESPACE=${KAFKA_NAMESPACE:-kafka}
 
 # Port-forward configuration
 USE_PORT_FORWARD=false
@@ -809,7 +810,7 @@ EOF
     echo_info "Message content: $kafka_message"
 
     # Get Kafka pod
-    local kafka_pod=$(oc get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=kafka" -o jsonpath='{.items[0].metadata.name}')
+    local kafka_pod=$(oc get pods -n "$KAFKA_NAMESPACE" -l "app.kubernetes.io/name=kafka" -o jsonpath='{.items[0].metadata.name}')
 
     if [ -z "$kafka_pod" ]; then
         echo_error "Kafka pod not found"
@@ -817,8 +818,8 @@ EOF
     fi
 
     # Publish message to Kafka
-    echo "$kafka_message" | oc exec -i -n "$NAMESPACE" "$kafka_pod" -- \
-        kafka-console-producer --broker-list localhost:29092 --topic hccm.ros.events
+    echo "$kafka_message" | oc exec -i -n "$KAFKA_NAMESPACE" "$kafka_pod" -- \
+        /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server ros-ocp-kafka-kafka-bootstrap:9092 --topic hccm.ros.events
 
     if [ $? -eq 0 ]; then
         echo_success "Kafka message published successfully"
@@ -854,15 +855,15 @@ verify_processing() {
 
     # Check Kafka topic for messages
     echo_info "Checking Kafka topics..."
-    local kafka_pod=$(oc get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=kafka" -o jsonpath='{.items[0].metadata.name}')
+    local kafka_pod=$(oc get pods -n "$KAFKA_NAMESPACE" -l "app.kubernetes.io/name=kafka" -o jsonpath='{.items[0].metadata.name}')
 
     if [ -n "$kafka_pod" ]; then
         echo_info "Messages in hccm.ros.events topic:"
-        local event_messages=$(oc exec -n "$NAMESPACE" "$kafka_pod" -- kafka-console-consumer --bootstrap-server localhost:29092 --topic hccm.ros.events --from-beginning --timeout-ms 5000 2>/dev/null | wc -l || echo "0")
+        local event_messages=$(oc exec -n "$KAFKA_NAMESPACE" "$kafka_pod" -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server ros-ocp-kafka-kafka-bootstrap:9092 --topic hccm.ros.events --from-beginning --timeout-ms 5000 2>/dev/null | wc -l || echo "0")
         echo_info "  Event messages: $event_messages"
 
         echo_info "Messages in rosocp.kruize.recommendations topic:"
-        local rec_messages=$(oc exec -n "$NAMESPACE" "$kafka_pod" -- kafka-console-consumer --bootstrap-server localhost:29092 --topic rosocp.kruize.recommendations --from-beginning --timeout-ms 5000 2>/dev/null | wc -l || echo "0")
+        local rec_messages=$(oc exec -n "$KAFKA_NAMESPACE" "$kafka_pod" -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server ros-ocp-kafka-kafka-bootstrap:9092 --topic rosocp.kruize.recommendations --from-beginning --timeout-ms 5000 2>/dev/null | wc -l || echo "0")
         echo_info "  Recommendation messages: $rec_messages"
     fi
 
@@ -1253,6 +1254,7 @@ case "${1:-}" in
         echo "Environment Variables:"
         echo "  NAMESPACE            Target namespace (default: ros-ocp)"
         echo "  HELM_RELEASE_NAME    Helm release name (default: ros-ocp)"
+        echo "  KAFKA_NAMESPACE      Kafka namespace (default: kafka)"
         echo ""
         echo "OpenShift Requirements:"
         echo "  - oc or kubectl must be configured for OpenShift cluster"
