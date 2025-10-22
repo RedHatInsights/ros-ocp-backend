@@ -14,6 +14,10 @@ const (
 )
 
 func (p *WorkloadType) Scan(value interface{}) error {
+	if value == nil {
+		*p = "" // Set to empty string for NULL values
+		return nil
+	}
 	*p = WorkloadType(value.(string))
 	return nil
 }
