@@ -6,16 +6,6 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-)
-
-var (
-	dbErrorCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "db_error_total",
-		Help: "Total number of database errors",
-	})
 )
 
 type HistoricalNamespaceRecommendationSet struct {
