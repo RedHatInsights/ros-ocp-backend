@@ -26,7 +26,9 @@ type Workload struct {
 }
 
 func (w *Workload) AfterFind(tx *gorm.DB) error {
-	w.WorkloadTypeStr = string(w.WorkloadType)
+	if w.WorkloadType != "" {
+		w.WorkloadTypeStr = string(w.WorkloadType)
+	}
 	return nil
 }
 
