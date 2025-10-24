@@ -783,19 +783,19 @@ verify_recommendations() {
     # Test API status endpoint first (public endpoint - no auth needed) with retries
     echo_info "Testing ROS-OCP API status..."
     echo_info "Status URL: $status_url"
-    
+
     local max_retries=5
     local retry_delay=10
     local status_http_code="000"
-    
+
     for i in $(seq 1 $max_retries); do
         echo_info "Attempt $i/$max_retries to reach rosocp-api..."
         local status_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 15 -o /tmp/status_response.json \
             -H "Host: localhost" \
             "$status_url" 2>/dev/null || echo "000")
-        
+
         status_http_code="${status_response: -3}"
-        
+
         if [ "$status_http_code" = "200" ]; then
             echo_success "ROS-OCP API status endpoint is accessible"
             if [ -f /tmp/status_response.json ]; then
@@ -810,7 +810,7 @@ verify_recommendations() {
             fi
         fi
     done
-    
+
     if [ "$status_http_code" != "200" ]; then
         echo_error "ROS-OCP API status endpoint not accessible after $max_retries attempts (HTTP $status_http_code)"
         echo_info "Debugging information:"
