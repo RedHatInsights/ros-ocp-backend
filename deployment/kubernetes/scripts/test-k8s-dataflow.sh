@@ -760,6 +760,12 @@ verify_processing() {
 verify_recommendations() {
     echo_info "=== STEP 5: Verify Recommendations via ROS-OCP API ===="
 
+    # Ensure rosocp-api pods are ready
+    echo_info "Verifying rosocp-api pods are ready..."
+    kubectl wait --for=condition=ready pod -l "app.kubernetes.io/name=rosocp-api,app.kubernetes.io/instance=$HELM_RELEASE_NAME" \
+        --namespace "$NAMESPACE" \
+        --timeout=60s || echo_warning "rosocp-api pods may not be fully ready yet"
+
     # Wait additional time for recommendations to be processed with fresh data
     echo_info "Waiting for recommendations to be processed with fresh timestamps (45 seconds)..."
     echo_info "Fresh data should trigger Kruize to generate valid recommendations..."
@@ -774,23 +780,52 @@ verify_recommendations() {
     local status_url=$(get_service_url "ros-ocp-rosocp-api" "/status")
     local api_base_url=$(get_service_url "ros-ocp-rosocp-api" "/api/cost-management/v1")
 
-    # Test API status endpoint first (public endpoint - no auth needed)
+    # Test API status endpoint first (public endpoint - no auth needed) with retries
     echo_info "Testing ROS-OCP API status..."
     echo_info "Status URL: $status_url"
-    local status_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 15 -o /tmp/status_response.json \
-        -H "Host: localhost" \
-        "$status_url" 2>/dev/null || echo "000")
-
-    local status_http_code="${status_response: -3}"
-
-    if [ "$status_http_code" = "200" ]; then
-        echo_success "ROS-OCP API status endpoint is accessible"
-        if [ -f /tmp/status_response.json ]; then
-            echo_info "Status response: $(cat /tmp/status_response.json)"
-            rm -f /tmp/status_response.json
+    
+    local max_retries=5
+    local retry_delay=10
+    local status_http_code="000"
+    
+    for i in $(seq 1 $max_retries); do
+        echo_info "Attempt $i/$max_retries to reach rosocp-api..."
+        local status_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 15 -o /tmp/status_response.json \
+            -H "Host: localhost" \
+            "$status_url" 2>/dev/null || echo "000")
+        
+        status_http_code="${status_response: -3}"
+        
+        if [ "$status_http_code" = "200" ]; then
+            echo_success "ROS-OCP API status endpoint is accessible"
+            if [ -f /tmp/status_response.json ]; then
+                echo_info "Status response: $(cat /tmp/status_response.json)"
+                rm -f /tmp/status_response.json
+            fi
+            break
+        else
+            echo_warning "Attempt $i failed (HTTP $status_http_code), retrying in ${retry_delay}s..."
+            if [ $i -lt $max_retries ]; then
+                sleep $retry_delay
+            fi
         fi
-    else
-        echo_error "ROS-OCP API status endpoint not accessible (HTTP $status_http_code)"
+    done
+    
+    if [ "$status_http_code" != "200" ]; then
+        echo_error "ROS-OCP API status endpoint not accessible after $max_retries attempts (HTTP $status_http_code)"
+        echo_info "Debugging information:"
+        echo_info "Checking rosocp-api pods:"
+        kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=rosocp-api" || true
+        echo_info "Checking rosocp-api service:"
+        kubectl get service -n "$NAMESPACE" "${HELM_RELEASE_NAME}-rosocp-api" || true
+        echo_info "Checking ingress configuration:"
+        kubectl get ingress -n "$NAMESPACE" || true
+        echo_info "Testing direct pod access:"
+        local api_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=rosocp-api" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -n "$api_pod" ]; then
+            echo_info "Attempting direct curl to pod $api_pod:"
+            kubectl exec -n "$NAMESPACE" "$api_pod" -- curl -s localhost:8000/status || true
+        fi
         return 1
     fi
 
