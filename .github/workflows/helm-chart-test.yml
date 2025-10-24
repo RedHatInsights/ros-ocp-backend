@@ -63,17 +63,19 @@ jobs:
           #  -u : treat unset variables as errors
           #  -o pipefail : fail if any command in a pipeline fails
           set -euo pipefail
-      
+
           # Get latest release tag
           RELEASE_TAG=$(curl -s https://api.github.com/repos/insights-onprem/ros-helm-chart/releases/latest | jq -r '.tag_name')
           echo "Using ros-helm-chart release: $RELEASE_TAG"
-      
+
           # Download scripts and chart
           mkdir -p ros-helm-chart/scripts
           curl -L -o ros-helm-chart/scripts/deploy-kind.sh \
             "https://raw.githubusercontent.com/insights-onprem/ros-helm-chart/${RELEASE_TAG}/scripts/deploy-kind.sh"
           curl -L -o ros-helm-chart/scripts/install-helm-chart.sh \
             "https://raw.githubusercontent.com/insights-onprem/ros-helm-chart/${RELEASE_TAG}/scripts/install-helm-chart.sh"
+          curl -L -o ros-helm-chart/scripts/deploy-strimzi.sh \
+            "https://raw.githubusercontent.com/insights-onprem/ros-helm-chart/${RELEASE_TAG}/scripts/deploy-strimzi.sh"
 
           # Download chart
           CHART_URL=$(curl -s https://api.github.com/repos/insights-onprem/ros-helm-chart/releases/latest | jq -r '.assets[] | select(.name | contains("latest")) | .browser_download_url')
@@ -82,13 +84,13 @@ jobs:
           # Extract chart to directory (script expects ../ros-ocp relative to scripts directory)
           mkdir -p ros-helm-chart/ros-ocp
           tar -xzf /tmp/ros-ocp-chart.tgz -C ros-helm-chart/ros-ocp --strip-components=1
-      
+
           chmod +x ros-helm-chart/scripts/*.sh
-      
+
           # PATCH: force install-helm-chart.sh to use only 'ros-ocp-latest.tgz'
           sed -i -E 's#ros-ocp-[^ ]*\.tgz#ros-ocp-latest.tgz#g' ros-helm-chart/scripts/install-helm-chart.sh
           echo "[INFO] Patched install-helm-chart.sh to always use ros-ocp-latest.tgz"
-      
+
           # VERIFY PATCH
           grep -A2 "ros-ocp" ros-helm-chart/scripts/install-helm-chart.sh
 
@@ -165,6 +167,22 @@ jobs:
           kind get clusters
           kubectl cluster-info
           kubectl get nodes -o wide
+
+      - name: Deploy Kafka Infrastructure
+        timeout-minutes: 10
+        run: |
+          cd ros-helm-chart/scripts
+          # Make script executable
+          chmod +x deploy-strimzi.sh
+
+          # Deploy Strimzi and Kafka (uses default KAFKA_NAMESPACE=kafka)
+          echo "Deploying Kafka infrastructure..."
+          ./deploy-strimzi.sh
+
+          # Verify Kafka deployment
+          echo "Verifying Kafka deployment..."
+          kubectl get pods -n kafka
+          kubectl get kafka -n kafka
 
       - name: Build and load image into KIND control plane
         run: |

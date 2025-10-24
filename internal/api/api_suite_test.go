@@ -1,4 +1,4 @@
-package middleware_test
+package api_test
 
 import (
 	"testing"
@@ -7,7 +7,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestMiddleware(t *testing.T) {
+func TestAPI(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Middleware Suite")
+	RunSpecs(t, "API Server Suite")
 }
+
