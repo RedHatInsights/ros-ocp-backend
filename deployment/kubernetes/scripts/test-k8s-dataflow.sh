@@ -45,11 +45,11 @@ echo_error() {
 # Function to create X-Rh-Identity header for ros-ocp-backend authentication
 create_rh_identity_header() {
     local org_id="${1:-12345}"
-    local account_number="${2:-12345}"
-
-    # Create identity JSON structure matching platform-go-middlewares format
-    local identity_json="{\"identity\":{\"account_number\":\"$account_number\",\"type\":\"User\",\"user\":{\"username\":\"test-user\",\"email\":\"test-user@example.com\",\"is_org_admin\":true},\"internal\":{\"org_id\":\"$org_id\"}}}"
-
+    
+    # Create identity JSON structure matching platform-go-middlewares XRHID format
+    # Reference: github.com/redhatinsights/platform-go-middlewares/v2/identity
+    local identity_json="{\"identity\":{\"org_id\":\"$org_id\",\"type\":\"User\"}}"
+    
     # Base64 encode the identity
     echo -n "$identity_json" | base64 | tr -d '\n'
 }
@@ -741,7 +741,7 @@ verify_recommendations() {
 
     # Create X-Rh-Identity header for ros-ocp-backend authentication
     echo_info "Creating X-Rh-Identity header for API authentication..."
-    local rh_identity_header=$(create_rh_identity_header "12345" "12345")
+    local rh_identity_header=$(create_rh_identity_header "12345")
     echo_info "Successfully created X-Rh-Identity header"
 
     # Get platform-appropriate URLs
