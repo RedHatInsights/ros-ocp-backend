@@ -610,8 +610,10 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
 
     # Ensure Kafka topic exists before publishing
     echo_info "Ensuring Kafka topic 'hccm.ros.events' exists..."
-    kubectl exec -n "$kafka_namespace" "$kafka_pod" -- \
-        kafka-topics --create --topic hccm.ros.events --bootstrap-server localhost:29092 \
+    # Use kubectl run with Strimzi Kafka image to access Kafka client tools
+    # Bootstrap server uses the Kafka service DNS name
+    kubectl run kafka-topics-temp --rm -i --restart=Never --image=quay.io/strimzi/kafka:latest-kafka-3.7.0 -n "$kafka_namespace" -- \
+        bin/kafka-topics.sh --create --topic hccm.ros.events --bootstrap-server ${kafka_cluster}-kafka-bootstrap:9092 \
         --partitions 1 --replication-factor 1 --if-not-exists 2>/dev/null || echo "Topic creation attempted"
 
     # Create proper Kafka message matching insights-ros-ingress format
@@ -644,8 +646,10 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
     echo_info "Files count: 1"
     echo_info "Object key: $object_key"
 
-    echo "$kafka_message" | kubectl exec -i -n "$kafka_namespace" "$kafka_pod" -- \
-        kafka-console-producer --broker-list localhost:29092 --topic hccm.ros.events
+    # Use kubectl run with Strimzi Kafka image to access Kafka client tools
+    # Bootstrap server uses the Kafka service DNS name
+    echo "$kafka_message" | kubectl run kafka-producer-temp --rm -i --restart=Never --image=quay.io/strimzi/kafka:latest-kafka-3.7.0 -n "$kafka_namespace" -- \
+        bin/kafka-console-producer.sh --bootstrap-server ${kafka_cluster}-kafka-bootstrap:9092 --topic hccm.ros.events
 
     if [ $? -eq 0 ]; then
         echo_success "Kafka message published successfully"
