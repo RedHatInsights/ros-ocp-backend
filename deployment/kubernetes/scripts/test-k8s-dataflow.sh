@@ -45,11 +45,11 @@ echo_error() {
 # Function to create X-Rh-Identity header for ros-ocp-backend authentication
 create_rh_identity_header() {
     local org_id="${1:-12345}"
-    
+
     # Create identity JSON structure matching platform-go-middlewares XRHID format
     # Reference: github.com/redhatinsights/platform-go-middlewares/v2/identity
     local identity_json="{\"identity\":{\"org_id\":\"$org_id\",\"type\":\"User\"}}"
-    
+
     # Base64 encode the identity
     echo -n "$identity_json" | base64 | tr -d '\n'
 }
@@ -521,15 +521,30 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
     # Check for CSV files in ros-data bucket (created by insights-ros-ingress)
     echo_info "Checking for CSV files in MinIO ros-data bucket..."
 
-    local minio_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=minio" -o jsonpath='{.items[0].metadata.name}')
-    local kafka_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/name=kafka" -o jsonpath={.items[0].metadata.name})
+    # MinIO is deployed in application namespace with Helm labels
+    local minio_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/instance=$HELM_RELEASE_NAME,app.kubernetes.io/component=minio" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    
+    # Kafka is deployed by Strimzi in 'kafka' namespace
+    local kafka_namespace="kafka"
+    local kafka_cluster="ros-ocp-kafka"
+    local kafka_pod=$(kubectl get pods -n "$kafka_namespace" -l "strimzi.io/cluster=$kafka_cluster,strimzi.io/name=${kafka_cluster}-kafka" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 
     if [ -z "$minio_pod" ]; then
-        echo_error "MinIO pod not found"
+        echo_error "MinIO pod not found in namespace $NAMESPACE"
+        echo_info "Available pods:"
+        kubectl get pods -n "$NAMESPACE" -o wide
         return 1
     fi
 
-    echo_info "Using MinIO pod: $minio_pod"
+    if [ -z "$kafka_pod" ]; then
+        echo_error "Kafka pod not found in namespace $kafka_namespace"
+        echo_info "Available pods in kafka namespace:"
+        kubectl get pods -n "$kafka_namespace" -o wide
+        return 1
+    fi
+
+    echo_info "Using MinIO pod: $minio_pod (namespace: $NAMESPACE)"
+    echo_info "Using Kafka pod: $kafka_pod (namespace: $kafka_namespace)"
 
     # Configure MinIO client
     echo_info "Configuring MinIO client..."
@@ -588,7 +603,7 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
 
     # Ensure Kafka topic exists before publishing
     echo_info "Ensuring Kafka topic 'hccm.ros.events' exists..."
-    kubectl exec -n "$NAMESPACE" "$kafka_pod" -- \
+    kubectl exec -n "$kafka_namespace" "$kafka_pod" -- \
         kafka-topics --create --topic hccm.ros.events --bootstrap-server localhost:29092 \
         --partitions 1 --replication-factor 1 --if-not-exists 2>/dev/null || echo "Topic creation attempted"
 
@@ -622,7 +637,7 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
     echo_info "Files count: 1"
     echo_info "Object key: $object_key"
 
-    echo "$kafka_message" | kubectl exec -i -n "$NAMESPACE" "$kafka_pod" -- \
+    echo "$kafka_message" | kubectl exec -i -n "$kafka_namespace" "$kafka_pod" -- \
         kafka-console-producer --broker-list localhost:29092 --topic hccm.ros.events
 
     if [ $? -eq 0 ]; then
