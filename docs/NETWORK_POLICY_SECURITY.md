@@ -90,15 +90,20 @@ spec:
 
 ### Simplified Code
 
-**Before (OAuth2):**
+**Current Implementation:**
 ```go
-oauth2Handler, err := ros_middleware.GetIdentityProviderHandlerFunction(ros_middleware.OAuth2IDProvider)
+// Authentication uses X-Rh-Identity headers for all API endpoints
+identityHandler, err := ros_middleware.GetIdentityProviderHandlerFunction()
 if err != nil {
-    log.Fatalf("Failed to initialize OAuth2: %v", err)
+    log.Fatal(err)
 }
 
+// Apply authentication to API group
+v1 := app.Group("/api/cost-management/v1")
+v1.Use(identityHandler)
+
+// Metrics endpoint runs on separate port without authentication
 metrics := echo.New()
-metrics.Use(oauth2Handler)  // Complex authentication middleware
 metrics.GET("/metrics", echoprometheus.NewHandler())
 ```
 

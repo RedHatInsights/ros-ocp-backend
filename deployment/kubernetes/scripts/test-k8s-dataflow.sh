@@ -3,9 +3,8 @@
 # ROS-OCP Kubernetes Data Flow Test Script
 # This script tests the complete data flow in a Kubernetes deployment
 #
-# NOTE: This script uses OAuth 2.0 authentication with service account tokens.
-# The ros-ocp-backend should be configured with ID_PROVIDER=oauth2 (or "oauth2" with quotes).
-# The script will automatically set this if not configured correctly.
+# NOTE: This script uses X-Rh-Identity authentication headers.
+# The ros-ocp-backend validates X-Rh-Identity headers for all authenticated endpoints.
 
 set -e  # Exit on any error
 
@@ -41,6 +40,18 @@ echo_warning() {
 
 echo_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Function to create X-Rh-Identity header for ros-ocp-backend authentication
+create_rh_identity_header() {
+    local org_id="${1:-12345}"
+    local account_number="${2:-12345}"
+
+    # Create identity JSON structure matching platform-go-middlewares format
+    local identity_json="{\"identity\":{\"account_number\":\"$account_number\",\"type\":\"User\",\"user\":{\"username\":\"test-user\",\"email\":\"test-user@example.com\",\"is_org_admin\":true},\"internal\":{\"org_id\":\"$org_id\"}}}"
+
+    # Base64 encode the identity
+    echo -n "$identity_json" | base64 | tr -d '\n'
 }
 
 # Function to check if kubectl is configured
@@ -728,40 +739,16 @@ verify_recommendations() {
     echo_info "Fresh data should trigger Kruize to generate valid recommendations..."
     sleep 45
 
-    # Verify that the API is configured for OAuth authentication
-    echo_info "Verifying OAuth authentication configuration..."
-    local id_provider=$(kubectl get deployment -l app.kubernetes.io/name=rosocp-api  -n "$NAMESPACE" -o jsonpath='{.items[0].spec.template.spec.containers[0].env[?(@.name=="ID_PROVIDER")].value}' 2>/dev/null || echo "")
-
-    # Remove quotes if present (Helm templates may add quotes)
-    local clean_id_provider=$(echo "$id_provider" | sed 's/^"//;s/"$//')
-
-    if [ "$clean_id_provider" != "oauth2" ]; then
-        echo_warning "ID_PROVIDER is not set to 'oauth2' (current: '$id_provider' -> cleaned: '$clean_id_provider')"
-        echo_info "Setting ID_PROVIDER=oauth2 for rosocp-api deployment..."
-        kubectl set env deployment -l app.kubernetes.io/name=rosocp-api ID_PROVIDER=oauth2 -n "$NAMESPACE"
-        echo_info "Waiting for deployment to restart (this may take up to 60 seconds)..."
-        if kubectl rollout status deployment -l app.kubernetes.io/name=rosocp-api -n "$NAMESPACE" --timeout=60s; then
-            echo_success "✓ Deployment updated successfully with oauth2 authentication"
-        else
-            echo_warning "Deployment update may still be in progress - continuing with test"
-        fi
-    else
-        echo_success "ID_PROVIDER is correctly set to 'oauth2' (raw: '$id_provider')"
-    fi
-
-    # Get OAuth 2.0 token from ros-ocp-api service account
-    local bearer_token=$(get_ros_api_service_account_token)
-    if [ -z "$bearer_token" ]; then
-        echo_error "Failed to get service account token from ros-ocp-api pod"
-        return 1
-    fi
-    echo_info "Successfully obtained service account token for OAuth authentication"
+    # Create X-Rh-Identity header for ros-ocp-backend authentication
+    echo_info "Creating X-Rh-Identity header for API authentication..."
+    local rh_identity_header=$(create_rh_identity_header "12345" "12345")
+    echo_info "Successfully created X-Rh-Identity header"
 
     # Get platform-appropriate URLs
     local status_url=$(get_service_url "ros-ocp-rosocp-api" "/status")
     local api_base_url=$(get_service_url "ros-ocp-rosocp-api" "/api/cost-management/v1")
 
-    # Test API status endpoint first
+    # Test API status endpoint first (public endpoint - no auth needed)
     echo_info "Testing ROS-OCP API status..."
     echo_info "Status URL: $status_url"
     local status_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 15 -o /tmp/status_response.json \
@@ -781,10 +768,10 @@ verify_recommendations() {
         return 1
     fi
 
-    # Test recommendations list endpoint
+    # Test recommendations list endpoint (requires X-Rh-Identity)
     echo_info "Testing recommendations list endpoint..."
     local list_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 30 -o /tmp/recommendations_list.json \
-        -H "Authorization: Bearer $bearer_token" \
+        -H "X-Rh-Identity: $rh_identity_header" \
         -H "Content-Type: application/json" \
         -H "Host: localhost" \
         "$api_base_url/recommendations/openshift" 2>/dev/null || echo "000")
@@ -847,7 +834,7 @@ except:
                 if [ -n "$rec_id" ]; then
                     echo_info "Testing individual recommendation endpoint for ID: $rec_id"
                     local detail_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 30 -o /tmp/recommendation_detail.json \
-                        -H "Authorization: Bearer $bearer_token" \
+                        -H "X-Rh-Identity: $rh_identity_header" \
                         -H "Content-Type: application/json" \
                         -H "Host: localhost" \
                         "$api_base_url/recommendations/openshift/$rec_id" 2>/dev/null || echo "000")
@@ -907,10 +894,10 @@ except Exception as e:
         fi
     fi
 
-    # Test CSV export format
+    # Test CSV export format (requires X-Rh-Identity)
     echo_info "Testing CSV export functionality..."
     local csv_response=$(curl -s -w "%{http_code}" --connect-timeout 5 --max-time 30 -o /tmp/recommendations.csv \
-        -H "Authorization: Bearer $bearer_token" \
+        -H "X-Rh-Identity: $rh_identity_header" \
         -H "Accept: text/csv" \
         -H "Host: localhost" \
         "$api_base_url/recommendations/openshift?format=csv" 2>/dev/null || echo "000")
@@ -1148,23 +1135,12 @@ run_health_checks() {
         fi
     fi
 
-    # Check ROS-OCP API with service account token
-    if [ -n "$sa_token" ]; then
-        local api_response_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 -H "Host: localhost" -H "Authorization: Bearer $sa_token" "$api_url" 2>/dev/null)
-        if [ "$api_response_code" = "200" ]; then
-            echo_success "ROS-OCP API is accessible with authentication at: $api_url (HTTP $api_response_code)"
-        else
-            echo_error "ROS-OCP API failed with authentication at: $api_url (HTTP $api_response_code)"
-            failed_checks=$((failed_checks + 1))
-        fi
+    # Check ROS-OCP API /status endpoint (public endpoint - no auth required)
+    if curl -f -s --connect-timeout 5 --max-time 15 -H "Host: localhost" "$api_url" >/dev/null; then
+        echo_success "ROS-OCP API status endpoint is accessible at: $api_url"
     else
-        # Fallback to unauthenticated check
-        if curl -f -s --connect-timeout 5 --max-time 15 -H "Host: localhost" "$api_url" >/dev/null; then
-            echo_success "ROS-OCP API is accessible at: $api_url"
-        else
-            echo_error "ROS-OCP API is not accessible at: $api_url"
-            failed_checks=$((failed_checks + 1))
-        fi
+        echo_error "ROS-OCP API status endpoint is not accessible at: $api_url"
+        failed_checks=$((failed_checks + 1))
     fi
 
     # Check Kruize API

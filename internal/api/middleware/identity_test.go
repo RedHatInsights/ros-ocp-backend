@@ -51,39 +51,15 @@ var _ = Describe("Identity Middleware", func() {
 	// Tests how the system selects and configures identity providers
 	// =============================================================================
 
-	Describe("When selecting an identity provider", func() {
-		Context("Given RHSSO configuration", func() {
-			It("should provide RHSSO middleware for explicit RHSSO config", func() {
-				// Given: RHSSO provider is explicitly requested
+	Describe("When requesting the identity provider", func() {
+		Context("Given RHSSO identity provider", func() {
+			It("should provide RHSSO middleware", func() {
+				// Given: RHSSO is the only identity provider
 
-				// When: requesting RHSSO provider
-				handler, err := middleware.GetIdentityProviderHandlerFunction("rhsso")
+				// When: requesting identity provider middleware
+				handler, err := middleware.GetIdentityProviderHandlerFunction()
 
 				// Then: should return valid RHSSO middleware
-				Expect(err).ToNot(HaveOccurred())
-				Expect(handler).ToNot(BeNil())
-				Expect(handler).To(BeAssignableToTypeOf((echo.MiddlewareFunc)(nil)))
-			})
-
-			It("should default to RHSSO middleware for unknown configurations", func() {
-				// Given: an unknown provider type is requested
-
-				// When: requesting unknown provider
-				handler, err := middleware.GetIdentityProviderHandlerFunction("unknown")
-
-				// Then: should fallback to RHSSO middleware
-				Expect(err).ToNot(HaveOccurred())
-				Expect(handler).ToNot(BeNil())
-				Expect(handler).To(BeAssignableToTypeOf((echo.MiddlewareFunc)(nil)))
-			})
-
-			It("should default to RHSSO middleware for empty configuration", func() {
-				// Given: no provider type is specified
-
-				// When: requesting provider with empty config
-				handler, err := middleware.GetIdentityProviderHandlerFunction("")
-
-				// Then: should fallback to RHSSO middleware
 				Expect(err).ToNot(HaveOccurred())
 				Expect(handler).ToNot(BeNil())
 				Expect(handler).To(BeAssignableToTypeOf((echo.MiddlewareFunc)(nil)))

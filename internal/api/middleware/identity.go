@@ -10,10 +10,7 @@ import (
 )
 
 const (
-	// ID Provider config values
-	RHSSOIDProvider = "rhsso"
-
-	// ID Provider header values
+	// Identity header for RHSSO authentication
 	RHSSOIdentityHeader = "X-Rh-Identity"
 )
 
@@ -49,8 +46,9 @@ func (r *RHSSOIdentityProvider) rhSSOIdentityHandlerFunction(next echo.HandlerFu
 	}
 }
 
-func GetIdentityProviderHandlerFunction(idProvider string) (echo.MiddlewareFunc, error) {
-	// Always use RHSSO identity provider
+// GetIdentityProviderHandlerFunction returns the RHSSO identity provider middleware
+// which validates X-Rh-Identity headers for all authenticated endpoints
+func GetIdentityProviderHandlerFunction() (echo.MiddlewareFunc, error) {
 	hf := NewRHSSOIdentityProvider()
 	return hf.GetHandlerFunction(), nil
 }
