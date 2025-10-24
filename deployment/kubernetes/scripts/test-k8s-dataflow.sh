@@ -3,8 +3,14 @@
 # ROS-OCP Kubernetes Data Flow Test Script
 # This script tests the complete data flow in a Kubernetes deployment
 #
-# NOTE: This script uses X-Rh-Identity authentication headers.
-# The ros-ocp-backend validates X-Rh-Identity headers for all authenticated endpoints.
+# AUTHENTICATION ARCHITECTURE:
+# - On Kubernetes/KIND: X-Rh-Identity headers validated directly by backend middleware
+# - On OpenShift: JWT tokens validated by Envoy sidecar, then transformed to X-Rh-Identity
+# - Both platforms require authentication for API endpoints (/api/cost-management/v1/*)
+# - Public endpoints (/status, /ready) do not require authentication on any platform
+#
+# This test uses X-Rh-Identity headers to authenticate with ros-ocp-backend API endpoints.
+# The backend validates X-Rh-Identity headers using platform-go-middlewares/v2/identity.
 
 set -e  # Exit on any error
 
@@ -522,8 +528,9 @@ $now_date,$now_date,$interval_start_3,$interval_end_3,test-container,test-pod-12
     echo_info "Checking for CSV files in MinIO ros-data bucket..."
 
     # MinIO is deployed in application namespace with Helm labels
-    local minio_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/instance=$HELM_RELEASE_NAME,app.kubernetes.io/component=minio" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-    
+    # Labels: app.kubernetes.io/instance=<release>, app.kubernetes.io/name=minio, app.kubernetes.io/component=storage
+    local minio_pod=$(kubectl get pods -n "$NAMESPACE" -l "app.kubernetes.io/instance=$HELM_RELEASE_NAME,app.kubernetes.io/name=minio" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+
     # Kafka is deployed by Strimzi in 'kafka' namespace
     local kafka_namespace="kafka"
     local kafka_cluster="ros-ocp-kafka"

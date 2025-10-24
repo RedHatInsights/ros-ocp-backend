@@ -9,6 +9,34 @@ The ros-ocp-backend uses **Kubernetes NetworkPolicy** to secure metrics endpoint
 - ✅ **Improved testability** - No authentication complexity in integration tests
 - ✅ **Kubernetes-native** - Leverages platform capabilities
 
+## Authentication Architecture by Platform
+
+### OpenShift (Production)
+```
+Client → JWT Token (Keycloak) → Envoy Sidecar → X-Rh-Identity → Backend
+```
+- **Envoy sidecars** deployed on `ros-ocp-api` and `ingress` services
+- **JWT validation** by Envoy's native `jwt_authn` filter
+- **Claims extraction** to `X-Rh-Identity` headers via Lua script
+- **Backend validation** of X-Rh-Identity by middleware
+
+### Kubernetes/KIND (Development)
+```
+Client → X-Rh-Identity Header → Backend (direct validation)
+```
+- **No Envoy sidecars** (not deployed on Kubernetes/KIND)
+- **Direct X-Rh-Identity validation** by backend middleware
+- **Same authentication logic** as OpenShift (just no frontend layer)
+- **Simpler testing** without Keycloak infrastructure
+
+### Key Point: Both Platforms Require Authentication!
+
+The difference is **only in the frontend validation layer**:
+- **OpenShift**: Two-layer validation (Envoy JWT → Backend X-Rh-Identity)
+- **Kubernetes/KIND**: Single-layer validation (Backend X-Rh-Identity only)
+
+**All API endpoints** (`/api/cost-management/v1/*`) require authentication on **both platforms**.
+
 ## Architecture
 
 ### Security Model
