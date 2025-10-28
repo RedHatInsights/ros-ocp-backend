@@ -43,7 +43,9 @@ func Setup_kruize_performance_profile() {
 			log.Errorf("An Error Occured %v \n", err)
 		} else {
 			body, err := io.ReadAll(response.Body)
-			response.Body.Close()
+			if respBodyErr := response.Body.Close(); respBodyErr != nil {
+				log.Errorf("Error closing response body: %v", respBodyErr)
+			}
 			if err != nil {
 				log.Errorf("Error reading listPerformanceProfiles response: %v", err)
 				time.Sleep(10 * time.Second)
@@ -88,7 +90,11 @@ func Setup_kruize_performance_profile() {
 						log.Errorf("PUT request failed: %v", err)
 						return
 					}
-					defer res.Body.Close()
+					defer func() {
+						if respBodyErr := res.Body.Close(); respBodyErr != nil {
+							log.Errorf("Error closing response body: %v", respBodyErr)
+						}
+					}()
 
 					bodyBytes, _ := io.ReadAll(res.Body)
 					log.Infof("Response status: %d", res.StatusCode)
