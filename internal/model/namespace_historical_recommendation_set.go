@@ -20,6 +20,7 @@ type HistoricalNamespaceRecommendationSet struct {
 	MonitoringStartTime  time.Time `gorm:"type:timestamp with time zone;not null"`
 	MonitoringEndTime    time.Time `gorm:"type:timestamp with time zone;not null"`
 	Recommendations      datatypes.JSON
+	CreatedAt            time.Time `gorm:"type:timestamp with time zone;not null"`
 	UpdatedAt            time.Time `gorm:"type:timestamp with time zone;not null"`
 }
 

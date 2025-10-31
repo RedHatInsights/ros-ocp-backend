@@ -3,7 +3,6 @@
 ALTER TABLE workloads ALTER COLUMN containers SET NOT NULL;
 ALTER TABLE workloads ALTER COLUMN workload_type SET NOT NULL;
 ALTER TABLE workloads ALTER COLUMN workload_name SET NOT NULL;
-ALTER TABLE workloads DROP COLUMN namespace_type;
 
 -- Workload Metrics
 

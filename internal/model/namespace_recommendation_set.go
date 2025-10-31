@@ -22,6 +22,7 @@ type NamespaceRecommendationSet struct {
 	MonitoringStartTime    time.Time `gorm:"type:timestamp"`
 	MonitoringEndTime      time.Time `gorm:"type:timestamp"`
 	Recommendations        datatypes.JSON
+	CreatedAt              time.Time `gorm:"type:timestamp with time zone;not null;default:now();<-:create"`
 	UpdatedAt              time.Time `gorm:"type:timestamp"`
 	MonitoringStartTimeStr string    `gorm:"-"`
 	MonitoringEndTimeStr   string    `gorm:"-"`
