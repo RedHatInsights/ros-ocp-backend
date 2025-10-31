@@ -1,6 +1,9 @@
 package workload
 
-import "database/sql/driver"
+import (
+	"database/sql/driver"
+	"fmt"
+)
 
 type WorkloadType string
 
@@ -14,7 +17,15 @@ const (
 )
 
 func (p *WorkloadType) Scan(value interface{}) error {
-	*p = WorkloadType(value.(string))
+	if value == nil {
+		*p = "" // workload.workload_type is nullable
+		return nil
+	}
+	strVal, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("WorkloadType.Scan: expected string, got %T", value)
+	}
+	*p = WorkloadType(strVal)
 	return nil
 }
 

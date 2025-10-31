@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS idx_namespace_recommendation_sets_workload_id;
+DROP INDEX IF EXISTS idx_namespace_recommendation_sets_monitoring_end_time;
+DROP TABLE IF EXISTS namespace_recommendation_sets;
