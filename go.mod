@@ -6,7 +6,7 @@ toolchain go1.24.6
 
 require (
 	github.com/aws/aws-sdk-go v1.55.8
-	github.com/confluentinc/confluent-kafka-go/v2 v2.11.1
+	github.com/confluentinc/confluent-kafka-go/v2 v2.12.0
 	github.com/go-gota/gota v0.12.0
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/golang-migrate/migrate/v4 v4.19.0
