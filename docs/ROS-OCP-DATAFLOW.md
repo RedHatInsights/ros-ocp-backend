@@ -122,7 +122,7 @@ podman exec db-ros_1 psql -U postgres -c "SELECT COUNT(*) FROM workloads;"
 ```
 
 ### 4. Kruize Autotune
-**Purpose**: Provides machine learning-based performance optimization recommendations
+**Purpose**: Provides performance optimization recommendations
 - **Port**: 8080
 - **Input**: Experiment creation requests from ROS-OCP Processor
 - **Processing**: Analyzes workload patterns and resource utilization
