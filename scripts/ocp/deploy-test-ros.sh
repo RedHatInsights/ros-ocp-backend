@@ -187,7 +187,7 @@ check_prerequisites() {
 }
 
 detect_openshift_credentials() {
-    log_verbose "Detecting OpenShift credentials from environment..."
+    log_info "Detecting OpenShift credentials from environment..."
     
     # Detect API URL from kubeconfig if not set
     if [[ -z "${OPENSHIFT_API}" ]] && [[ -f "${KUBECONFIG}" ]]; then
@@ -557,8 +557,8 @@ test_jwt_flow() {
     
     # Ensure we're logged in to OpenShift for JWT test
     if [[ "${DRY_RUN}" != "true" ]]; then
-        if ! oc whoami &> /dev/null; then
-            log_info "Not logged in to OpenShift, attempting login for JWT test..."
+        if ! oc whoami -t &> /dev/null; then
+            log_info "Not logged in to OpenShift with a user that has an available token, attempting login for JWT test..."
             if ! login_to_openshift; then
                 log_warning "Failed to login to OpenShift, skipping JWT test"
                 return 0
