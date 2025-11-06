@@ -21,7 +21,7 @@ set -euo pipefail
 #   --skip-test               Skip JWT authentication test
 #   --skip-image-override     Skip creating custom values file for image override
 #   --namespace NAME          Target namespace (default: ros-ocp)
-#   --image-tag TAG           Custom image tag for insights-ros-ingress
+#   --image-tag TAG           Custom image tag for ros-ocp-backend services
 #   --use-local-chart         Use local Helm chart instead of GitHub release
 #   --verbose                 Enable verbose output
 #   --dry-run                 Show what would be executed without running
@@ -37,7 +37,7 @@ set -euo pipefail
 #   QUAY_USERNAME            Quay.io username for pulling images
 #   QUAY_PASSWORD            Quay.io password for pulling images
 #   IMAGE_REGISTRY           Image registry (default: quay.io)
-#   IMAGE_REPOSITORY         Image repository (default: insights-onprem/insights-ros-ingress)
+#   IMAGE_REPOSITORY         Image repository (default: insights-onprem/ros-ocp-backend)
 #
 # Note: This script will automatically login to OpenShift using credentials from:
 #       1. KUBECONFIG file (for API URL)
@@ -70,7 +70,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 # Default configuration
 NAMESPACE="${NAMESPACE:-ros-ocp}"
 IMAGE_REGISTRY="${IMAGE_REGISTRY:-quay.io}"
-IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-insights-onprem/insights-ros-ingress}"
+IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-insights-onprem/ros-ocp-backend}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 USE_LOCAL_CHART="${USE_LOCAL_CHART:-false}"
 VERBOSE="${VERBOSE:-false}"
@@ -429,8 +429,7 @@ deploy_helm_chart() {
         return 0
     fi
     
-    log_step "Deploying ROS Helm chart (3/5)"
-    
+    log_step "Deploying ROS Helm chart (3/5)"    
     download_script "${SCRIPT_INSTALL_HELM}"
     
     # Download the official openshift-values.yaml from ros-helm-chart repo
@@ -440,13 +439,31 @@ deploy_helm_chart() {
     
     # Add image override via --set if not skipped
     if [[ "${SKIP_IMAGE_OVERRIDE}" == "false" ]]; then
-        log_info "Configuring image override via Helm --set flags"
+        log_info "Configuring image override via Helm --set flags for all ros-ocp-backend services"
         export HELM_EXTRA_ARGS=(
+            # Processor service
             "--set" "rosocp.processor.image.repository=${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
             "--set" "rosocp.processor.image.tag=${IMAGE_TAG}"
             "--set" "rosocp.processor.image.pullPolicy=Always"
+            # Recommendation Poller service
+            "--set" "rosocp.recommendationPoller.image.repository=${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
+            "--set" "rosocp.recommendationPoller.image.tag=${IMAGE_TAG}"
+            "--set" "rosocp.recommendationPoller.image.pullPolicy=Always"
+            # API service
+            "--set" "rosocp.api.image.repository=${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
+            "--set" "rosocp.api.image.tag=${IMAGE_TAG}"
+            "--set" "rosocp.api.image.pullPolicy=Always"
+            # Housekeeper service
+            "--set" "rosocp.housekeeper.image.repository=${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
+            "--set" "rosocp.housekeeper.image.tag=${IMAGE_TAG}"
+            "--set" "rosocp.housekeeper.image.pullPolicy=Always"
+            # Partition Cleaner service
+            "--set" "rosocp.partitionCleaner.image.repository=${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
+            "--set" "rosocp.partitionCleaner.image.tag=${IMAGE_TAG}"
+            "--set" "rosocp.partitionCleaner.image.pullPolicy=Always"
         )
         log_verbose "Image: ${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}:${IMAGE_TAG}"
+        log_verbose "Overriding images for: processor, recommendationPoller, api, housekeeper, partitionCleaner"
     else
         log_info "Using chart default image (--skip-image-override)"
         export HELM_EXTRA_ARGS=()
