@@ -21,4 +21,5 @@ ON DELETE CASCADE;
 ALTER TABLE namespace_recommendation_sets
 ADD CONSTRAINT UQ_Namespace_Recommendation UNIQUE (workload_id);
 
-CREATE INDEX IF NOT EXISTS idx_namespace_recommendation_sets_workload_id ON namespace_recommendation_sets (workload_id);
+CREATE INDEX IF NOT EXISTS idx_namespace_recommendation_sets_workload_id ON namespace_recommendation_sets(workload_id);
+CREATE INDEX IF NOT EXISTS idx_namespace_recommendation_sets_org_id ON namespace_recommendation_sets(org_id);
