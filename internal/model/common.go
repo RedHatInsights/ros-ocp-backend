@@ -46,6 +46,6 @@ func getNamespaceRecommendationQuery(orgID string) *gorm.DB {
 			JOIN workloads ON namespace_recommendation_sets.workload_id = workloads.id
 			JOIN clusters ON workloads.cluster_id = clusters.id
 		`).Model(&NamespaceRecommendationSetResult{}).
-		Where("workloads.org_id = ?", orgID)
+		Where("namespace_recommendation_sets.org_id = ?", orgID)
 	return query
 }

@@ -12,6 +12,7 @@ import (
 
 type NamespaceRecommendationSet struct {
 	ID                     string `gorm:"primaryKey;not null;autoIncrement"`
+	OrgID                  string `gorm:"type:text;not null"`
 	WorkloadID             uint
 	Workload               Workload `gorm:"foreignKey:WorkloadID"`
 	NamespaceName          string
