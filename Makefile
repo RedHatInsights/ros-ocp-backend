@@ -200,3 +200,12 @@ else
 		 -H "x-rh-request_id: testtesttest" \
 		 http://localhost:8000/api/cost-management/v1/recommendations/openshift?start_date=${start_date} | python -m json.tool
 endif
+
+.PHONY: oc-deploy-test
+oc-deploy-test: ## Deploy ROS test environment with JWT authentication on OpenShift
+	@echo "🚀 Deploying ROS test environment to OpenShift..."
+	@echo ""
+	IMAGE_TAG=$(VERSION) \
+	IMAGE_REGISTRY=$(REGISTRY) \
+	IMAGE_REPOSITORY=$(APP_NAME) \
+	./scripts/ocp/deploy-test-ros.sh
