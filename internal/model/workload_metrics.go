@@ -17,6 +17,8 @@ type WorkloadMetrics struct {
 	WorkloadID    uint
 	Workload      Workload `gorm:"foreignKey:WorkloadID"`
 	ContainerName string
+	NamespaceName string
+	MetricType    string    `gorm:"type:metrictype;default:'container'"`
 	IntervalStart time.Time `gorm:"type:timestamp"`
 	IntervalEnd   time.Time `gorm:"type:timestamp"`
 	UsageMetrics  datatypes.JSON
