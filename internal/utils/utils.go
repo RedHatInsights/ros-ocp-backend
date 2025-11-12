@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -66,46 +68,52 @@ func Setup_kruize_performance_profile() {
 						}
 					}
 
-					// Version mismatch -> Update the profile
-					log.Infof("Updating performance profile to supported version: %v", newVersion)
-					postBody, err := os.ReadFile("./resource_optimization_openshift.json")
-					if err != nil {
-						log.Fatalf("File reading error: %v (path=%s)", err, postBody)
-					}
-
-					// create the PUT request
-					update_performance_profile_url := cfg.KruizeUrl + "/updatePerformanceProfile"
-					req, err := http.NewRequest(http.MethodPut, update_performance_profile_url, bytes.NewReader(postBody))
-					if err != nil {
-						log.Errorf("Failed to create PUT request: %v", err)
-						return
-					}
-					req.Header.Set("Content-Type", "application/json")
-					req.Header.Set("Accept", "*/*")
-
-					// call the updatePerformanceProfile API using PUT request
-					log.Infof("Sending PUT request to: %s (len=%d bytes)", update_performance_profile_url, req.ContentLength)
-					res, err := http.DefaultClient.Do(req)
-					if err != nil {
-						log.Errorf("PUT request failed: %v", err)
-						return
-					}
-					defer func() {
-						if respBodyErr := res.Body.Close(); respBodyErr != nil {
-							log.Errorf("Error closing response body: %v", respBodyErr)
+					// Version mismatch -> Update the profile if update flag is enabled
+					if cfg.UpdateKruizePerfProfile {
+						log.Infof("Updating performance profile to supported version: %v", newVersion)
+						// ✅ Ensure Kruize PUT endpoint is ready before attempting update
+						if !waitForKruizePutReady(cfg.KruizeUrl, 5, 30*time.Second) {
+							log.Error("❌ Kruize PUT endpoint did not become ready — skipping update attempt.")
+							return
 						}
-					}()
+						postBody, err := os.ReadFile("./resource_optimization_openshift.json")
+						if err != nil {
+							log.Fatalf("File reading error: %v (path=%s)", err, postBody)
+						}
 
-					bodyBytes, _ := io.ReadAll(res.Body)
-					log.Infof("Response status: %d", res.StatusCode)
-					log.Infof("Response body: %s", string(bodyBytes))
+						// create the PUT request
+						update_performance_profile_url := cfg.KruizeUrl + "/updatePerformanceProfile"
+						req, err := http.NewRequest(http.MethodPut, update_performance_profile_url, bytes.NewReader(postBody))
+						if err != nil {
+							log.Errorf("Failed to create PUT request: %v", err)
+							return
+						}
+						req.Header.Set("Content-Type", "application/json")
+						req.Header.Set("Accept", "*/*")
 
-					if res.StatusCode == 201 {
-						log.Infof("Performance profile updated successfully.")
-						return
+						// call the updatePerformanceProfile API using PUT request
+						log.Infof("Sending PUT request to: %s (len=%d bytes)", update_performance_profile_url, req.ContentLength)
+						res, err := http.DefaultClient.Do(req)
+						if err != nil {
+							log.Errorf("PUT request failed: %v", err)
+							return
+						}
+						defer func() {
+							if respBodyErr := res.Body.Close(); respBodyErr != nil {
+								log.Errorf("Error closing response body: %v", respBodyErr)
+							}
+						}()
+
+						bodyBytes, _ := io.ReadAll(res.Body)
+						log.Infof("Response status: %d", res.StatusCode)
+						log.Infof("Response body: %s", string(bodyBytes))
+
+						if res.StatusCode == 201 {
+							log.Infof("Performance profile updated successfully.")
+							return
+						}
+						log.Errorf("Failed to update performance profile (status=%d): %s", res.StatusCode, string(bodyBytes))
 					}
-					log.Errorf("Failed to update performance profile (status=%d): %s", res.StatusCode, string(bodyBytes))
-
 				}
 			}
 
@@ -143,6 +151,43 @@ func Setup_kruize_performance_profile() {
 		time.Sleep(10 * time.Second)
 	}
 
+}
+
+// waitForKruizePutReady ensures the /updatePerformanceProfile endpoint is ready to accept PUTs.
+// It polls the endpoint using an OPTIONS request and checks if the Allow header includes PUT.
+func waitForKruizePutReady(kruizeURL string, retries int, delay time.Duration) bool {
+	target := kruizeURL + "/updatePerformanceProfile"
+	log.Infof("Checking Kruize PUT endpoint readiness at: %s", target)
+
+	for i := 1; i <= retries; i++ {
+		req, _ := http.NewRequest(http.MethodOptions, target, nil)
+		client := &http.Client{
+			Transport: &http.Transport{
+				DisableKeepAlives:  true,
+				DisableCompression: true,
+				DialContext: (&net.Dialer{
+					Timeout:   5 * time.Second,
+					KeepAlive: 0,
+				}).DialContext,
+			},
+			Timeout: 10 * time.Second,
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Warnf("Attempt %d/%d: OPTIONS check failed: %v", i, retries, err)
+		} else {
+			allow := resp.Header.Get("Allow")
+			if strings.Contains(allow, "PUT") {
+				log.Info("✅ Kruize PUT endpoint is ready!")
+				return true
+			}
+		}
+		log.Infof("Waiting %v before retry...", delay)
+		time.Sleep(delay)
+	}
+	log.Error("❌ Kruize PUT endpoint not ready after multiple attempts.")
+	return false
 }
 
 func ReadCSVFromUrl(url string) ([][]string, error) {

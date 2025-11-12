@@ -21,6 +21,7 @@ type Config struct {
 	ReadHeaderTimeout               int    `mapstructure:"READ_HEADER_TIMEOUT"`
 	RecordLimitCSV                  int    `mapstructure:"RECORD_LIMIT_CSV"`
 	CSVStreamInterval               int    `mapstructure:"CSV_STREAM_INTERVAL"`
+	UpdateKruizePerfProfile         bool   `mapstructure:"UPDATE_KRUIZE_PERF_PROFILE"`
 
 	// Kafka config
 	KafkaBootstrapServers string `mapstructure:"KAFKA_BOOTSTRAP_SERVERS"`
@@ -181,6 +182,7 @@ func initConfig() {
 	viper.SetDefault("READ_HEADER_TIMEOUT", 15)
 	viper.SetDefault("RECORD_LIMIT_CSV", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
+	viper.SetDefault("UPDATE_KRUIZE_PERF_PROFILE", true)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}
