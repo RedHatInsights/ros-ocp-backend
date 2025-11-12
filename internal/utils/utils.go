@@ -177,6 +177,10 @@ func waitForKruizePutReady(kruizeURL string, retries int, delay time.Duration) b
 		if err != nil {
 			log.Warnf("Attempt %d/%d: OPTIONS check failed: %v", i, retries, err)
 		} else {
+			err := resp.Body.Close()
+			if err != nil {
+				return false
+			}
 			allow := resp.Header.Get("Allow")
 			if strings.Contains(allow, "PUT") {
 				log.Info("✅ Kruize PUT endpoint is ready!")
