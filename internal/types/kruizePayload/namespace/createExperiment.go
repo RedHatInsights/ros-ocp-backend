@@ -5,7 +5,7 @@ import (
 )
 
 //nolint:unused
-type createNamespaceExperiment struct {
+type CreateNamespaceExperiment struct {
 	Version                 string                               `json:"version"`
 	Experiment_name         string                               `json:"experiment_name"`
 	Cluster_name            string                               `json:"cluster_name"`
