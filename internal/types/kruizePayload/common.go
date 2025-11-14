@@ -1,7 +1,6 @@
 package kruizePayload
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -120,7 +119,7 @@ type recommendedValues struct {
 
 func AssertAndConvertToString(data interface{}) string {
 	if metric, ok := data.(float64); ok {
-		return fmt.Sprintf("%.2f", metric)
+		return strconv.FormatFloat(metric, 'f', -1, 64)
 	}
 	if metric, ok := data.(int); ok {
 		return strconv.Itoa(metric)
