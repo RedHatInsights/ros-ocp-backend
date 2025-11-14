@@ -5,22 +5,22 @@ import (
 )
 
 type createExperiment struct {
-	Version                 string                  `json:"version"`
-	Experiment_name         string                  `json:"experiment_name"`
-	Cluster_name            string                  `json:"cluster_name"`
-	Performance_profile     string                  `json:"performance_profile"`
-	Mode                    string                  `json:"mode"`
-	Target_cluster          string                  `json:"target_cluster"`
-	Kubernetes_objects      []kubernetesObject      `json:"kubernetes_objects"`
-	Trial_settings          trial_settings          `json:"trial_settings"`
-	Recommendation_settings recommendation_settings `json:"recommendation_settings"`
+	Version                 string                 `json:"version"`
+	Experiment_name         string                 `json:"experiment_name"`
+	Cluster_name            string                 `json:"cluster_name"`
+	Performance_profile     string                 `json:"performance_profile"`
+	Mode                    string                 `json:"mode"`
+	Target_cluster          string                 `json:"target_cluster"`
+	Kubernetes_objects      []kubernetesObject     `json:"kubernetes_objects"`
+	Trial_settings          TrialSettings          `json:"trial_settings"`
+	Recommendation_settings RecommendationSettings `json:"recommendation_settings"`
 }
 
-type trial_settings struct {
+type TrialSettings struct {
 	Measurement_duration string `json:"measurement_duration"`
 }
 
-type recommendation_settings struct {
+type RecommendationSettings struct {
 	Threshold string `json:"threshold"`
 }
 
@@ -40,8 +40,8 @@ func GetCreateExperimentPayload(experiment_name string, cluster_identifier strin
 			Performance_profile:     "resource-optimization-openshift",
 			Mode:                    "monitor",
 			Target_cluster:          "remote",
-			Trial_settings:          trial_settings{Measurement_duration: "15min"},
-			Recommendation_settings: recommendation_settings{Threshold: "0.1"},
+			Trial_settings:          TrialSettings{Measurement_duration: "15min"},
+			Recommendation_settings: RecommendationSettings{Threshold: "0.1"},
 			Kubernetes_objects: []kubernetesObject{
 				{
 					K8stype:    data["k8s_object_type"],
