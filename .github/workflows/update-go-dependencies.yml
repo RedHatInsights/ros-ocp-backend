@@ -1,0 +1,66 @@
+name: Go Dependencies Update
+
+on:
+  schedule:
+    - cron: '30 3 * * 5'  # Every Friday at 9 AM IST (3:30 AM UTC)
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Update dependencies
+        run: |
+          go get -u ./...
+          go mod tidy
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get updated packages
+        id: packages
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          echo "updated_packages<<EOF" >> $GITHUB_OUTPUT
+          git diff --name-only HEAD~1 HEAD | grep -E '\.(mod|sum)$' || echo "No package changes detected"
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update dependencies'
+          title: 'chore: update Go dependencies'
+          body: |
+            This PR updates Go dependencies to their latest versions.
+
+            **Changes:**
+            - Updated all dependencies with `go get -u ./...`
+            - Cleaned up unused dependencies with `go mod tidy`
+
+            **Updated Packages:**
+            ```
+            ${{ steps.packages.outputs.updated_packages }}
+            ```
+          branch: chore/update-deps-$(date +%Y-%m-%d-%H%M)
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
