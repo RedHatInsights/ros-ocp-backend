@@ -137,30 +137,44 @@ func initConfig() {
 	} else {
 		viper.SetDefault("LogFormater", "text")
 
+		// Enable automatic environment variable binding
+		viper.AutomaticEnv()
+
+		// Kafka Config - bind environment variables with defaults
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
 		viper.SetDefault("UPLOAD_TOPIC", "hccm.ros.events")
 		viper.SetDefault("RECOMMENDATION_TOPIC", "rosocp.kruize.recommendations")
 		viper.SetDefault("SOURCES_EVENT_TOPIC", "platform.sources.event-stream")
 
-		// default DB Config
-		viper.SetDefault("DBName", "postgres")
-		viper.SetDefault("DBUser", "postgres")
-		viper.SetDefault("DBPassword", "postgres")
+		// DB Config - bind environment variables with defaults
+		_ = viper.BindEnv("DBHost", "DB_HOST")
 		viper.SetDefault("DBHost", "localhost")
+		_ = viper.BindEnv("DBPort", "DB_PORT")
 		viper.SetDefault("DBPort", "15432")
+		_ = viper.BindEnv("DBName", "DB_NAME")
+		viper.SetDefault("DBName", "postgres")
+		_ = viper.BindEnv("DBUser", "DB_USER")
+		viper.SetDefault("DBUser", "postgres")
+		_ = viper.BindEnv("DBPassword", "DB_PASSWORD")
+		viper.SetDefault("DBPassword", "postgres")
+		_ = viper.BindEnv("DBssl", "DB_SSL")
 		viper.SetDefault("DBssl", "disable")
 		viper.SetDefault("DBCACert", "")
 
-		// default RBAC Config
+		// RBAC Config - bind environment variables with defaults
+		_ = viper.BindEnv("RBACHost", "RBAC_HOST")
 		viper.SetDefault("RBACHost", "localhost")
+		_ = viper.BindEnv("RBACPort", "RBAC_PORT")
 		viper.SetDefault("RBACPort", "9080")
 		viper.SetDefault("RBACProtocol", "http")
 		viper.SetDefault("RBAC_ENABLE", false)
 
-		// prometheus config
+		// Prometheus config - bind environment variables with defaults
+		_ = viper.BindEnv("PROMETHEUS_PORT", "PROMETHEUS_PORT")
 		viper.SetDefault("PROMETHEUS_PORT", "5005")
 
-		// Sources-api-go
+		// Sources-api-go config - bind environment variables with defaults
+		_ = viper.BindEnv("SOURCES_API_BASE_URL", "SOURCES_API_BASE_URL")
 		viper.SetDefault("SOURCES_API_BASE_URL", "http://127.0.0.1:8002")
 
 	}
