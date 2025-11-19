@@ -56,7 +56,7 @@ jobs:
         with:
           path: ros-ocp-backend
 
-      - name: Download ros-helm-chart scripts and chart from latest release
+      - name: Download cost-onprem-chart scripts and chart from latest release
         run: |
           # Fail fast and safely:
           #  -e : exit immediately if a command fails
@@ -65,34 +65,34 @@ jobs:
           set -euo pipefail
 
           # Get latest release tag
-          RELEASE_TAG=$(curl -s https://api.github.com/repos/insights-onprem/ros-helm-chart/releases/latest | jq -r '.tag_name')
-          echo "Using ros-helm-chart release: $RELEASE_TAG"
+          RELEASE_TAG=$(curl -s https://api.github.com/repos/insights-onprem/cost-onprem-chart/releases/latest | jq -r '.tag_name')
+          echo "Using cost-onprem-chart release: $RELEASE_TAG"
 
           # Download scripts and chart
-          mkdir -p ros-helm-chart/scripts
-          curl -L -o ros-helm-chart/scripts/deploy-kind.sh \
-            "https://raw.githubusercontent.com/insights-onprem/ros-helm-chart/${RELEASE_TAG}/scripts/deploy-kind.sh"
-          curl -L -o ros-helm-chart/scripts/install-helm-chart.sh \
-            "https://raw.githubusercontent.com/insights-onprem/ros-helm-chart/${RELEASE_TAG}/scripts/install-helm-chart.sh"
-          curl -L -o ros-helm-chart/scripts/deploy-strimzi.sh \
-            "https://raw.githubusercontent.com/insights-onprem/ros-helm-chart/${RELEASE_TAG}/scripts/deploy-strimzi.sh"
+          mkdir -p cost-onprem-chart/scripts
+          curl -L -o cost-onprem-chart/scripts/deploy-kind.sh \
+            "https://raw.githubusercontent.com/insights-onprem/cost-onprem-chart/${RELEASE_TAG}/scripts/deploy-kind.sh"
+          curl -L -o cost-onprem-chart/scripts/install-helm-chart.sh \
+            "https://raw.githubusercontent.com/insights-onprem/cost-onprem-chart/${RELEASE_TAG}/scripts/install-helm-chart.sh"
+          curl -L -o cost-onprem-chart/scripts/deploy-strimzi.sh \
+            "https://raw.githubusercontent.com/insights-onprem/cost-onprem-chart/${RELEASE_TAG}/scripts/deploy-strimzi.sh"
 
           # Download chart
-          CHART_URL=$(curl -s https://api.github.com/repos/insights-onprem/ros-helm-chart/releases/latest | jq -r '.assets[] | select(.name | contains("latest")) | .browser_download_url')
+          CHART_URL=$(curl -s https://api.github.com/repos/insights-onprem/cost-onprem-chart/releases/latest | jq -r '.assets[] | select(.name | contains("latest")) | .browser_download_url')
           curl -L -o /tmp/ros-ocp-chart.tgz "$CHART_URL"
 
           # Extract chart to directory (script expects ../ros-ocp relative to scripts directory)
-          mkdir -p ros-helm-chart/ros-ocp
-          tar -xzf /tmp/ros-ocp-chart.tgz -C ros-helm-chart/ros-ocp --strip-components=1
+          mkdir -p cost-onprem-chart/ros-ocp
+          tar -xzf /tmp/ros-ocp-chart.tgz -C cost-onprem-chart/ros-ocp --strip-components=1
 
-          chmod +x ros-helm-chart/scripts/*.sh
+          chmod +x cost-onprem-chart/scripts/*.sh
 
           # PATCH: force install-helm-chart.sh to use only 'ros-ocp-latest.tgz'
-          sed -i -E 's#ros-ocp-[^ ]*\.tgz#ros-ocp-latest.tgz#g' ros-helm-chart/scripts/install-helm-chart.sh
+          sed -i -E 's#ros-ocp-[^ ]*\.tgz#ros-ocp-latest.tgz#g' cost-onprem-chart/scripts/install-helm-chart.sh
           echo "[INFO] Patched install-helm-chart.sh to always use ros-ocp-latest.tgz"
 
           # VERIFY PATCH
-          grep -A2 "ros-ocp" ros-helm-chart/scripts/install-helm-chart.sh
+          grep -A2 "ros-ocp" cost-onprem-chart/scripts/install-helm-chart.sh
 
       - name: Install Podman
         run: |
@@ -146,7 +146,7 @@ jobs:
       - name: Setup KIND cluster
         timeout-minutes: 15
         run: |
-          cd ros-helm-chart/scripts
+          cd cost-onprem-chart/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
@@ -171,7 +171,7 @@ jobs:
       - name: Deploy Kafka Infrastructure
         timeout-minutes: 10
         run: |
-          cd ros-helm-chart/scripts
+          cd cost-onprem-chart/scripts
           # Make script executable
           chmod +x deploy-strimzi.sh
 
@@ -238,7 +238,7 @@ jobs:
         timeout-minutes: 15
         run: |
           # Deploy Helm chart with local image overrides
-          cd ros-helm-chart/scripts
+          cd cost-onprem-chart/scripts
           export KIND_CLUSTER_NAME=${{ env.KIND_CLUSTER_NAME }}
           export HELM_RELEASE_NAME=${{ env.HELM_RELEASE_NAME }}
           export NAMESPACE=${{ env.NAMESPACE }}
