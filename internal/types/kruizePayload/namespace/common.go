@@ -4,7 +4,6 @@ import (
 	kruizePayload "github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
 )
 
-//nolint:unused
 type UpdateNamespaceResultResponse struct {
 	Message           string                             `json:"message,omitempty"`
 	Httpcode          int                                `json:"httpcode,omitempty"`
@@ -13,7 +12,6 @@ type UpdateNamespaceResultResponse struct {
 	Data              []kruizePayload.UpdateResponseData `json:"data,omitempty"`
 }
 
-//nolint:unused
 type NamespaceRecommendationResponse []NamespaceExperiment
 
 type NamespaceExperiment struct {
