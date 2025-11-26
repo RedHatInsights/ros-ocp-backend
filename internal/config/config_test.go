@@ -45,12 +45,12 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 			setEnv:       true,
 		},
 		{
-			name:         "RBAC_HOST environment variable overrides default",
-			envKey:       "RBAC_HOST",
-			envValue:     "rbac.example.com",
-			viperKey:     "RBACHost",
-			defaultValue: "localhost",
-			expected:     "rbac.example.com",
+			name:         "DB_CA_CERT environment variable overrides default",
+			envKey:       "DB_CA_CERT",
+			envValue:     "test-ca-cert",
+			viperKey:     "DBCACert",
+			defaultValue: "",
+			expected:     "test-ca-cert",
 			setEnv:       true,
 		},
 		{
@@ -121,7 +121,7 @@ func TestNonClowderConfigurationLoads(t *testing.T) {
 		"DB_HOST":                 "test-postgres",
 		"DB_PORT":                 "5432",
 		"KAFKA_BOOTSTRAP_SERVERS": "test-kafka:9092",
-		"RBAC_HOST":               "test-rbac",
+		"DB_CA_CERT":              "test-ca-cert",
 	}
 
 	for key, value := range testEnvVars {
@@ -156,7 +156,7 @@ func TestNonClowderConfigurationLoads(t *testing.T) {
 		t.Errorf("KafkaBootstrapServers = %q, want %q", config.KafkaBootstrapServers, "test-kafka:9092")
 	}
 
-	if config.RBACHost != "test-rbac" {
-		t.Errorf("RBACHost = %q, want %q", config.RBACHost, "test-rbac")
+	if config.DBCACert != "test-ca-cert" {
+		t.Errorf("DBCACert = %q, want %q", config.DBCACert, "test-ca-cert")
 	}
 }
