@@ -99,7 +99,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.final_check.outputs.has_changes == 'true'
-        uses: peter-evans/create-pull-request@a35b72e2d40beed5f529ce3d50af680ff23a4c91
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ steps.branch.outputs.name }}
