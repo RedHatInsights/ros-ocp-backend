@@ -5,6 +5,8 @@ on:
     # Run every Wednesday at 3:30 AM UTC (9 AM IST)
     - cron: '30 3 * * 3'
   workflow_dispatch: # allow manual trigger
+  pull_request:  # temporary test workflow
+    branches: [main]
 
 jobs:
   update-deps:
