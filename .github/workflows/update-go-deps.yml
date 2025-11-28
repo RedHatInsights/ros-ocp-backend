@@ -54,7 +54,8 @@ jobs:
           if [ -s /tmp/diff_after_get.txt ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "diff<<EOF" >> $GITHUB_OUTPUT
-            grep -E '^\+\s+.*/' /tmp/diff_after_get.txt | sed 's/^+\s*//' | head -30 || echo "No visible additions"
+            # Extract go.mod changes (lines with + that contain module paths)
+            grep -E '^\+\s+.*(github\.com|golang\.org|gopkg\.in|go\.|/.*v[0-9])' /tmp/diff_after_get.txt | grep -v '^+++' | sed 's/^+\s*//' | head -50 || echo "No visible additions"
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
@@ -75,13 +76,13 @@ jobs:
           if [ -n "$(git status --porcelain go.mod go.sum 2>/dev/null)" ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "summary<<EOF" >> $GITHUB_OUTPUT
-            echo "### Added/Updated:" >> $GITHUB_OUTPUT
-            git diff go.mod go.sum | grep -E '^\+\s+.*/' | sed 's/^+\s*//' | head -30 || echo "None"
+            echo "### Added/Updated Dependencies:" >> $GITHUB_OUTPUT
+            git diff go.mod | grep -E '^\+\s+.*(github\.com|golang\.org|gopkg\.in|go\.|/.*v[0-9])' | grep -v '^+++' | sed 's/^+\s*//' | head -50 || echo "None"
             echo "" >> $GITHUB_OUTPUT
-            echo "### Removed:" >> $GITHUB_OUTPUT
-            git diff go.mod go.sum | grep -E '^\-\s+.*/' | sed 's/^-\s*//' | head -20 || echo "None"
+            echo "### Removed Dependencies:" >> $GITHUB_OUTPUT
+            git diff go.mod | grep -E '^\-\s+.*(github\.com|golang\.org|gopkg\.in|go\.|/.*v[0-9])' | grep -v '^---' | sed 's/^-\s*//' | head -30 || echo "None"
             echo "" >> $GITHUB_OUTPUT
-            echo "### Full diff (go.mod and go.sum):" >> $GITHUB_OUTPUT
+            echo "### File Statistics:" >> $GITHUB_OUTPUT
             git diff --stat go.mod go.sum || echo "No stat available"
             echo "EOF" >> $GITHUB_OUTPUT
           else
