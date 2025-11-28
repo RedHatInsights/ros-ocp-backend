@@ -19,7 +19,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          repository: github.repository
+          repository: ${{ github.repository }}}
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
