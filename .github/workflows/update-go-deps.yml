@@ -19,7 +19,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          repository: github.repository
+          repository: ${{ github.repository }}
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -104,7 +104,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: github.repository
+          repository: ${{ github.repository }}
           branch: ${{ steps.branch.outputs.name }}
           delete-branch: true
           base: main
