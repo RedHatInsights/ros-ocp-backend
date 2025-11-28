@@ -19,7 +19,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository }}
+          repository: github.repository
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -54,7 +54,7 @@ jobs:
           if [ -s /tmp/diff_after_get.txt ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "diff<<EOF" >> $GITHUB_OUTPUT
-            grep -E '^\+\s+(require|replace)\s+' /tmp/diff_after_get.txt | sed 's/^+\s*//' | head -20 || echo "No visible additions"
+            grep -E '^\+\s+.*/' /tmp/diff_after_get.txt | sed 's/^+\s*//' | head -30 || echo "No visible additions"
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
@@ -76,10 +76,13 @@ jobs:
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "summary<<EOF" >> $GITHUB_OUTPUT
             echo "### Added/Updated:" >> $GITHUB_OUTPUT
-            git diff go.mod go.sum | grep -E '^\+\s+(require|replace)\s+' | sed 's/^+\s*//' | head -25 || echo "None"
+            git diff go.mod go.sum | grep -E '^\+\s+.*/' | sed 's/^+\s*//' | head -30 || echo "None"
             echo "" >> $GITHUB_OUTPUT
             echo "### Removed:" >> $GITHUB_OUTPUT
-            git diff go.mod go.sum | grep -E '^\-\s+(require|replace)\s+' | sed 's/^-\s*//' | head -15 || echo "None"
+            git diff go.mod go.sum | grep -E '^\-\s+.*/' | sed 's/^-\s*//' | head -20 || echo "None"
+            echo "" >> $GITHUB_OUTPUT
+            echo "### Full diff (go.mod and go.sum):" >> $GITHUB_OUTPUT
+            git diff --stat go.mod go.sum || echo "No stat available"
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
@@ -104,14 +107,16 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
           branch: ${{ steps.branch.outputs.name }}
           delete-branch: true
           base: main
+          trigger-workflow: true
           commit-message: 'chore: update Go dependencies'
           title: 'chore: update Go dependencies'
           body: |
             ## Updated Go Dependencies
+
+            :warning: Do not merge unless all PR checks pass.
 
             This PR was automatically created by the Update Go Dependencies workflow.
 
