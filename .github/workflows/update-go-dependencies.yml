@@ -36,12 +36,12 @@ jobs:
       - name: Update dependencies
         id: update_all
         run: |
-          set -e
-          go get -u ./... 2>&1 | tee /tmp/go_get_output.log || {
+          set -euo pipefail
+          if ! go get -u ./... 2>&1 | tee /tmp/go_get_output.log; then
             echo "Error: go get -u ./... failed"
             cat /tmp/go_get_output.log
             exit 1
-          }
+          fi
           git diff --no-color go.mod go.sum > /tmp/diff_after_get.txt 2>/dev/null || touch /tmp/diff_after_get.txt
 
       - name: Check changes after go get -u
@@ -51,30 +51,6 @@ jobs:
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "diff<<EOF" >> $GITHUB_OUTPUT
             grep -E '^\+\s+(require|replace)\s+' /tmp/diff_after_get.txt | sed 's/^+\s*//' | head -20 || echo "No visible additions"
-            echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "diff=No changes detected" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Update golang.org/x/exp
-        id: update_exp
-        run: |
-          set -e
-          go get golang.org/x/exp@latest 2>&1 | tee /tmp/go_get_exp_output.log || {
-            echo "Error: go get golang.org/x/exp@latest failed"
-            cat /tmp/go_get_exp_output.log
-            exit 1
-          }
-          git diff --no-color go.mod go.sum > /tmp/diff_after_exp.txt 2>/dev/null || touch /tmp/diff_after_exp.txt
-
-      - name: Check changes after golang.org/x/exp
-        id: changes_after_exp
-        run: |
-          if [ -s /tmp/diff_after_exp.txt ]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "diff<<EOF" >> $GITHUB_OUTPUT
-            grep -E '^\+\s+(require|replace)\s+' /tmp/diff_after_exp.txt | sed 's/^+\s*//' | head -20 || echo "No visible additions"
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
@@ -109,7 +85,7 @@ jobs:
       - name: Cleanup temporary files
         if: always()
         run: |
-          rm -f /tmp/diff_after_get.txt /tmp/diff_after_exp.txt /tmp/go_get_output.log /tmp/go_get_exp_output.log
+          rm -f /tmp/diff_after_get.txt /tmp/go_get_output.log
 
       - name: Generate branch name
         id: branch
@@ -131,8 +107,22 @@ jobs:
 
             This PR was automatically created by the Update Go Dependencies workflow.
 
-            ### Changes After `go get -u ./...`
+            ### Changes After Updating packages `go get -u ./...`
             ${{ steps.changes_after_get.outputs.has_changes == 'true' && '✅ **Dependencies updated**' || 'ℹ️ **No changes**' }}
 
             <details>
             <summary>View changes</summary>
+
+            ```
+            ${{ steps.changes_after_get.outputs.diff }}
+            ```
+            </details>
+
+            ### Final Summary
+            After running `go mod tidy`:
+
+            ${{ steps.final_check.outputs.summary }}
+
+            **Actions performed:**
+            - Updated all dependencies with `go get -u ./...`
+            - Cleaned up unused dependencies with `go mod tidy`
