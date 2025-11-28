@@ -103,6 +103,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ steps.branch.outputs.name }}
+          base: main
           commit-message: 'chore: update Go dependencies'
           title: 'chore: update Go dependencies'
           body: |
