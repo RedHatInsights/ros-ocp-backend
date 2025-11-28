@@ -2,8 +2,8 @@ name: Update Go Dependencies
 
 on:
   schedule:
-    # Run every other Wednesday at 3:30 AM UTC (9 AM IST)
-    - cron: '30 3 3,17 * 3'
+    # Run every Wednesday at 3:30 AM UTC (9 AM IST)
+    - cron: '30 3 * * 3'
   workflow_dispatch: # allow manual trigger
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version-file: go.mod
           cache-dependency-path: go.sum
 
       - name: Verify Go environment
