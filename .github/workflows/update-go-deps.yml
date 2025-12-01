@@ -79,6 +79,14 @@ jobs:
             else
                 echo "has_changes=false" >> $GITHUB_OUTPUT
             fi
+            
+      - name: Capture go.mod diff
+        id: go_mod_diff
+        if: steps.final_check.outputs.has_changes == 'true'
+        run: |
+            echo "diff<<EOF" >> $GITHUB_OUTPUT
+            git diff go.mod || echo "No changes"
+            echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Generate branch name
         id: branch
@@ -108,8 +116,11 @@ jobs:
             - Updated all dependencies with `go get -u ./...`
             - Updated go experimental package with `go get golang.org/x/exp@latest`
             - Cleaned up unused dependencies with `go mod tidy`
-            
-            Please check summary of changes via sourcery-ai
+
+             ### Changes in go.mod:
+             ```
+             ${{ steps.go_mod_diff.outputs.diff }}
+             ```
 
       - name: Cleanup temporary files
         if: always()
