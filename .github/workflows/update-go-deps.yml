@@ -4,7 +4,7 @@ on:
   schedule:
     # Run every Wednesday at 3:30 AM UTC (9 AM IST)
     - cron: '30 3 * * 3'
-  workflow_dispatch: # allow manual trigger
+  workflow_dispatch:
   pull_request:  # temporary, to test PR
     branches: [main]
 
@@ -37,58 +37,29 @@ jobs:
             exit 1
           fi
 
-      - name: Update dependencies
-        id: update_all
+      - name: Update packages
         run: |
-          set -euo pipefail
-          if ! go get -u ./... 2>&1 | tee /tmp/go_get_output.log; then
-            echo "Error: go get -u ./... failed"
-            cat /tmp/go_get_output.log
+          set -e
+          go get -u ./... 2>&1 || {
+            echo "Error: failed to fetch package updates"
             exit 1
-          fi
-          git diff --no-color go.mod go.sum > /tmp/diff_after_get.txt 2>/dev/null || touch /tmp/diff_after_get.txt
+          }
 
-      - name: Check changes after go get -u
-        id: changes_after_get
+      - name: Update experimental package
         run: |
-          if [ -s /tmp/diff_after_get.txt ]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "diff<<EOF" >> $GITHUB_OUTPUT
-            # Extract go.mod changes (lines with + that contain module paths)
-            grep -E '^\+\s+.*(github\.com|golang\.org|gopkg\.in|go\.|/.*v[0-9])' /tmp/diff_after_get.txt | grep -v '^+++' | sed 's/^+\s*//' | head -50 || echo "No visible additions"
-            echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "diff=No changes detected" >> $GITHUB_OUTPUT
-          fi
+          set -e
+          go get golang.org/x/exp@latest 2>&1 || {
+            echo "Error: failed to update go exp package"
+            exit 1
+          }
 
       - name: Tidy modules
         run: |
           set -e
           go mod tidy 2>&1 || {
-            echo "Error: go mod tidy failed"
+            echo "Error: failed to tidy up go modules"
             exit 1
           }
-
-      - name: Check for final changes
-        id: final_check
-        run: |
-          if [ -n "$(git status --porcelain go.mod go.sum 2>/dev/null)" ]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "summary<<EOF" >> $GITHUB_OUTPUT
-            echo "### Added/Updated Dependencies:" >> $GITHUB_OUTPUT
-            git diff go.mod | grep -E '^\+\s+.*(github\.com|golang\.org|gopkg\.in|go\.|/.*v[0-9])' | grep -v '^+++' | sed 's/^+\s*//' | head -50 || echo "None"
-            echo "" >> $GITHUB_OUTPUT
-            echo "### Removed Dependencies:" >> $GITHUB_OUTPUT
-            git diff go.mod | grep -E '^\-\s+.*(github\.com|golang\.org|gopkg\.in|go\.|/.*v[0-9])' | grep -v '^---' | sed 's/^-\s*//' | head -30 || echo "None"
-            echo "" >> $GITHUB_OUTPUT
-            echo "### File Statistics:" >> $GITHUB_OUTPUT
-            git diff --stat go.mod go.sum || echo "No stat available"
-            echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "summary=No changes after go mod tidy" >> $GITHUB_OUTPUT
-          fi
 
       - name: Cleanup temporary files
         if: always()
@@ -100,7 +71,7 @@ jobs:
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
           DATE=$(date -u +%Y-%m-%d)
-          BRANCH_NAME="chore/update-go-deps-${DATE}-${{ github.run_id }}"
+          BRANCH_NAME="chore/update-go-deps-${DATE}"
           echo "name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
       - uses: tibdex/github-app-token@v1
@@ -125,24 +96,7 @@ jobs:
 
             :warning: Do not merge unless all PR checks pass.
 
-            This PR was automatically created by the Update Go Dependencies workflow.
-
-            ### Changes After Updating packages `go get -u ./...`
-            ${{ steps.changes_after_get.outputs.has_changes == 'true' && '✅ **Dependencies updated**' || 'ℹ️ **No changes**' }}
-
-            <details>
-            <summary>View changes</summary>
-
-            ```
-            ${{ steps.changes_after_get.outputs.diff }}
-            ```
-            </details>
-
-            ### Final Summary
-            After Tidying packages `go mod tidy`:
-
-            ${{ steps.final_check.outputs.summary }}
-
             **Actions performed:**
             - Updated all dependencies with `go get -u ./...`
+            - Updated go experimental package with `go get golang.org/x/exp@latest`
             - Cleaned up unused dependencies with `go mod tidy`
