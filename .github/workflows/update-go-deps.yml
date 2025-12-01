@@ -70,8 +70,8 @@ jobs:
         id: branch
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
-          DATE=$(date -u +%Y-%m-%d)
-          BRANCH_NAME="chore/update-go-deps-${DATE}"
+          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+          BRANCH_NAME="chore/update-go-deps-${TIMESTAMP}"
           echo "name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
       - uses: tibdex/github-app-token@v1
