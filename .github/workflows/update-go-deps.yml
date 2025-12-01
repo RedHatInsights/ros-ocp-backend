@@ -16,13 +16,13 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-        
+
       - uses: tibdex/github-app-token@v1
         id: generate-token
         with:
           app_id: ${{ secrets.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
-          
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -45,6 +45,7 @@ jobs:
           fi
 
       - name: Update packages
+        id: update_packages
         run: |
           set -e
           go get -u ./... 2>&1 || {
@@ -53,6 +54,7 @@ jobs:
           }
 
       - name: Update experimental package
+        id: update_exp_packages
         run: |
           set -e
           go get golang.org/x/exp@latest 2>&1 || {
@@ -61,6 +63,7 @@ jobs:
           }
 
       - name: Tidy modules
+        id: tidy_modules
         run: |
           set -e
           go mod tidy 2>&1 || {
@@ -68,10 +71,14 @@ jobs:
             exit 1
           }
 
-      - name: Cleanup temporary files
-        if: always()
+      - name: Check for final changes
+        id: final_check
         run: |
-          rm -f /tmp/diff_after_get.txt /tmp/go_get_output.log
+            if [ -n "$(git status --porcelain go.mod go.sum 2>/dev/null)" ]; then
+                echo "has_changes=true" >> $GITHUB_OUTPUT
+            else
+                echo "has_changes=false" >> $GITHUB_OUTPUT
+            fi
 
       - name: Generate branch name
         id: branch
@@ -101,3 +108,10 @@ jobs:
             - Updated all dependencies with `go get -u ./...`
             - Updated go experimental package with `go get golang.org/x/exp@latest`
             - Cleaned up unused dependencies with `go mod tidy`
+            
+            Please check summary of changes via sourcery-ai
+
+      - name: Cleanup temporary files
+        if: always()
+        run: |
+            rm -f /tmp/diff_after_get.txt /tmp/go_get_output.log
