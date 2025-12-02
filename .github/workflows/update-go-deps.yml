@@ -79,14 +79,15 @@ jobs:
             else
                 echo "has_changes=false" >> $GITHUB_OUTPUT
             fi
+
       - name: Capture updated packages
         id: go_mod_diff
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
             echo "summary<<EOF" >> $GITHUB_OUTPUT
-            git diff go.mod | grep -E '^\+\s+.*github\.com|^\+\s+.*golang\.org' | grep -v '^+++' | sed 's/^+\s*/+ /' | sort >> $GITHUB_OUTPUT
+            git diff go.mod | grep -E '^\+\s+.*github\.com|^\+\s+.*golang\.org' | grep -v '^+++' | sed 's/^+\s*/++ /' | sort >> $GITHUB_OUTPUT
             echo "" >> $GITHUB_OUTPUT
-            git diff go.mod | grep -E '^\-\s+.*github\.com|^\-\s+.*golang\.org' | grep -v '^---' | sed 's/^-\s*/- /' | sort >> $GITHUB_OUTPUT
+            git diff go.mod | grep -E '^\-\s+.*github\.com|^\-\s+.*golang\.org' | grep -v '^---' | sed 's/^-\s*/-- /' | sort >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Generate branch name
