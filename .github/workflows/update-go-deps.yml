@@ -79,13 +79,14 @@ jobs:
             else
                 echo "has_changes=false" >> $GITHUB_OUTPUT
             fi
-      - name: Capture go.mod diff
+      - name: Capture updated packages
         id: go_mod_diff
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
-            git diff go.mod > /tmp/go_mod_diff.txt || echo "No changes" > /tmp/go_mod_diff.txt
-            echo "diff<<EOF" >> $GITHUB_OUTPUT
-            cat /tmp/go_mod_diff.txt
+            echo "summary<<EOF" >> $GITHUB_OUTPUT
+            git diff go.mod | grep -E '^\+\s+.*github\.com|^\+\s+.*golang\.org' | grep -v '^+++' | sed 's/^+\s*/+ /' | sort >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            git diff go.mod | grep -E '^\-\s+.*github\.com|^\-\s+.*golang\.org' | grep -v '^---' | sed 's/^-\s*/- /' | sort >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Generate branch name
@@ -104,7 +105,6 @@ jobs:
           branch: ${{ steps.branch.outputs.name }}
           delete-branch: true
           base: main
-          trigger-workflow: true
           commit-message: 'chore: update Go dependencies'
           title: 'chore: update Go dependencies'
           body: |
@@ -118,7 +118,7 @@ jobs:
             - Cleaned up unused dependencies with `go mod tidy`
 
              ### Changes in go.mod:
-             ${{ steps.go_mod_diff.outputs.diff }}
+             ${{ steps.go_mod_diff.outputs.summary }}
 
       - name: Cleanup temporary files
         if: always()
