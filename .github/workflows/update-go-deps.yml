@@ -1,0 +1,125 @@
+name: Update Go Dependencies
+
+on:
+  schedule:
+    # Run every Wednesday at 3:30 AM UTC (9 AM IST)
+    - cron: '30 3 * * 3'
+  workflow_dispatch:
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+
+      - uses: tibdex/github-app-token@v1
+        id: generate-token
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: main
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Verify Go environment
+        run: |
+          go version
+          if [ ! -f go.mod ]; then
+            echo "Error: go.mod not found"
+            exit 1
+          fi
+
+      - name: Update packages
+        id: update_packages
+        run: |
+          set -e
+          go get -u ./... 2>&1 || {
+            echo "Error: failed to fetch package updates"
+            exit 1
+          }
+
+      - name: Update experimental package
+        id: update_exp_packages
+        run: |
+          set -e
+          go get golang.org/x/exp@latest 2>&1 || {
+            echo "Error: failed to update go exp package"
+            exit 1
+          }
+
+      - name: Tidy modules
+        id: tidy_modules
+        run: |
+          set -e
+          go mod tidy 2>&1 || {
+            echo "Error: failed to tidy up go modules"
+            exit 1
+          }
+
+      - name: Check for final changes
+        id: final_check
+        run: |
+            if [ -n "$(git status --porcelain go.mod go.sum 2>/dev/null)" ]; then
+                echo "has_changes=true" >> $GITHUB_OUTPUT
+            else
+                echo "has_changes=false" >> $GITHUB_OUTPUT
+            fi
+
+      - name: Capture updated packages
+        id: go_mod_diff
+        if: steps.final_check.outputs.has_changes == 'true'
+        run: |
+            echo "summary<<EOF" >> $GITHUB_OUTPUT
+            git diff go.mod | grep -E '^\+\s+.*github\.com|^\+\s+.*golang\.org' | grep -v '^+++' | sed 's/^+\s*/++ /' | sort >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            git diff go.mod | grep -E '^\-\s+.*github\.com|^\-\s+.*golang\.org' | grep -v '^---' | sed 's/^-\s*/-- /' | sort >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Generate branch name
+        id: branch
+        if: steps.final_check.outputs.has_changes == 'true'
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+          BRANCH_NAME="chore/update-go-deps-${TIMESTAMP}"
+          echo "name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.final_check.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          branch: ${{ steps.branch.outputs.name }}
+          delete-branch: true
+          base: main
+          commit-message: 'chore: update Go dependencies'
+          title: 'chore: update Go dependencies'
+          body: |
+            ## Updated Go Dependencies
+
+            :warning: Do not merge unless all PR checks pass.
+
+            **Actions performed:**
+            - Updated all dependencies with `go get -u ./...`
+            - Updated go experimental package with `go get golang.org/x/exp@latest`
+            - Cleaned up unused dependencies with `go mod tidy`
+
+             ### Changes in go.mod:
+             ${{ steps.go_mod_diff.outputs.summary }}
+
+      - name: Cleanup temporary files
+        if: always()
+        run: |
+            rm -f /tmp/diff_after_get.txt /tmp/go_get_output.log
