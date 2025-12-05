@@ -25,6 +25,7 @@ set -euo pipefail
 #   --use-local-chart         Use local Helm chart instead of GitHub release
 #   --verbose                 Enable verbose output
 #   --dry-run                 Show what would be executed without running
+#   --tests-only              Run only JWT authentication tests (skip all deployments)
 #   --help                    Display this help message
 #
 # Environment Variables:
@@ -75,6 +76,7 @@ IMAGE_TAG="${IMAGE_TAG:-latest}"
 USE_LOCAL_CHART="${USE_LOCAL_CHART:-false}"
 VERBOSE="${VERBOSE:-false}"
 DRY_RUN="${DRY_RUN:-false}"
+TESTS_ONLY="${TESTS_ONLY:-false}"
 
 # OpenShift authentication
 KUBECONFIG="${KUBECONFIG:-${HOME}/.kube/config}"
@@ -666,6 +668,10 @@ main() {
                 DRY_RUN=true
                 shift
                 ;;
+            --tests-only)
+                TESTS_ONLY=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 ;;
@@ -676,6 +682,16 @@ main() {
                 ;;
         esac
     done
+    
+    # In tests-only mode, skip all deployment steps and run tests
+    if [[ "${TESTS_ONLY}" == "true" ]]; then
+        SKIP_RHBK=true
+        SKIP_STRIMZI=true
+        SKIP_HELM=true
+        SKIP_TLS=true
+        SKIP_IMAGE_OVERRIDE=true
+        SKIP_TEST=false
+    fi
     
     # Show deployment summary
     print_summary
@@ -688,7 +704,9 @@ main() {
     # Execute deployment steps
     check_prerequisites
     check_oc_connection
-    create_namespace
+    if [[ "${TESTS_ONLY}" != "true" ]]; then
+        create_namespace
+    fi
     
     deploy_rhbk
     deploy_strimzi
@@ -710,4 +728,3 @@ main() {
 
 # Run main function
 main "$@"
-
