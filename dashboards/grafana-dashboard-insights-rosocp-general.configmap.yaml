@@ -91,8 +91,8 @@ data:
             "overrides": []
           },
           "gridPos": {
-            "h": 9,
-            "w": 15,
+            "h": 8,
+            "w": 24,
             "x": 0,
             "y": 0
           },
@@ -133,7 +133,7 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 9
+            "y": 8
           },
           "id": 14,
           "panels": [],
@@ -179,9 +179,9 @@ data:
           },
           "gridPos": {
             "h": 5,
-            "w": 4,
+            "w": 6,
             "x": 0,
-            "y": 10
+            "y": 9
           },
           "id": 23,
           "maxDataPoints": 100,
@@ -258,9 +258,9 @@ data:
           },
           "gridPos": {
             "h": 5,
-            "w": 4,
-            "x": 4,
-            "y": 10
+            "w": 6,
+            "x": 6,
+            "y": 9
           },
           "id": 24,
           "maxDataPoints": 100,
@@ -337,9 +337,9 @@ data:
           },
           "gridPos": {
             "h": 5,
-            "w": 4,
-            "x": 8,
-            "y": 10
+            "w": 6,
+            "x": 12,
+            "y": 9
           },
           "id": 25,
           "maxDataPoints": 100,
@@ -416,9 +416,9 @@ data:
           },
           "gridPos": {
             "h": 5,
-            "w": 4,
-            "x": 12,
-            "y": 10
+            "w": 6,
+            "x": 18,
+            "y": 9
           },
           "id": 26,
           "maxDataPoints": 100,
@@ -462,7 +462,7 @@ data:
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 15
+            "y": 14
           },
           "id": 4,
           "panels": [],
@@ -504,9 +504,9 @@ data:
           },
           "gridPos": {
             "h": 5,
-            "w": 4,
+            "w": 6,
             "x": 0,
-            "y": 16
+            "y": 15
           },
           "id": 9,
           "maxDataPoints": 100,
@@ -583,9 +583,9 @@ data:
           },
           "gridPos": {
             "h": 5,
-            "w": 4,
-            "x": 4,
-            "y": 16
+            "w": 6,
+            "x": 6,
+            "y": 15
           },
           "id": 12,
           "maxDataPoints": 100,
@@ -662,9 +662,9 @@ data:
           },
           "gridPos": {
             "h": 5,
-            "w": 4,
-            "x": 8,
-            "y": 16
+            "w": 6,
+            "x": 12,
+            "y": 15
           },
           "id": 13,
           "maxDataPoints": 100,
@@ -700,6 +700,90 @@ data:
             }
           ],
           "title": "Postgres table partition",
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DatasourceRDS}"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [
+                {
+                  "options": {
+                    "match": "null",
+                    "result": {
+                      "text": "N/A"
+                    }
+                  },
+                  "type": "special"
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 0
+                  },
+                  {
+                    "color": "green",
+                    "value": 20
+                  }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 18,
+            "y": 15
+          },
+          "id": 6,
+          "maxDataPoints": 100,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "percentChangeColorMode": "standard",
+            "reduceOptions": {
+              "calcs": [
+                "mean"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "text": {},
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "pluginVersion": "11.6.3",
+          "targets": [
+            {
+              "datasource": {
+                "uid": "${DatasourceRDS}"
+              },
+              "editorMode": "code",
+              "expr": "aws_rds_free_storage_space_average{job=~\"cloudwatch-exporter.*\",dbinstance_identifier=\"$namespace\"} / 1000 /1000 /1000",
+              "legendFormat": "__auto",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "RDS free storage space (GB)",
           "type": "stat"
         },
         {
@@ -763,10 +847,10 @@ data:
             "overrides": []
           },
           "gridPos": {
-            "h": 9,
-            "w": 8,
+            "h": 7,
+            "w": 24,
             "x": 0,
-            "y": 21
+            "y": 20
           },
           "id": 32,
           "options": {
@@ -800,96 +884,12 @@ data:
           "type": "timeseries"
         },
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DatasourceRDS}"
-          },
-          "description": "",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [
-                {
-                  "options": {
-                    "match": "null",
-                    "result": {
-                      "text": "N/A"
-                    }
-                  },
-                  "type": "special"
-                }
-              ],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 0
-                  },
-                  {
-                    "color": "green",
-                    "value": 20
-                  }
-                ]
-              },
-              "unit": "none"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 5,
-            "w": 4,
-            "x": 8,
-            "y": 21
-          },
-          "id": 6,
-          "maxDataPoints": 100,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "auto",
-            "orientation": "horizontal",
-            "percentChangeColorMode": "standard",
-            "reduceOptions": {
-              "calcs": [
-                "mean"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "text": {},
-            "textMode": "auto",
-            "wideLayout": true
-          },
-          "pluginVersion": "11.6.3",
-          "targets": [
-            {
-              "datasource": {
-                "uid": "${DatasourceRDS}"
-              },
-              "editorMode": "code",
-              "expr": "aws_rds_free_storage_space_average{job=~\"cloudwatch-exporter.*\",dbinstance_identifier=\"$namespace\"} / 1000 /1000 /1000",
-              "legendFormat": "__auto",
-              "range": true,
-              "refId": "A"
-            }
-          ],
-          "title": "RDS free storage space (GB)",
-          "type": "stat"
-        },
-        {
           "collapsed": false,
           "gridPos": {
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 30
+            "y": 27
           },
           "id": 11,
           "panels": [],
@@ -935,9 +935,9 @@ data:
           },
           "gridPos": {
             "h": 5,
-            "w": 4,
+            "w": 6,
             "x": 0,
-            "y": 31
+            "y": 28
           },
           "id": 30,
           "maxDataPoints": 100,
@@ -1014,9 +1014,9 @@ data:
           },
           "gridPos": {
             "h": 5,
-            "w": 4,
-            "x": 4,
-            "y": 31
+            "w": 6,
+            "x": 6,
+            "y": 28
           },
           "id": 8,
           "maxDataPoints": 100,
@@ -1125,10 +1125,10 @@ data:
             "overrides": []
           },
           "gridPos": {
-            "h": 5,
-            "w": 8,
+            "h": 8,
+            "w": 24,
             "x": 0,
-            "y": 36
+            "y": 33
           },
           "id": 29,
           "interval": "24h",
