@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -65,6 +66,12 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 	}
 
 	for _, file := range kafkaMsg.Files {
+		if strings.Contains(file, "namespace") {
+			if cfg.DisableNamespaceRecommendation {
+				log.Warnf("namespace recommendation disabled, skipped %s", file)
+				continue
+			}
+		}
 		data, err := utils.ReadCSVFromUrl(file)
 		if err != nil {
 			invalidCSV.Inc()
