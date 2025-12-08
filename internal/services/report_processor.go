@@ -68,6 +68,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 	for _, file := range kafkaMsg.Files {
 		if strings.Contains(file, "namespace") {
 			if cfg.DisableNamespaceRecommendation {
+				log.Warnf("namespace recommendation disabled, skipped %s", file)
 				continue
 			}
 		}

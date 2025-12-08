@@ -194,7 +194,7 @@ func initConfig() {
 	viper.SetDefault("READ_HEADER_TIMEOUT", 15)
 	viper.SetDefault("RECORD_LIMIT_CSV", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
-	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", false)
+	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", true)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}
