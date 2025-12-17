@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS historical_namespace_recommendation_sets;

@@ -18,4 +18,9 @@ var (
 		Name: "rosocp_recommendation_success_total",
 		Help: "The total number of recommendations saved by ROSOCP",
 	})
+	//nolint:unused
+	invalidNamespaceCSV = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rosocp_invalid_namespace_csv_total",
+		Help: "The total number of invalid namespace csvs sent by cost-mgmt",
+	})
 )

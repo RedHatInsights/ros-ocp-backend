@@ -71,6 +71,9 @@ type Config struct {
 	// Sources-api-go config
 	SourceApiBaseUrl string `mapstructure:"SOURCES_API_BASE_URL"`
 	SourceApiPrefix  string `mapstructure:"SOURCES_API_PREFIX"`
+
+	// Namespace recommendation config
+	DisableNamespaceRecommendation bool `mapstructure:"DISABLE_NAMESPACE_RECOMMENDATION"`
 }
 
 var cfg *Config = nil
@@ -138,18 +141,29 @@ func initConfig() {
 	} else {
 		viper.SetDefault("LogFormater", "text")
 
+		// Enable automatic environment variable binding
+		viper.AutomaticEnv()
+
+		// Kafka Config
 		viper.SetDefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
 		viper.SetDefault("UPLOAD_TOPIC", "hccm.ros.events")
 		viper.SetDefault("RECOMMENDATION_TOPIC", "rosocp.kruize.recommendations")
 		viper.SetDefault("SOURCES_EVENT_TOPIC", "platform.sources.event-stream")
 
-		// default DB Config
-		viper.SetDefault("DBName", "postgres")
-		viper.SetDefault("DBUser", "postgres")
-		viper.SetDefault("DBPassword", "postgres")
+		// DB Config
+		_ = viper.BindEnv("DBHost", "DB_HOST")
 		viper.SetDefault("DBHost", "localhost")
+		_ = viper.BindEnv("DBPort", "DB_PORT")
 		viper.SetDefault("DBPort", "15432")
+		_ = viper.BindEnv("DBName", "DB_NAME")
+		viper.SetDefault("DBName", "postgres")
+		_ = viper.BindEnv("DBUser", "DB_USER")
+		viper.SetDefault("DBUser", "postgres")
+		_ = viper.BindEnv("DBPassword", "DB_PASSWORD")
+		viper.SetDefault("DBPassword", "postgres")
+		_ = viper.BindEnv("DBssl", "DB_SSL")
 		viper.SetDefault("DBssl", "disable")
+		_ = viper.BindEnv("DBCACert", "DB_CA_CERT")
 		viper.SetDefault("DBCACert", "")
 
 		// default RBAC Config
@@ -163,7 +177,6 @@ func initConfig() {
 
 		// Sources-api-go
 		viper.SetDefault("SOURCES_API_BASE_URL", "http://127.0.0.1:8002")
-
 	}
 
 	viper.SetDefault("SOURCES_API_PREFIX", "/api/sources/v3.1")
@@ -182,6 +195,7 @@ func initConfig() {
 	viper.SetDefault("READ_HEADER_TIMEOUT", 15)
 	viper.SetDefault("RECORD_LIMIT_CSV", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
+	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", true)
 	viper.SetDefault("UPDATE_KRUIZE_PERF_PROFILE", true)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761

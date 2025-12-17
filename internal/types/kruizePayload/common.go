@@ -1,7 +1,6 @@
 package kruizePayload
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -16,13 +15,13 @@ type kubernetesObject struct {
 type container struct {
 	Container_image_name string         `json:"container_image_name,omitempty"`
 	Container_name       string         `json:"container_name,omitempty"`
-	Metrics              []metric       `json:"metrics,omitempty"`
-	Recommendations      Recommendation `json:"recommendations,omitempty"`
+	Metrics              []Metric       `json:"metrics,omitempty"`
+	Recommendations      Recommendation `json:"recommendations"`
 }
 
-type metric struct {
+type Metric struct {
 	Name    string `json:"name,omitempty"`
-	Results result `json:"results,omitempty"`
+	Results result `json:"results"`
 }
 
 type result struct {
@@ -120,7 +119,7 @@ type recommendedValues struct {
 
 func AssertAndConvertToString(data interface{}) string {
 	if metric, ok := data.(float64); ok {
-		return fmt.Sprintf("%.2f", metric)
+		return strconv.FormatFloat(metric, 'f', -1, 64)
 	}
 	if metric, ok := data.(int); ok {
 		return strconv.Itoa(metric)
@@ -133,7 +132,7 @@ func AssertAndConvertToString(data interface{}) string {
 }
 
 func make_container_data(c map[string]interface{}) container {
-	metrics := []metric{}
+	metrics := []Metric{}
 
 	// Initialising a map with name Metrics Map
 	// It holds the keys to get the required data to create a metrics instance
@@ -256,7 +255,7 @@ func make_container_data(c map[string]interface{}) container {
 
 		// Check if "sum" & "avg" are not empty to proceed for metric creation
 		if sum != "" && avg != "" {
-			metrics = append(metrics, metric{
+			metrics = append(metrics, Metric{
 				Name: metricName,
 				Results: result{
 					Aggregation_info: aggregation_info{

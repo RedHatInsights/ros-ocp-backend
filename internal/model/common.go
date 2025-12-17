@@ -27,3 +27,25 @@ func getRecommendationQuery(orgID string) *gorm.DB {
 		Where("rh_accounts.org_id = ?", orgID)
 	return query
 }
+
+func getNamespaceRecommendationQuery(orgID string) *gorm.DB {
+	db := database.GetDB()
+	query := db.Table("namespace_recommendation_sets").
+		Select("namespace_recommendation_sets.id, "+
+			"namespace_recommendation_sets.namespace_name AS project, "+
+			"clusters.source_id, "+
+			"clusters.cluster_uuid, "+
+			"clusters.cluster_alias, "+
+			"clusters.last_reported_at AS last_reported, "+
+			"namespace_recommendation_sets.cpu_request_current, "+
+			"namespace_recommendation_sets.cpu_variation, "+
+			"namespace_recommendation_sets.memory_request_current, "+
+			"namespace_recommendation_sets.memory_variation, "+
+			"namespace_recommendation_sets.recommendations").
+		Joins(`
+			JOIN workloads ON namespace_recommendation_sets.workload_id = workloads.id
+			JOIN clusters ON workloads.cluster_id = clusters.id
+		`).Model(&NamespaceRecommendationSetResult{}).
+		Where("namespace_recommendation_sets.org_id = ?", orgID)
+	return query
+}
