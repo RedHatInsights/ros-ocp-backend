@@ -11,7 +11,9 @@ import (
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
+	namespacePayload "github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload/namespace"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -145,7 +147,7 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 	return payload_data, nil
 }
 
-func Update_recommendations(experiment_name string, interval_end_time time.Time) ([]kruizePayload.ListRecommendations, error) {
+func Update_recommendations(experiment_name string, interval_end_time time.Time, experimentType types.PayloadType) (any, error) {
 	url := cfg.KruizeUrl + "/updateRecommendations"
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, nil)
@@ -174,9 +176,20 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 		}
 		return nil, fmt.Errorf("%s", data["message"].(string))
 	}
-	response := []kruizePayload.ListRecommendations{}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal response of /updateRecommendations API %v", err)
+
+	var response any
+	if experimentType == types.PayloadTypeNamespace && !cfg.DisableNamespaceRecommendation {
+		var namespaceResponse namespacePayload.NamespaceRecommendationResponse
+		if err := json.Unmarshal(body, &namespaceResponse); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal response of /updateRecommendations API %v", err)
+		}
+		response = namespaceResponse
+	} else {
+		var containerResponse []kruizePayload.ListRecommendations
+		if err := json.Unmarshal(body, &containerResponse); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal response of /updateRecommendations API %v", err)
+		}
+		response = containerResponse
 	}
 
 	return response, nil

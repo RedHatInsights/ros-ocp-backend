@@ -2,6 +2,13 @@ package types
 
 import "time"
 
+type PayloadType string
+
+const (
+	PayloadTypeContainer PayloadType = "container"
+	PayloadTypeNamespace PayloadType = "namespace"
+)
+
 type KafkaMsg struct {
 	Request_id   string `validate:"required"`
 	B64_identity string `validate:"required"`
@@ -16,10 +23,11 @@ type KafkaMsg struct {
 }
 
 type RecommendationMetadata struct {
-	Org_id             string    `validate:"required"`
-	Workload_id        uint      `validate:"required"`
-	Experiment_name    string    `validate:"required"`
-	Max_endtime_report time.Time `validate:"required"`
+	Org_id             string      `validate:"required"`
+	Workload_id        uint        `validate:"required"`
+	Experiment_name    string      `validate:"required"`
+	Max_endtime_report time.Time   `validate:"required"`
+	ExperimentType     PayloadType `validate:"required"`
 }
 
 type RecommendationKafkaMsg struct {

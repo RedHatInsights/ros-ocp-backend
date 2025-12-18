@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
 )
 
 type NamespaceRecommendationSet struct {
@@ -96,4 +97,14 @@ func (r *NamespaceRecommendationSet) CreateNamespaceRecommendationSet(tx *gorm.D
 	}
 
 	return nil
+}
+
+func GetFirstNamespaceRecommendationSetsByWorkloadID(workload_id uint) (NamespaceRecommendationSet, error) {
+	namespaceRecommendationSets := NamespaceRecommendationSet{}
+	db := database.GetDB()
+	query := db.Where("workload_id = ?", workload_id).First(&namespaceRecommendationSets)
+	if query.Error != nil && query.Error.Error() == "record not found" {
+		return namespaceRecommendationSets, nil
+	}
+	return namespaceRecommendationSets, query.Error
 }

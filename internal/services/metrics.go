@@ -14,9 +14,17 @@ var (
 		Name: "rosocp_recommendation_request_total",
 		Help: "The total number of recommendations requested from Kruize",
 	})
+	namespaceRecommendationRequest = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rosocp_namespace_recommendation_request_total",
+		Help: "The total number of namespace recommendations requested from Kruize",
+	})
 	recommendationSuccess = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "rosocp_recommendation_success_total",
 		Help: "The total number of recommendations saved by ROSOCP",
+	})
+	namespaceRecommendationSuccess = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rosocp_namespace_recommendation_success_total",
+		Help: "The total number of namespace recommendations saved by ROSOCP",
 	})
 	//nolint:unused
 	invalidNamespaceCSV = promauto.NewCounter(prometheus.CounterOpts{
