@@ -16,6 +16,11 @@ import (
 
 func TestNamespaceRecommendationSuccess(t *testing.T) {
 
+	db := database.GetDB()
+	if db == nil {
+		t.Skip("skipping test: database not available, run test locally")
+	}
+
 	mockRecommResponseFromKruize := `[{
 		"cluster_name": "unittest-cluster",
 		"experiment_type": "namespace",
@@ -75,7 +80,6 @@ func TestNamespaceRecommendationSuccess(t *testing.T) {
 
 	before := testutil.ToFloat64(namespaceRecommendationSuccess)
 
-	db := database.GetDB()
 	rhAccount := model.RHAccount{
 		Account: "unittest-account",
 		OrgId:   "12345",
