@@ -181,11 +181,35 @@
                     },
                     {
                         "function": "max",
-                      "query": "max by(container,namespace)(max_over_time(container_memory_rss{container!=\"\", container!=\"POD\", pod!=\"\", namespace=$NAMESPACE$, container=\"$CONTAINER_NAME$\"}[15m]))"
+                        "query": "max by(container,namespace)(max_over_time(container_memory_rss{container!=\"\", container!=\"POD\", pod!=\"\", namespace=$NAMESPACE$, container=\"$CONTAINER_NAME$\"}[15m]))"
                     },
                     {
                         "function": "sum",
-                      "query": "sum by(container,namespace)(avg_over_time(container_memory_rss{container!=\"\", container!=\"POD\", pod!=\"\", namespace=$NAMESPACE$, container=”$CONTAINER_NAME$”}[15m]))"
+                        "query": "sum by(container,namespace)(avg_over_time(container_memory_rss{container!=\"\", container!=\"POD\", pod!=\"\", namespace=$NAMESPACE$, container=”$CONTAINER_NAME$”}[15m]))"
+                    }
+                ]
+            },
+            {
+                "name": "namespaceCpuRequest",
+                "datasource": "prometheus",
+                "value_type": "double",
+                "kubernetes_object": "namespace",
+                "aggregation_functions": [
+                    {
+                        "function": "sum",
+                        "query": "sum by (namespace) (kube_resourcequota{namespace=\"$NAMESPACE$\", resource=\"requests.cpu\", type=\"hard\"})"
+                    }
+                ]
+            },
+            {
+                "name": "namespaceCpuLimit",
+                "datasource": "prometheus",
+                "value_type": "double",
+                "kubernetes_object": "namespace",
+                "aggregation_functions": [
+                    {
+                        "function": "sum",
+                        "query": "sum by (namespace) (kube_resourcequota{namespace=\"$NAMESPACE$\", resource=\"limits.cpu\", type=\"hard\"})"
                     }
                 ]
             },
