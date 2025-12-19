@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"gorm.io/datatypes"
@@ -103,7 +104,7 @@ func GetFirstNamespaceRecommendationSetsByWorkloadID(workload_id uint) (Namespac
 	namespaceRecommendationSets := NamespaceRecommendationSet{}
 	db := database.GetDB()
 	query := db.Where("workload_id = ?", workload_id).First(&namespaceRecommendationSets)
-	if query.Error != nil && query.Error.Error() == "record not found" {
+	if query.Error != nil && errors.Is(query.Error, gorm.ErrRecordNotFound) {
 		return namespaceRecommendationSets, nil
 	}
 	return namespaceRecommendationSets, query.Error

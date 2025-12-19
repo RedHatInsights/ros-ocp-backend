@@ -42,11 +42,15 @@ func fetchRecommendationFromKruize(
 
 		if err.Error() == notFoundMsg {
 			log.Errorf("unable to list recommendation for experiment : %s at interval: %v", experimentName, endInterval)
+			if experimentType == types.PayloadTypeContainer {
+				recommendationRequest.Inc()
+			}
+			if experimentType == types.PayloadTypeNamespace {
+				namespaceRecommendationRequest.Inc()
+			}
 		}
-
 		return nil, err
 	}
-
 	return response, nil
 }
 
@@ -116,9 +120,10 @@ func transactionForNamespaceRecommendation(recommendationSetList []model.Namespa
 	return tx.Commit().Error
 }
 
-// NOTE: Container and namespace paths are intentionally duplicated.
-// Unifying requires Go interfaces which adds complexity without clear benefit.
-// Adding interfaces might increase the complexity of this service as well
+/* NOTE: Container and namespace paths are intentionally duplicated.
+ * Unifying requires Go interfaces which adds complexity without clear benefit.
+ * Adding interfaces will change the flow structurally, might increase the complexity of this service
+ */
 
 func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recommendationType string) bool {
 	log := logging.GetLogger()
@@ -136,7 +141,6 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeContainer {
 		recommendationResponse, err := fetchRecommendationFromKruize(experiment_name, maxEndTimeFromReport, types.PayloadTypeContainer)
 		if err != nil {
-			recommendationRequest.Inc()
 			return poll_cycle_complete
 		}
 		recommendationRequest.Inc()
@@ -191,7 +195,6 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 		if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace {
 			namespaceRecommendation, err := fetchRecommendationFromKruize(experiment_name, maxEndTimeFromReport, types.PayloadTypeNamespace)
 			if err != nil {
-				namespaceRecommendationRequest.Inc()
 				return poll_cycle_complete
 			}
 			namespaceRecommendationRequest.Inc()
