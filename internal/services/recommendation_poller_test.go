@@ -59,7 +59,10 @@ func TestNamespaceRecommendationSuccess(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(mockRecommResponseFromKruize))
+		_, writeErr := w.Write([]byte(mockRecommResponseFromKruize))
+		if writeErr != nil {
+			t.Fatalf("failed to write response: %v", writeErr.Error())
+		}
 	}))
 	defer server.Close()
 
