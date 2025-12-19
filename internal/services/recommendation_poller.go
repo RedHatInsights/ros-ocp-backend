@@ -152,6 +152,11 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 				return poll_cycle_complete
 			}
 
+			if recommendation[0].Experiment_type != string(types.PayloadTypeContainer) {
+				log.Errorf("experiment type mismatch: expected %s, got %s", types.PayloadTypeContainer, recommendation[0].Experiment_type)
+				return poll_cycle_complete
+			}
+
 			containers := recommendation[0].Kubernetes_objects[0].Containers
 			for _, container := range containers {
 				if kruize.Is_valid_recommendation(container.Recommendations, experiment_name, maxEndTimeFromReport) {
@@ -205,6 +210,12 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 					log.Warnf("empty namespace recommendation response for experiment %s", experiment_name)
 					return poll_cycle_complete
 				}
+
+				if typedNamespaceObj[0].ExperimentType != string(types.PayloadTypeNamespace) {
+					log.Errorf("experiment type mismatch: expected %s, got %s", types.PayloadTypeNamespace, typedNamespaceObj[0].ExperimentType)
+					return poll_cycle_complete
+				}
+
 				typedNamespaceRecommendation := typedNamespaceObj[0].KubernetesObjects[0].Namespaces
 				if kruize.Is_valid_recommendation(typedNamespaceRecommendation.Recommendations, experiment_name, maxEndTimeFromReport) {
 					for _, v := range typedNamespaceRecommendation.Recommendations.Data {
