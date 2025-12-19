@@ -74,7 +74,7 @@ func transactionForRecommendation(recommendationSetList []model.RecommendationSe
 			tx.Rollback()
 			return err
 		} else {
-			log.Infof("%s - Recommendation saved for experiment - %s and end_interval - %s", recommendationType, experiment_name, recommendationSet.MonitoringEndTimeStr)
+			log.Infof("%s - Recommendation saved for experiment - %s and end_interval - %s", recommendationType, experiment_name, recommendationSet.MonitoringEndTime.Format(time.RFC3339))
 		}
 	}
 	for _, historicalRecommendationSet := range histRecommendationSetList {
@@ -107,7 +107,7 @@ func transactionForNamespaceRecommendation(recommendationSetList []model.Namespa
 			tx.Rollback()
 			return err
 		} else {
-			log.Infof("%s - Recommendation saved for experiment - %s and end_interval - %s", recommendationType, experiment_name, recommendationSet.MonitoringEndTimeStr)
+			log.Infof("%s - Recommendation saved for experiment - %s and end_interval - %s", recommendationType, experiment_name, recommendationSet.MonitoringEndTime.Format(time.RFC3339))
 		}
 	}
 	for _, historicalRecommendationSet := range histRecommendationSetList {
@@ -257,7 +257,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 							CPURequestCurrent:    v.Current.Requests.Cpu.Amount,
 							MemoryRequestCurrent: v.Current.Requests.Memory.Amount,
 							/* TODO
-							 	* Add and populate columns for each term and recommendation type,
+							 	* Add and populate variation columns for each term and recommendation type,
 									cpu_variation_short_cost
 									cpu_variation_short_performance
 									cpu_variation_medium_cost
@@ -341,13 +341,13 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeContainer {
 		recommendation_stored_in_db, checkRecommExistsErr = model.GetFirstRecommendationSetsByWorkloadID(workloadID)
 		if checkRecommExistsErr != nil {
-			log.Errorf("error while checking for container recommendation_set record: %s", checkRecommExistsErr)
+			log.Errorf("error while checking for container recommendation_set record: %s", checkRecommExistsErr.Error())
 			return
 		}
 	} else if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && !cfg.DisableNamespaceRecommendation {
 		recommendation_stored_in_db, checkRecommExistsErr = model.GetFirstNamespaceRecommendationSetsByWorkloadID(workloadID)
 		if checkRecommExistsErr != nil {
-			log.Errorf("error while checking for namespace recommendation_set record: %s", checkRecommExistsErr)
+			log.Errorf("error while checking for namespace recommendation_set record: %s", checkRecommExistsErr.Error())
 			return
 		}
 	} else {
@@ -374,13 +374,13 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 			var lastRecommRecordDate time.Time
 			var lastRecommRecordID string
 
-			switch v := recommendation_stored_in_db.(type) {
+			switch modelType := recommendation_stored_in_db.(type) {
 			case model.RecommendationSet:
-				lastRecommRecordDate = v.MonitoringEndTime.UTC()
-				lastRecommRecordID = v.ID
+				lastRecommRecordDate = modelType.MonitoringEndTime.UTC()
+				lastRecommRecordID = modelType.ID
 			case model.NamespaceRecommendationSet:
-				lastRecommRecordDate = v.MonitoringEndTime.UTC()
-				lastRecommRecordID = v.ID
+				lastRecommRecordDate = modelType.MonitoringEndTime.UTC()
+				lastRecommRecordID = modelType.ID
 			}
 			if !lastRecommRecordDate.IsZero() {
 				duration := maxEndTimeFromReport.Sub(lastRecommRecordDate)
