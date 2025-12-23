@@ -54,7 +54,7 @@ func fetchRecommendationFromKruize(
 	return response, nil
 }
 
-func transactionForRecommendation(recommendationSetList []model.RecommendationSet, histRecommendationSetList []model.HistoricalRecommendationSet, experiment_name string, recommendationType string) error {
+func transactionForContainerRecommendation(recommendationSetList []model.RecommendationSet, histRecommendationSetList []model.HistoricalRecommendationSet, experiment_name string, recommendationType string) error {
 	log := logging.GetLogger()
 	db := database.GetDB()
 	tx := db.Begin()
@@ -286,7 +286,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 	}
 
 	if len(recommendationSetList) > 0 {
-		txError := transactionForRecommendation(recommendationSetList, histRecommendationSetList, experiment_name, recommendationType)
+		txError := transactionForContainerRecommendation(recommendationSetList, histRecommendationSetList, experiment_name, recommendationType)
 		if txError == nil {
 			poll_cycle_complete = true
 			recommendationSuccess.Inc()
