@@ -198,6 +198,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 					Workload_id:        workload.ID,
 					Max_endtime_report: maxEndtimeFromReport,
 					Experiment_name:    experiment_name,
+					ExperimentType:     types.PayloadTypeContainer,
 				},
 			}
 

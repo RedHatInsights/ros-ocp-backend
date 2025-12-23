@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"gorm.io/datatypes"
@@ -54,7 +55,7 @@ func GetFirstRecommendationSetsByWorkloadID(workload_id uint) (RecommendationSet
 	recommendationSets := RecommendationSet{}
 	db := database.GetDB()
 	query := db.Where("workload_id = ?", workload_id).First(&recommendationSets)
-	if query.Error != nil && query.Error.Error() == "record not found" {
+	if query.Error != nil && errors.Is(query.Error, gorm.ErrRecordNotFound) {
 		return recommendationSets, nil
 	}
 	return recommendationSets, query.Error
