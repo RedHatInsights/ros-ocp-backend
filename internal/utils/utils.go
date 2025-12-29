@@ -9,11 +9,13 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -205,4 +207,18 @@ func getDate(d time.Time) time.Time {
 func isItFirstOfMonth(d time.Time) bool {
 	_, _, day := d.Date()
 	return day == 1
+}
+
+func DetermineCSVType(fileName string) (types.PayloadType, bool) {
+	isNamespace := strings.Contains(fileName, "namespace")
+
+	if isNamespace && cfg.DisableNamespaceRecommendation {
+		log.Warnf("namespace recommendation disabled, skipped %s", fileName)
+		return "", true // true i.e. should skip file
+	}
+
+	if isNamespace {
+		return types.PayloadTypeNamespace, false
+	}
+	return types.PayloadTypeContainer, false
 }

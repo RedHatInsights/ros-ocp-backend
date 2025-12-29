@@ -6,8 +6,10 @@ import (
 	"os"
 
 	"github.com/go-gota/gota/dataframe"
+	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
 
@@ -25,7 +27,7 @@ var (
 			}
 			if outputDir != "" {
 				if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-					if err := os.MkdirAll("a/b/c/d", os.ModePerm); err != nil {
+					if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
 						panic(err.Error())
 					}
 				}
@@ -46,9 +48,16 @@ var (
 			if err != nil {
 				panic(err.Error())
 			}
-
-			df := dataframe.LoadRecords(records)
-			df, err = utils.Aggregate_data(df)
+			csvType, skip := utils.DetermineCSVType(input_file)
+			if skip {
+				log.Warn("namespace recommendations are disabled")
+			}
+			columnHeaders := types.CSVColumnMapping
+			if csvType == types.PayloadTypeNamespace {
+				columnHeaders = types.NamespaceCSVColumnMapping
+			}
+			df := dataframe.LoadRecords(records, dataframe.WithTypes(columnHeaders))
+			df, err = utils.Aggregate_data(csvType, df)
 			if err != nil {
 				panic(err.Error())
 			}

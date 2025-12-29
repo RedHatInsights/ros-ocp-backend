@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-gota/gota/series"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 )
 
 type UsageData struct {
@@ -48,6 +49,7 @@ type UsageData struct {
 }
 
 func Test_filter_valid_csv_records(t *testing.T) {
+	csvTypeContainer := types.PayloadTypeContainer
 	usage_data := []UsageData{
 		// k8s object with missing data
 		{
@@ -71,7 +73,7 @@ func Test_filter_valid_csv_records(t *testing.T) {
 		},
 	}
 	df := dataframe.LoadStructs(usage_data)
-	result, no_of_dropped_records := filter_valid_csv_records(df)
+	result, no_of_dropped_records := filterValidCSVRecords(csvTypeContainer, df)
 	if result.Nrow() != 1 || no_of_dropped_records != 2 {
 		t.Error("Invalid k8s object type did not get dropped")
 	}
@@ -121,7 +123,7 @@ func Test_filter_valid_csv_records(t *testing.T) {
 		},
 	}
 	df = dataframe.LoadStructs(usage_data)
-	result, _ = filter_valid_csv_records(df)
+	result, _ = filterValidCSVRecords(csvTypeContainer, df)
 	if result.Nrow() != 6 {
 		t.Error("Data not filtered properly. Some of the valid k8s object type got dropped")
 	}
@@ -137,7 +139,7 @@ func Test_filter_valid_csv_records(t *testing.T) {
 		},
 	}
 	df = dataframe.LoadStructs(usage_data)
-	result, _ = filter_valid_csv_records(df)
+	result, _ = filterValidCSVRecords(csvTypeContainer, df)
 	if result.Nrow() != 0 {
 		t.Error("Invalid k8s object type did not get dropped")
 	}
@@ -158,7 +160,7 @@ func Test_filter_valid_csv_records(t *testing.T) {
 		},
 	}
 	df = dataframe.LoadStructs(usage_data)
-	result, _ = filter_valid_csv_records(df)
+	result, _ = filterValidCSVRecords(csvTypeContainer, df)
 	if result.Nrow() != 0 {
 		t.Error("Invalid k8s object type did not get dropped")
 	}
@@ -168,7 +170,7 @@ func Test_check_if_all_required_columns_in_CSV(t *testing.T) {
 	// Good case - all the columns are present
 	usage_data := []UsageData{{}}
 	df := dataframe.LoadStructs(usage_data)
-	if err := check_if_all_required_columns_in_CSV(df); err != nil {
+	if err := hasMissingColumnsCSV(types.PayloadTypeContainer, df); err != nil {
 		t.Error("CSV has all required columns but test fails")
 	}
 
@@ -181,13 +183,13 @@ func Test_check_if_all_required_columns_in_CSV(t *testing.T) {
 			columns,
 		},
 	)
-	if err := check_if_all_required_columns_in_CSV(newdf); err != nil {
+	if err := hasMissingColumnsCSV(types.PayloadTypeContainer, newdf); err != nil {
 		t.Error("unordered columns should be allowed")
 	}
 
 	// Bad case - dropping one of the column
 	df = df.Drop([]int{5})
-	if err := check_if_all_required_columns_in_CSV(df); err == nil {
+	if err := hasMissingColumnsCSV(types.PayloadTypeContainer, df); err == nil {
 		t.Error("Expecting error to be returned as all required column not present")
 	}
 
@@ -201,7 +203,7 @@ func Test_check_if_all_required_columns_in_CSV(t *testing.T) {
 		series.New([]string{"abc_profile"}, series.String, "additional_column_2"),
 	)
 
-	if err := check_if_all_required_columns_in_CSV(df); err != nil {
+	if err := hasMissingColumnsCSV(types.PayloadTypeContainer, df); err != nil {
 		t.Error("additional columns should be ignored but test fails")
 	}
 }
@@ -211,7 +213,7 @@ func TestAggregateDataNoRecords(t *testing.T) {
 
 	// The function should not panic when none of the rows are valid
 	df := dataframe.LoadStructs(usage_data)
-	_, err := Aggregate_data(df)
+	_, err := Aggregate_data(types.PayloadTypeContainer, df)
 	if err == nil {
 		t.Error("Expecting error to be returned when all rows are invalid")
 	}

@@ -2,7 +2,6 @@ package services
 
 import (
 	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -43,47 +42,66 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 
 	log = logging.Set_request_details(kafkaMsg)
 
-	// Create user account(if not present) for incoming archive.
-	rh_account := model.RHAccount{
-		Account: kafkaMsg.Metadata.Account,
-		OrgId:   kafkaMsg.Metadata.Org_id,
-	}
-	if err := rh_account.CreateRHAccount(); err != nil {
-		log.Errorf("unable to get or add record to rh_accounts table: %v. Error: %v", rh_account, err)
-		return
-	}
+	var (
+		csvType types.PayloadType
+		skip    bool
+	)
+	for _, file := range kafkaMsg.Files {
+		csvType, skip = utils.DetermineCSVType(file)
+		if skip {
+			continue
+		}
 
-	// Create cluster record(if not present) for incoming archive.
-	cluster := model.Cluster{
-		TenantID:       rh_account.ID,
-		SourceId:       kafkaMsg.Metadata.Source_id,
-		ClusterUUID:    kafkaMsg.Metadata.Cluster_uuid,
-		ClusterAlias:   kafkaMsg.Metadata.Cluster_alias,
-		LastReportedAt: time.Now(),
-	}
-	if err := cluster.CreateCluster(); err != nil {
-		log.Errorf("unable to get or add record to clusters table: %v. Error: %v", cluster, err)
-		return
-	}
+		// Create user account(if not present) for incoming archive.
+		rh_account := model.RHAccount{
+			Account: kafkaMsg.Metadata.Account,
+			OrgId:   kafkaMsg.Metadata.Org_id,
+		}
+		if err := rh_account.CreateRHAccount(); err != nil {
+			log.Errorf("unable to get or add record to rh_accounts table: %v. Error: %v", rh_account, err)
+			return
+		}
+
+		// Create cluster record(if not present) for incoming archive.
+		cluster := model.Cluster{
+			TenantID:       rh_account.ID,
+			SourceId:       kafkaMsg.Metadata.Source_id,
+			ClusterUUID:    kafkaMsg.Metadata.Cluster_uuid,
+			ClusterAlias:   kafkaMsg.Metadata.Cluster_alias,
+			LastReportedAt: time.Now(),
+		}
+		if err := cluster.CreateCluster(); err != nil {
+			log.Errorf("unable to get or add record to clusters table: %v. Error: %v", cluster, err)
+			return
+		}
 
 	for _, file := range kafkaMsg.Files {
 		if strings.Contains(file, "namespace") {
-			if !featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id) {
-				log.Warnf("namespace recommendation disabled, skipped %s", file)
-				continue
-			}
+			if cfg.DisableNamespaceRecommendation {
+                log.Warnf("namespace recommendation disabled, skipped %s", file)
+                continue
+            }
+
+            if !featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id) {
+                continue
+            }
 		}
 		data, err := utils.ReadCSVFromUrl(file)
 		if err != nil {
 			invalidCSV.Inc()
+			// todo update relevant metric
 			log.Errorf("Unable to read CSV from URL. Error: %s", err)
 			return
 		}
+		columnHeaders := types.CSVColumnMapping // default as container
+		if csvType == types.PayloadTypeNamespace {
+			columnHeaders = types.NamespaceCSVColumnMapping
+		}
 		df := dataframe.LoadRecords(
 			data,
-			dataframe.WithTypes(types.CSVColumnMapping),
+			dataframe.WithTypes(columnHeaders),
 		)
-		df, err = utils.Aggregate_data(df)
+		df, err = utils.Aggregate_data(csvType, df)
 		if err != nil {
 			log.Errorf("Error: %s", err)
 			return
