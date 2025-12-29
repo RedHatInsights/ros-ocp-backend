@@ -13,16 +13,16 @@ import (
 	w "github.com/redhatinsights/ros-ocp-backend/internal/types/workload"
 )
 
-func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
+func Aggregate_data(aggregationType types.PayloadType, df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	log = logging.GetLogger()
 
 	// Check if CSV has all the needed columns
-	if err := check_if_all_required_columns_in_CSV(df); err != nil {
+	if err := hasMissingColumnsCSV(aggregationType, df); err != nil {
 		return dataframe.DataFrame{}, err
 	}
 
 	// Validation to check if metrics for cpuUsage, memoryUsage and memoryRSS are missing
-	df, no_of_dropped_records := filter_valid_csv_records(df)
+	df, no_of_dropped_records := filterValidCSVRecords(aggregationType, df)
 	if no_of_dropped_records != 0 {
 		invalidDataPoints.Add(float64(no_of_dropped_records))
 		log.Infof("Invalid records in CSV - %v", no_of_dropped_records)
@@ -31,43 +31,80 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	if df.Nrow() == 0 {
 		return df, fmt.Errorf("no valid records present in CSV to process further")
 	}
-	df = determine_k8s_object_type(df)
 
-	dfGroups := df.GroupBy(
-		"namespace",
-		"k8s_object_type",
-		"k8s_object_name",
-		"workload",
-		"container_name",
-		"image_name",
-		"interval_start",
-		"interval_end",
-	)
+	var aggregationMapping map[string]dataframe.AggregationType
+	var dfGroups *dataframe.Groups
 
-	aggregationMapping := map[string]dataframe.AggregationType{
-		"cpu_request_container_avg":      dataframe.Aggregation_MEAN,
-		"cpu_request_container_sum":      dataframe.Aggregation_SUM,
-		"cpu_limit_container_avg":        dataframe.Aggregation_MEAN,
-		"cpu_limit_container_sum":        dataframe.Aggregation_SUM,
-		"cpu_usage_container_avg":        dataframe.Aggregation_MEAN,
-		"cpu_usage_container_min":        dataframe.Aggregation_MIN,
-		"cpu_usage_container_max":        dataframe.Aggregation_MAX,
-		"cpu_usage_container_sum":        dataframe.Aggregation_SUM,
-		"cpu_throttle_container_avg":     dataframe.Aggregation_MEAN,
-		"cpu_throttle_container_max":     dataframe.Aggregation_MAX,
-		"cpu_throttle_container_sum":     dataframe.Aggregation_SUM,
-		"memory_request_container_avg":   dataframe.Aggregation_MEAN,
-		"memory_request_container_sum":   dataframe.Aggregation_SUM,
-		"memory_limit_container_avg":     dataframe.Aggregation_MEAN,
-		"memory_limit_container_sum":     dataframe.Aggregation_SUM,
-		"memory_usage_container_avg":     dataframe.Aggregation_MEAN,
-		"memory_usage_container_min":     dataframe.Aggregation_MIN,
-		"memory_usage_container_max":     dataframe.Aggregation_MAX,
-		"memory_usage_container_sum":     dataframe.Aggregation_SUM,
-		"memory_rss_usage_container_avg": dataframe.Aggregation_MEAN,
-		"memory_rss_usage_container_min": dataframe.Aggregation_MIN,
-		"memory_rss_usage_container_max": dataframe.Aggregation_MAX,
-		"memory_rss_usage_container_sum": dataframe.Aggregation_SUM,
+	if aggregationType == types.PayloadTypeContainer {
+		df = determine_k8s_object_type(df)
+
+		dfGroups = df.GroupBy(
+			"namespace",
+			"k8s_object_type",
+			"k8s_object_name",
+			"workload",
+			"container_name",
+			"image_name",
+			"interval_start",
+			"interval_end",
+		)
+
+		aggregationMapping = map[string]dataframe.AggregationType{
+			"cpu_request_container_avg":      dataframe.Aggregation_MEAN,
+			"cpu_request_container_sum":      dataframe.Aggregation_SUM,
+			"cpu_limit_container_avg":        dataframe.Aggregation_MEAN,
+			"cpu_limit_container_sum":        dataframe.Aggregation_SUM,
+			"cpu_usage_container_avg":        dataframe.Aggregation_MEAN,
+			"cpu_usage_container_min":        dataframe.Aggregation_MIN,
+			"cpu_usage_container_max":        dataframe.Aggregation_MAX,
+			"cpu_usage_container_sum":        dataframe.Aggregation_SUM,
+			"cpu_throttle_container_avg":     dataframe.Aggregation_MEAN,
+			"cpu_throttle_container_max":     dataframe.Aggregation_MAX,
+			"cpu_throttle_container_sum":     dataframe.Aggregation_SUM,
+			"memory_request_container_avg":   dataframe.Aggregation_MEAN,
+			"memory_request_container_sum":   dataframe.Aggregation_SUM,
+			"memory_limit_container_avg":     dataframe.Aggregation_MEAN,
+			"memory_limit_container_sum":     dataframe.Aggregation_SUM,
+			"memory_usage_container_avg":     dataframe.Aggregation_MEAN,
+			"memory_usage_container_min":     dataframe.Aggregation_MIN,
+			"memory_usage_container_max":     dataframe.Aggregation_MAX,
+			"memory_usage_container_sum":     dataframe.Aggregation_SUM,
+			"memory_rss_usage_container_avg": dataframe.Aggregation_MEAN,
+			"memory_rss_usage_container_min": dataframe.Aggregation_MIN,
+			"memory_rss_usage_container_max": dataframe.Aggregation_MAX,
+			"memory_rss_usage_container_sum": dataframe.Aggregation_SUM,
+		}
+	} else {
+		// namespace aggregation
+		dfGroups = df.GroupBy(
+			"namespace",
+			"interval_start",
+			"interval_end",
+		)
+
+		aggregationMapping = map[string]dataframe.AggregationType{
+			"cpu_request_namespace_sum":      dataframe.Aggregation_SUM,
+			"cpu_limit_namespace_sum":        dataframe.Aggregation_SUM,
+			"cpu_usage_namespace_avg":        dataframe.Aggregation_MEAN,
+			"cpu_usage_namespace_max":        dataframe.Aggregation_MAX,
+			"cpu_usage_namespace_min":        dataframe.Aggregation_MIN,
+			"cpu_throttle_namespace_avg":     dataframe.Aggregation_MEAN,
+			"cpu_throttle_namespace_max":     dataframe.Aggregation_MAX,
+			"cpu_throttle_namespace_min":     dataframe.Aggregation_MIN,
+			"memory_request_namespace_sum":   dataframe.Aggregation_SUM,
+			"memory_limit_namespace_sum":     dataframe.Aggregation_SUM,
+			"memory_usage_namespace_avg":     dataframe.Aggregation_MEAN,
+			"memory_usage_namespace_max":     dataframe.Aggregation_MAX,
+			"memory_usage_namespace_min":     dataframe.Aggregation_MIN,
+			"memory_rss_usage_namespace_avg": dataframe.Aggregation_MEAN,
+			"memory_rss_usage_namespace_max": dataframe.Aggregation_MAX,
+			"memory_rss_usage_namespace_min": dataframe.Aggregation_MIN,
+			"namespace_running_pods_max":     dataframe.Aggregation_MAX,
+			"namespace_running_pods_avg":     dataframe.Aggregation_MEAN,
+			"namespace_total_pods_max":       dataframe.Aggregation_MAX,
+			"namespace_total_pods_avg":       dataframe.Aggregation_MEAN,
+		}
+
 	}
 
 	columnsToAggregate := []string{}
@@ -81,7 +118,27 @@ func Aggregate_data(df dataframe.DataFrame) (dataframe.DataFrame, error) {
 	return df, nil
 }
 
-func filter_valid_csv_records(mainDf dataframe.DataFrame) (dataframe.DataFrame, int) {
+func filterValidCSVRecords(filterForType types.PayloadType, mainDf dataframe.DataFrame) (dataframe.DataFrame, int) {
+
+	if filterForType == types.PayloadTypeNamespace {
+		df := mainDf.FilterAggregation(
+			dataframe.And,
+			dataframe.F{Colname: "cpu_usage_namespace_avg", Comparator: series.GreaterEq, Comparando: 0},
+			dataframe.F{Colname: "cpu_usage_namespace_max", Comparator: series.GreaterEq, Comparando: 0},
+			dataframe.F{Colname: "cpu_usage_namespace_min", Comparator: series.GreaterEq, Comparando: 0},
+			dataframe.F{Colname: "memory_usage_namespace_avg", Comparator: series.GreaterEq, Comparando: 0},
+			dataframe.F{Colname: "memory_usage_namespace_max", Comparator: series.GreaterEq, Comparando: 0},
+			dataframe.F{Colname: "memory_usage_namespace_min", Comparator: series.GreaterEq, Comparando: 0},
+			dataframe.F{Colname: "memory_rss_usage_namespace_avg", Comparator: series.GreaterEq, Comparando: 0},
+			dataframe.F{Colname: "memory_rss_usage_namespace_max", Comparator: series.GreaterEq, Comparando: 0},
+			dataframe.F{Colname: "memory_rss_usage_namespace_min", Comparator: series.GreaterEq, Comparando: 0},
+			dataframe.F{Colname: "namespace", Comparator: series.Neq, Comparando: ""},
+			dataframe.F{Colname: "namespace", Comparator: series.Neq, Comparando: "<none>"},
+		)
+		return df, mainDf.Nrow() - df.Nrow()
+	}
+
+	// container aggregation
 	df := mainDf.FilterAggregation(
 		dataframe.And,
 		dataframe.F{Colname: "memory_rss_usage_container_sum", Comparator: series.GreaterEq, Comparando: 0},
@@ -181,10 +238,14 @@ func hasMissingColumns(requiredColumns []string, csvColumns []string) bool {
 	return false
 }
 
-func check_if_all_required_columns_in_CSV(df dataframe.DataFrame) error {
+func hasMissingColumnsCSV(csvType types.PayloadType, df dataframe.DataFrame) error {
 	// Check if all the required columns are present in CSV
-	all_required_columns := make([]string, 0, len(types.CSVColumnMapping))
-	for k := range types.CSVColumnMapping {
+	columnHeaders := types.CSVColumnMapping
+	if csvType == types.PayloadTypeNamespace {
+		columnHeaders = types.NamespaceCSVColumnMapping
+	}
+	all_required_columns := make([]string, 0, len(columnHeaders))
+	for k := range columnHeaders {
 		all_required_columns = append(all_required_columns, k)
 	}
 
