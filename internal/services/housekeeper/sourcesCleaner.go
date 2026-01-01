@@ -23,10 +23,16 @@ func StartSourcesListenerService() {
 	log := logging.GetLogger()
 	cfg := config.GetConfig()
 	var err error
-	cost_app_id, err = sources.GetCostApplicationID()
-	if err != nil {
-		log.Error("Unable to get cost application id", err)
-		os.Exit(1)
+
+	if os.Getenv("ON_PREM") == "true" {
+		cost_app_id = 0
+		log.Infof("ON_PREM flag is set, cost_app_id set to 0")
+	} else {
+		cost_app_id, err = sources.GetCostApplicationID()
+		if err != nil {
+			log.Error("Unable to get cost application id", err)
+			os.Exit(1)
+		}
 	}
 
 	kafka.StartConsumer(cfg.SourcesEventTopic, sourcesListener)
