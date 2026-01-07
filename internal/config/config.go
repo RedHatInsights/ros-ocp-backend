@@ -70,6 +70,9 @@ type Config struct {
 	// Sources-api-go config
 	SourceApiBaseUrl string `mapstructure:"SOURCES_API_BASE_URL"`
 	SourceApiPrefix  string `mapstructure:"SOURCES_API_PREFIX"`
+
+	// On-prem deployment config
+	RosOnPremDeployment bool `mapstructure:"ROS_ONPREM_DEPLOYMENT"`
 }
 
 var cfg *Config = nil
@@ -166,6 +169,7 @@ func initConfig() {
 	}
 
 	viper.SetDefault("SOURCES_API_PREFIX", "/api/sources/v3.1")
+	viper.SetDefault("ROS_ONPREM_DEPLOYMENT", false)
 	viper.SetDefault("SERVICE_NAME", "rosocp")
 	viper.SetDefault("API_PORT", "8000")
 	viper.SetDefault("KRUIZE_WAIT_TIME", "30")

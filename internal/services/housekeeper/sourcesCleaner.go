@@ -24,7 +24,7 @@ func StartSourcesListenerService() {
 	cfg := config.GetConfig()
 	var err error
 
-	if os.Getenv("ROS_ONPREM_DEPLOYMENT") == "true" {
+	if cfg.RosOnPremDeployment {
 		cost_app_id = 0
 		log.Infof("ROS_ONPREM_DEPLOYMENT flag is set, cost_app_id set to 0")
 	} else {
