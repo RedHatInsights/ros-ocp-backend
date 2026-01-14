@@ -17,6 +17,9 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils/sources"
 )
 
+// OnPremCostAppID is the default application ID used in on-prem deployments
+const OnPremCostAppID = 0
+
 var cost_app_id int
 
 func StartSourcesListenerService() {
@@ -25,8 +28,8 @@ func StartSourcesListenerService() {
 	var err error
 
 	if cfg.ONPREM {
-		cost_app_id = 0
-		log.Infof("ONPREM flag is set, cost_app_id set to 0")
+		cost_app_id = OnPremCostAppID
+		log.Infof("ONPREM flag is set, cost_app_id set to %d", OnPremCostAppID)
 	} else {
 		cost_app_id, err = sources.GetCostApplicationID()
 		if err != nil {
