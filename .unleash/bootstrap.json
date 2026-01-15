@@ -2,7 +2,7 @@
   "version": 1,
   "tokens": [
     {
-      "projects":["ros-ocp"],
+      "projects":["rosocp"],
       "type": "client",
       "token": "rosocp:dev.token"
     }
@@ -10,7 +10,7 @@
   "features": [
     {
       "name": "rosocp.namespace_enabled",
-      "project": "ros-ocp",
+      "project": "rosocp",
       "enabled": true,
       "strategies": [
         {
