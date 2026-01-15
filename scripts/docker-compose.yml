@@ -6,7 +6,7 @@ services:
       - ZOOKEEPER_CLIENT_PORT=32181
       - ZOOKEEPER_SERVER_ID=1
   kafka:
-    image: confluentinc/cp-kafka
+    image: confluentinc/cp-kafka:7.5.9
     restart: always
     ports:
       - 29092:29092
@@ -20,7 +20,7 @@ services:
       - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
 
   kafka-create-topics:
-    image: confluentinc/cp-kafka
+    image: confluentinc/cp-kafka:7.5.9
     command: "bash -c 'echo Waiting for Kafka to be ready... && \
                        cub kafka-ready -b kafka:29092 1 20 && \
                        kafka-topics --create --if-not-exists --topic hccm.ros.events --bootstrap-server kafka:29092 && \
@@ -103,7 +103,7 @@ services:
       - 8888:80
 
   db-sources:
-    image: postgres
+    image: postgres:14
     restart: always
     environment:
       POSTGRES_PASSWORD: postgres
@@ -117,12 +117,12 @@ services:
     ports:
       - "6379:6379"
 
-  sources-db-setup:
+  sources-api-db-setup:
     image: quay.io/cloudservices/sources-api-go
     restart: on-failure
     command: -setup
     environment:
-     - DATABASE_USER=postgres
+      - DATABASE_USER=postgres
       - DATABASE_PASSWORD=postgres
       - DATABASE_HOST=db-sources
       - DATABASE_PORT=5432
@@ -133,6 +133,7 @@ services:
       - BYPASS_RBAC=true
       - QUEUE_HOST=kafka
       - QUEUE_PORT=29092
+      - ENCRYPTION_KEY=YWFhYWFhYWFhYWFhYWFhYQ
     depends_on:
       - db-sources
 
@@ -154,6 +155,7 @@ services:
       - BYPASS_RBAC=true
       - QUEUE_HOST=kafka
       - QUEUE_PORT=29092
+      - ENCRYPTION_KEY=YWFhYWFhYWFhYWFhYWFhYQ
     depends_on:
       - db-sources
       - kafka
