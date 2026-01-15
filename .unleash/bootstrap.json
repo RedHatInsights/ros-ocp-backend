@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "tokens": [
+    {
+      "projects":["rosocp"],
+      "type": "client",
+      "token": "rosocp:dev.token"
+    }
+  ],
+  "features": [
+    {
+      "name": "rosocp.namespace_enabled",
+      "project": "rosocp",
+      "enabled": true,
+      "strategies": [
+        {
+          "name": "flexibleRollout",
+          "parameters": {
+            "rollout": "100",
+            "stickiness": "orgId",
+            "groupId": "rosocp.namespace_enabled"
+          },
+          "constraints": [
+            {
+              "contextName": "orgId",
+              "operator": "IN",
+              "values": ["000001"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

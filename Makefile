@@ -125,3 +125,6 @@ else
 		 -H "x-rh-request_id: testtesttest" \
 		 http://localhost:8000/api/cost-management/v1/recommendations/openshift?start_date=${start_date} | python -m json.tool
 endif
+
+get_unleash_features:
+	curl -H "Authorization: rosocp:dev.token" http://localhost:3063/api/client/features && echo

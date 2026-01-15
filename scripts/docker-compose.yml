@@ -158,3 +158,11 @@ services:
       - db-sources
       - kafka
       - redis
+
+  unleash-edge:
+      image: unleashorg/unleash-edge:latest
+      command: ["offline", "--client-tokens", "rosocp:dev.token", "--bootstrap-file", "/unleash/bootstrap.json"]
+      ports:
+        - "3063:3063"
+      volumes:
+        - ../.unleash/bootstrap.json:/unleash/bootstrap.json
