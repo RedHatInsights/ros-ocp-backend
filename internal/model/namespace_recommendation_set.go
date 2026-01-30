@@ -58,7 +58,8 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 	var recommendationSets []NamespaceRecommendationSetResult
 	query := getNamespaceRecommendationQuery(orgID)
 
-	add_rbac_filter(query, user_permissions)
+	// TODO: Apply RBAC filters based on user roles and permissions
+	// add_rbac_filter(query, user_permissions)
 
 	for key, values := range queryParams {
 		switch v := values.(type) {
