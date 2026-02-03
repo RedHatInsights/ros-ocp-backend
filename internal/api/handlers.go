@@ -323,13 +323,13 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 	orderBy = c.QueryParam("order_by")
 	if orderBy != "" {
 		orderByOptions := map[string]string{
-			"cluster":       "clusters.cluster_alias",
-			"project":       "namespace_recommendation_sets.namespace_name",
-			"cpu_current_request":  "namespace_recommendation_sets.cpu_current_request",
-			"cpu_variation":  "namespace_recommendation_sets.cpu_variation",
-			"memory_current_request":  "namespace_recommendation_sets.memory_current_request",
-			"memory_variation":  "namespace_recommendation_sets.memory_variation",
-			"last_reported": "clusters.last_reported_at",
+			"cluster":                "clusters.cluster_alias",
+			"project":                "namespace_recommendation_sets.namespace_name",
+			"cpu_current_request":    "namespace_recommendation_sets.cpu_current_request",
+			"cpu_variation":          "namespace_recommendation_sets.cpu_variation",
+			"memory_current_request": "namespace_recommendation_sets.memory_current_request",
+			"memory_variation":       "namespace_recommendation_sets.memory_variation",
+			"last_reported":          "clusters.last_reported_at",
 		}
 		orderByOption, keyError := orderByOptions[orderBy]
 
