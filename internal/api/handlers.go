@@ -11,8 +11,8 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/redhatinsights/platform-go-middlewares/identity"
-	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/api/common"
+	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 )
 
 func GetRecommendationSetList(c echo.Context) error {
@@ -66,10 +66,10 @@ func GetRecommendationSetList(c echo.Context) error {
 	defaultDBColumn := "clusters.last_reported_at"
 	listOptions, err := common.ListAPIOptions(c, defaultDBColumn, allowedOrderBy)
 	if err != nil {
-	    return c.JSON(http.StatusBadRequest, echo.Map{
-	        "status":  "error",
-	        "message": err.Error(),
-	    })
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
 	}
 
 	queryParams, err := MapQueryParameters(c)
@@ -265,7 +265,6 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 		unitChoices["memory"] = "bytes"
 	}
 
-
 	allowedOrderBy := map[string]string{
 		"cluster":                "clusters.cluster_alias",
 		"project":                "namespace_recommendation_sets.namespace_name",
@@ -279,10 +278,10 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 
 	listOptions, err := common.ListAPIOptions(c, defaultDBColumn, allowedOrderBy)
 	if err != nil {
-	    return c.JSON(http.StatusBadRequest, echo.Map{
-	        "status":  "error",
-	        "message": err.Error(),
-	    })
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
 	}
 
 	queryParams := make(map[string]interface{})

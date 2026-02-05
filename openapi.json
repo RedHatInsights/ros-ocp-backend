@@ -421,7 +421,6 @@
             }
           },
           "503": {
-            //Service Unavailable
             "description": "namespace Feature temporarily disabled / rollout pending",
             "content": {
               "application/json": {
@@ -440,7 +439,7 @@
           }
         }
       }
-    },
+    }
   },
   "components": {
     "schemas": {
