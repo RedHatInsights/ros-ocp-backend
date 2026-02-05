@@ -290,7 +290,7 @@
         }
       }
     },
-    "/recommendations/openshift/namespaces": {
+    "/openshift/namespace/recommendations": {
       "get": {
         "tags": [
           "Namespace Optimizations"
