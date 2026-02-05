@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"fmt"
+
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 	"gorm.io/gorm"

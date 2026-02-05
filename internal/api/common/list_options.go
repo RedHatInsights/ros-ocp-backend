@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	DefaultLimit = 10
+	DefaultLimit  = 10
 	DefaultOffset = 0
 
-	OrderAsc  = "asc"
-	OrderDesc = "desc"
+	OrderAsc           = "asc"
+	OrderDesc          = "desc"
 	ResponseFormatJSON = "json"
 	ResponseFormatCSV  = "csv"
 )
@@ -23,7 +23,7 @@ type ListOptions struct {
 	Offset   int
 	OrderBy  string
 	OrderHow string
-	Format string
+	Format   string
 }
 
 func parseInt(val string, def int) int {
@@ -79,7 +79,7 @@ func ListAPIOptions(c echo.Context, defaultDBColumn string, allowedOrderBy map[s
 		Offset:   offset,
 		OrderBy:  orderBy,
 		OrderHow: orderHow,
-		Format: format,
+		Format:   format,
 	}, nil
 }
 

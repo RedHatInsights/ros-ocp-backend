@@ -8,10 +8,10 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/api/common"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
 	"github.com/redhatinsights/ros-ocp-backend/internal/rbac"
-	"github.com/redhatinsights/ros-ocp-backend/internal/api/common"
 )
 
 type NamespaceRecommendationSet struct {
@@ -84,8 +84,8 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 
 	query.Count(&count)
 	if opts.OrderBy != "" {
-    query = query.Order(opts.OrderBy + " " + opts.OrderHow)
-  }
+		query = query.Order(opts.OrderBy + " " + opts.OrderHow)
+	}
 
 	limit := opts.Limit
 	if opts.Format == "csv" {
