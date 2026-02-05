@@ -52,7 +52,7 @@ func StartAPIServer() {
 	}
 	v1.GET("/recommendations/openshift", GetRecommendationSetList)
 	v1.GET("/recommendations/openshift/:recommendation-id", GetRecommendationSet)
-	v1.GET("/recommendations/openshift/namespaces", GetNamespaceRecommendationSetList)
+	v1.GET("/openshift/namespace/recommendations", GetNamespaceRecommendationSetList)
 
 	s := http.Server{
 		Addr:              ":" + cfg.API_PORT, // local dev server

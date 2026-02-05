@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/redhatinsights/platform-go-middlewares/identity"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
+	"github.com/redhatinsights/ros-ocp-backend/internal/api/common"
 )
 
 func GetRecommendationSetList(c echo.Context) error {
@@ -55,74 +55,21 @@ func GetRecommendationSetList(c echo.Context) error {
 		unitChoices["memory"] = "bytes"
 	}
 
-	var orderHow string
-	var orderBy string
-	// Default values
-	limit := 10
-	offset := 0
-
-	orderBy = c.QueryParam("order_by")
-	if orderBy != "" {
-		orderByOptions := map[string]string{
-			"cluster":       "clusters.cluster_alias",
-			"workload_type": "workloads.workload_type",
-			"workload":      "workloads.workload_name",
-			"project":       "workloads.namespace",
-			"container":     "recommendation_sets.container_name",
-			"last_reported": "clusters.last_reported_at",
-		}
-		orderByOption, keyError := orderByOptions[orderBy]
-
-		if !keyError {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid order_by value"})
-		}
-		orderBy = orderByOption
-	} else {
-		orderBy = "clusters.last_reported_at"
+	allowedOrderBy := map[string]string{
+		"cluster":       "clusters.cluster_alias",
+		"workload_type": "workloads.workload_type",
+		"workload":      "workloads.workload_name",
+		"project":       "workloads.namespace",
+		"container":     "recommendation_sets.container_name",
+		"last_reported": "clusters.last_reported_at",
 	}
-
-	orderHow = c.QueryParam("order_how")
-	if orderHow != "" {
-		orderHowUpper := strings.ToUpper(orderHow)
-		if (orderHowUpper != "ASC") && (orderHowUpper != "DESC") {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid order_how value"})
-		}
-		orderHow = orderHowUpper
-	} else {
-		orderHow = "DESC"
-	}
-
-	orderQuery := orderBy + " " + orderHow
-
-	limitStr := c.QueryParam("limit")
-	if limitStr != "" {
-		limitInt, err := strconv.Atoi(limitStr)
-		if err == nil {
-			limit = limitInt
-		}
-	}
-
-	offsetStr := c.QueryParam("offset")
-
-	if offsetStr != "" {
-		offsetInt, err := strconv.Atoi(offsetStr)
-		if err == nil {
-			offset = offsetInt
-		}
-	}
-
-	acceptHeaderValue := c.Request().Header.Get("Accept")
-	formatParam := c.QueryParam("format")
-	formatLower := ""
-	if formatParam != "" {
-		formatLower = strings.ToLower(formatParam)
-	}
-
-	format, formatErr := resolveResponseFormat(acceptHeaderValue, formatLower)
-	if formatErr != nil {
-		return c.JSON(http.StatusBadRequest,
-			echo.Map{"status": "error", "message": formatErr.Error()},
-		)
+	defaultDBColumn := "clusters.last_reported_at"
+	listOptions, err := common.ListAPIOptions(c, defaultDBColumn, allowedOrderBy)
+	if err != nil {
+	    return c.JSON(http.StatusBadRequest, echo.Map{
+	        "status":  "error",
+	        "message": err.Error(),
+	    })
 	}
 
 	queryParams, err := MapQueryParameters(c)
@@ -130,7 +77,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
 	}
 	recommendationSet := model.RecommendationSet{}
-	recommendationSets, count, queryErr := recommendationSet.GetRecommendationSets(OrgID, orderQuery, format, limit, offset, queryParams, user_permissions)
+	recommendationSets, count, queryErr := recommendationSet.GetRecommendationSets(OrgID, listOptions, queryParams, user_permissions)
 	if queryErr != nil {
 		log.Errorf("unable to fetch records from database; %v", queryErr)
 	}
@@ -157,15 +104,15 @@ func GetRecommendationSetList(c echo.Context) error {
 		)
 	}
 
-	switch format {
-	case "json":
+	switch listOptions.Format {
+	case common.ResponseFormatJSON:
 		interfaceSlice := make([]interface{}, len(recommendationSets))
 		for i, v := range recommendationSets {
 			interfaceSlice[i] = v
 		}
-		results := CollectionResponse(interfaceSlice, c.Request(), count, limit, offset)
+		results := CollectionResponse(interfaceSlice, c.Request(), count, listOptions.Limit, listOptions.Offset)
 		return c.JSON(http.StatusOK, results)
-	case "csv":
+	case common.ResponseFormatCSV:
 		filename := "recommendations-" + time.Now().Format("20060102")
 		c.Response().Header().Set(echo.HeaderContentType, "text/csv")
 		c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", filename))
@@ -318,83 +265,30 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 		unitChoices["memory"] = "bytes"
 	}
 
-	var orderHow string
-	var orderBy string
-	orderBy = c.QueryParam("order_by")
-	if orderBy != "" {
-		orderByOptions := map[string]string{
-			"cluster":                "clusters.cluster_alias",
-			"project":                "namespace_recommendation_sets.namespace_name",
-			"cpu_current_request":    "namespace_recommendation_sets.cpu_current_request",
-			"cpu_variation":          "namespace_recommendation_sets.cpu_variation",
-			"memory_current_request": "namespace_recommendation_sets.memory_current_request",
-			"memory_variation":       "namespace_recommendation_sets.memory_variation",
-			"last_reported":          "clusters.last_reported_at",
-		}
-		orderByOption, keyError := orderByOptions[orderBy]
 
-		if !keyError {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid order_by value"})
-		}
-		orderBy = orderByOption
-	} else {
-		orderBy = "clusters.last_reported_at"
+	allowedOrderBy := map[string]string{
+		"cluster":                "clusters.cluster_alias",
+		"project":                "namespace_recommendation_sets.namespace_name",
+		"cpu_current_request":    "namespace_recommendation_sets.cpu_current_request",
+		"cpu_variation":          "namespace_recommendation_sets.cpu_variation",
+		"memory_current_request": "namespace_recommendation_sets.memory_current_request",
+		"memory_variation":       "namespace_recommendation_sets.memory_variation",
+		"last_reported":          "clusters.last_reported_at",
 	}
+	defaultDBColumn := "clusters.last_reported_at"
 
-	orderHow = c.QueryParam("order_how")
-	if orderHow != "" {
-		orderHowUpper := strings.ToUpper(orderHow)
-		if (orderHowUpper != "ASC") && (orderHowUpper != "DESC") {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid order_how value"})
-		}
-		orderHow = orderHowUpper
-	} else {
-		orderHow = "DESC"
-	}
-
-	orderQuery := orderBy + " " + orderHow
-	// Default values
-	limit := 10
-	offset := 0
-	limitStr := c.QueryParam("limit")
-	if limitStr != "" {
-		limitInt, err := strconv.Atoi(limitStr)
-		if err == nil {
-			limit = limitInt
-		}
-	}
-
-	offsetStr := c.QueryParam("offset")
-
-	if offsetStr != "" {
-		offsetInt, err := strconv.Atoi(offsetStr)
-		if err == nil {
-			offset = offsetInt
-		}
-	}
-
-	acceptHeaderValue := c.Request().Header.Get("Accept")
-	formatParam := c.QueryParam("format")
-	formatLower := ""
-	if formatParam != "" {
-		formatLower = strings.ToLower(formatParam)
-	}
-
-	format, formatErr := resolveResponseFormat(acceptHeaderValue, formatLower)
-	if formatErr != nil {
-		return c.JSON(http.StatusBadRequest,
-			echo.Map{"status": "error", "message": formatErr.Error()},
-		)
+	listOptions, err := common.ListAPIOptions(c, defaultDBColumn, allowedOrderBy)
+	if err != nil {
+	    return c.JSON(http.StatusBadRequest, echo.Map{
+	        "status":  "error",
+	        "message": err.Error(),
+	    })
 	}
 
 	queryParams := make(map[string]interface{})
-	var err error
 
 	NamespaceRecommendationSet := model.NamespaceRecommendationSet{}
-	namespaceRecommendationSets, count, queryErr := NamespaceRecommendationSet.GetNamespaceRecommendationSets(OrgID, orderQuery, format, limit, offset, queryParams, user_permissions)
-
-	s := fmt.Sprintf("namespaceRecommendationSets %v", namespaceRecommendationSets)
-	fmt.Println(s)
+	namespaceRecommendationSets, count, queryErr := NamespaceRecommendationSet.GetNamespaceRecommendationSets(OrgID, listOptions, queryParams, user_permissions)
 
 	if queryErr != nil {
 		log.Errorf("unable to fetch records from database; %v", queryErr)
@@ -422,15 +316,15 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 		)
 	}
 
-	switch format {
-	case "json":
+	switch listOptions.Format {
+	case common.ResponseFormatJSON:
 		interfaceSlice := make([]interface{}, len(namespaceRecommendationSets))
 		for i, v := range namespaceRecommendationSets {
 			interfaceSlice[i] = v
 		}
-		results := CollectionResponse(interfaceSlice, c.Request(), count, limit, offset)
+		results := CollectionResponse(interfaceSlice, c.Request(), count, listOptions.Limit, listOptions.Offset)
 		return c.JSON(http.StatusOK, results)
-	case "csv":
+	case common.ResponseFormatCSV:
 		// TODO: Add CSV support when export feature is enabled
 		return c.JSON(http.StatusNotAcceptable, map[string]string{
 			"message": "CSV format is not supported. Please use application/json.",
