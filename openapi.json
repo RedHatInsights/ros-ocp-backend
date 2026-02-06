@@ -339,9 +339,9 @@
               "enum": [
                 "cluster",
                 "project",
-                "cpu_current_request",
+                "cpu_request_current",
                 "cpu_variation",
-                "memory_current_request",
+                "memory_request_current",
                 "memory_variation",
                 "last_reported"
               ],

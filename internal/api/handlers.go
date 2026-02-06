@@ -268,9 +268,9 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 	allowedOrderBy := map[string]string{
 		"cluster":                "clusters.cluster_alias",
 		"project":                "namespace_recommendation_sets.namespace_name",
-		"cpu_current_request":    "namespace_recommendation_sets.cpu_current_request",
+		"cpu_request_current":    "namespace_recommendation_sets.cpu_request_current",
 		"cpu_variation":          "namespace_recommendation_sets.cpu_variation",
-		"memory_current_request": "namespace_recommendation_sets.memory_current_request",
+		"memory_request_current": "namespace_recommendation_sets.memory_request_current",
 		"memory_variation":       "namespace_recommendation_sets.memory_variation",
 		"last_reported":          "clusters.last_reported_at",
 	}
