@@ -73,6 +73,13 @@ type Config struct {
 
 	// Namespace recommendation config
 	DisableNamespaceRecommendation bool `mapstructure:"DISABLE_NAMESPACE_RECOMMENDATION"`
+
+	//FeatureFlag config
+	FeatureFlagsClientAccessToken string
+	FeatureFlagsHostname          string
+	FeatureFlagsPort              int
+	FeatureFlagsScheme            string
+	FeatureFlagsFullURL           string
 }
 
 var cfg *Config = nil
@@ -137,6 +144,14 @@ func initConfig() {
 		// prometheus config
 		viper.SetDefault("PROMETHEUS_PORT", c.MetricsPort)
 
+		// Unleash config
+		if c.FeatureFlags != nil {
+			viper.SetDefault("FeatureFlagsClientAccessToken", *c.FeatureFlags.ClientAccessToken)
+			viper.SetDefault("FeatureFlagsHostname", c.FeatureFlags.Hostname)
+			viper.SetDefault("FeatureFlagsScheme", string(c.FeatureFlags.Scheme))
+			viper.SetDefault("FeatureFlagsPort", c.FeatureFlags.Port)
+			viper.SetDefault("FeatureFlagsFullURL", fmt.Sprintf("%s://%s:%d/api/", viper.GetString("FeatureFlagsScheme"), viper.GetString("FeatureFlagsHostname"), viper.GetInt("FeatureFlagsPort")))
+		}
 	} else {
 		viper.SetDefault("LogFormater", "text")
 
@@ -195,6 +210,20 @@ func initConfig() {
 	viper.SetDefault("RECORD_LIMIT_CSV", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
 	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", true)
+
+	// Unleash config
+	viper.SetDefault("FeatureFlagsClientAccessToken", "rosocp:dev.token")
+	viper.SetDefault("FeatureFlagsHostname", "0.0.0.0")
+	viper.SetDefault("FeatureFlagsScheme", "http")
+	viper.SetDefault("FeatureFlagsPort", 3063)
+	viper.SetDefault(
+		"FeatureFlagsFullURL",
+		fmt.Sprintf(
+			"%s://%s:%d/api/",
+			viper.GetString("FeatureFlagsScheme"),
+			viper.GetString("FeatureFlagsHostname"),
+			viper.GetInt("FeatureFlagsPort")),
+	)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}

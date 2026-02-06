@@ -9,12 +9,16 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	"github.com/redhatinsights/ros-ocp-backend/internal/featureflags"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 )
 
 func StartConsumer(kafka_topic string, handler func(msg *kafka.Message, consumer_object *kafka.Consumer), auto_commit_option ...bool) {
 	log := logging.GetLogger()
 	cfg := config.GetConfig()
+
+	// initialize feature flag service
+	featureflags.Init()
 
 	// Fetch and validate auto_commit_option value
 	var auto_commit bool
