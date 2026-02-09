@@ -17,8 +17,10 @@ func StartConsumer(kafka_topic string, handler func(msg *kafka.Message, consumer
 	log := logging.GetLogger()
 	cfg := config.GetConfig()
 
-	// initialize feature flag service
-	featureflags.Init()
+	// initialize unleash service
+	if err := featureflags.Init(); err != nil {
+		log.Errorf("Unleash Error: %v", err)
+	}
 
 	// Fetch and validate auto_commit_option value
 	var auto_commit bool
