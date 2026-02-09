@@ -179,9 +179,8 @@ func Update_recommendations(orgId string, experiment_name string, interval_end_t
 	}
 
 	var response any
-	isNamespaceUpload := (experimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId))
 
-	if isNamespaceUpload {
+	if experimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId) {
 		var namespaceResponse namespacePayload.NamespaceRecommendationResponse
 		if err := json.Unmarshal(body, &namespaceResponse); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal response of /updateRecommendations API %v", err)
