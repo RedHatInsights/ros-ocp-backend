@@ -41,8 +41,7 @@ func AddRBACFilter(query *gorm.DB, userPermissions map[string][]string, resource
 	projectAll := hasProject && utils.StringInSlice("*", projectPerms)
 
 	applyClusterFilter := func() {
-		switch resourceType {
-		case ResourceContainer, ResourceProject:
+		if resourceType == ResourceContainer || resourceType == ResourceProject {
 			query.Where("clusters.cluster_uuid IN (?)", clusterPerms)
 		}
 	}
