@@ -13,15 +13,15 @@ import (
 )
 
 var log *logrus.Entry = logging.GetLogger()
+var cfg = config.GetConfig()
 
 func Init() error {
-	cfg := config.GetConfig()
 	// Initialize Unleash client
 	err := unleash.Initialize(
 		unleash.WithAppName(cfg.ServiceName),
-		unleash.WithUrl(cfg.FeatureFlagsFullURL),
+		unleash.WithUrl(cfg.UnleashFullURL),
 		unleash.WithCustomHeaders(http.Header{
-			"Authorization": {cfg.FeatureFlagsClientAccessToken},
+			"Authorization": {cfg.UnleashClientAccessToken},
 		}),
 		unleash.WithRefreshInterval(15*time.Second),
 		unleash.WithListener(&unleash.DebugListener{}),

@@ -74,12 +74,12 @@ type Config struct {
 	// Namespace recommendation config
 	DisableNamespaceRecommendation bool `mapstructure:"DISABLE_NAMESPACE_RECOMMENDATION"`
 
-	//FeatureFlag config
-	FeatureFlagsClientAccessToken string
-	FeatureFlagsHostname          string
-	FeatureFlagsPort              int
-	FeatureFlagsScheme            string
-	FeatureFlagsFullURL           string
+	//Unleash config
+	UnleashClientAccessToken string
+	UnleashHostname          string
+	UnleashPort              int
+	UnleashScheme            string
+	UnleashFullURL           string
 }
 
 var cfg *Config = nil
@@ -146,11 +146,16 @@ func initConfig() {
 
 		// Unleash config
 		if c.FeatureFlags != nil {
-			viper.SetDefault("FeatureFlagsClientAccessToken", *c.FeatureFlags.ClientAccessToken)
-			viper.SetDefault("FeatureFlagsHostname", c.FeatureFlags.Hostname)
-			viper.SetDefault("FeatureFlagsScheme", string(c.FeatureFlags.Scheme))
-			viper.SetDefault("FeatureFlagsPort", c.FeatureFlags.Port)
-			viper.SetDefault("FeatureFlagsFullURL", fmt.Sprintf("%s://%s:%d/api/", viper.GetString("FeatureFlagsScheme"), viper.GetString("FeatureFlagsHostname"), viper.GetInt("FeatureFlagsPort")))
+			viper.SetDefault("UnleashClientAccessToken", *c.FeatureFlags.ClientAccessToken)
+			viper.SetDefault("UnleashHostname", c.FeatureFlags.Hostname)
+			viper.SetDefault("UnleashScheme", string(c.FeatureFlags.Scheme))
+			viper.SetDefault("UnleashPort", c.FeatureFlags.Port)
+			viper.SetDefault("UnleashFullURL",
+				fmt.Sprintf(
+					"%s://%s:%d/api/",
+					viper.GetString("UnleashScheme"),
+					viper.GetString("UnleashHostname"),
+					viper.GetInt("UnleashPort")))
 		}
 	} else {
 		viper.SetDefault("LogFormater", "text")
@@ -212,17 +217,17 @@ func initConfig() {
 	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", true)
 
 	// Unleash config
-	viper.SetDefault("FeatureFlagsClientAccessToken", "rosocp:dev.token")
-	viper.SetDefault("FeatureFlagsHostname", "0.0.0.0")
-	viper.SetDefault("FeatureFlagsScheme", "http")
-	viper.SetDefault("FeatureFlagsPort", 3063)
+	viper.SetDefault("UnleashClientAccessToken", "rosocp:dev.token")
+	viper.SetDefault("UnleashHostname", "0.0.0.0")
+	viper.SetDefault("UnleashScheme", "http")
+	viper.SetDefault("UnleashPort", 3063)
 	viper.SetDefault(
-		"FeatureFlagsFullURL",
+		"UnleashFullURL",
 		fmt.Sprintf(
 			"%s://%s:%d/api/",
-			viper.GetString("FeatureFlagsScheme"),
-			viper.GetString("FeatureFlagsHostname"),
-			viper.GetInt("FeatureFlagsPort")),
+			viper.GetString("UnleashScheme"),
+			viper.GetString("UnleashHostname"),
+			viper.GetInt("UnleashPort")),
 	)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761

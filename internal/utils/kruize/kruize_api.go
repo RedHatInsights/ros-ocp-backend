@@ -179,8 +179,7 @@ func Update_recommendations(orgId string, experiment_name string, interval_end_t
 	}
 
 	var response any
-	isNamespaceUpload := (experimentType == types.PayloadTypeNamespace &&
-		featureflags.IsNamespaceEnabled(cfg.DisableNamespaceRecommendation, orgId))
+	isNamespaceUpload := (experimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId))
 
 	if isNamespaceUpload {
 		var namespaceResponse namespacePayload.NamespaceRecommendationResponse

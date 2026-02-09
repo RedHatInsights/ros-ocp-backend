@@ -5,8 +5,8 @@ import (
 	"github.com/Unleash/unleash-go-sdk/v5/context"
 )
 
-func IsNamespaceEnabled(isNamespaceENVDisabled bool, org_id string) bool {
-	if isNamespaceENVDisabled {
+func IsNamespaceEnabled(org_id string) bool {
+	if cfg.DisableNamespaceRecommendation {
 		return false
 	}
 

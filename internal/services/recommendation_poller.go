@@ -129,7 +129,6 @@ func transactionForNamespaceRecommendation(recommendationSetList []model.Namespa
 
 func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recommendationType string) bool {
 	log := logging.GetLogger()
-	cfg := config.GetConfig()
 	experiment_name := kafkaMsg.Metadata.Experiment_name
 	maxEndTimeFromReport := kafkaMsg.Metadata.Max_endtime_report
 	poll_cycle_complete := false
@@ -140,7 +139,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 	namespaceRecommendationSetList := []model.NamespaceRecommendationSet{}
 	namespaceHistRecommendationSetList := []model.HistoricalNamespaceRecommendationSet{}
 	isNamespaceUpload := (kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace &&
-		featureflags.IsNamespaceEnabled(cfg.DisableNamespaceRecommendation, kafkaMsg.Metadata.Org_id))
+		featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id))
 
 	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeContainer {
 		recommendationResponse, err := fetchRecommendationFromKruize(
@@ -340,7 +339,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 	maxEndTimeFromReport := kafkaMsg.Metadata.Max_endtime_report
 	workloadID := kafkaMsg.Metadata.Workload_id
 	isNamespaceUpload := (kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace &&
-		featureflags.IsNamespaceEnabled(cfg.DisableNamespaceRecommendation, kafkaMsg.Metadata.Org_id))
+		featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id))
 
 	var recommendation_stored_in_db any
 	var checkRecommExistsErr error

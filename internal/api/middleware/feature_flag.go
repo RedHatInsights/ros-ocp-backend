@@ -15,7 +15,7 @@ func RequireNamespaceFeature() echo.MiddlewareFunc {
 			XRHID := c.Get("Identity").(identity.XRHID)
 			OrgID := XRHID.Identity.OrgID
 
-			if !featureflags.IsNamespaceEnabled(cfg.DisableNamespaceRecommendation, OrgID) {
+			if !featureflags.IsNamespaceEnabled(OrgID) {
 				return echo.NewHTTPError(
 					http.StatusServiceUnavailable,
 					"Namespace Feature temporarily disabled / rollout pending",
