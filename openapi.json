@@ -419,23 +419,6 @@
                 }
               }
             }
-          },
-          "503": {
-            "description": "namespace Feature temporarily disabled / rollout pending",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "description": "Message text",
-                      "example": "This API is not yet enabled. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }

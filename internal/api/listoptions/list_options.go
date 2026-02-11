@@ -17,7 +17,7 @@ const (
 	ResponseFormatJSON = "json"
 	ResponseFormatCSV  = "csv"
 
-	// Default DB columns for OrderBy
+	// Default DB columns for OrderBy.
 	DefaultContainerRecsDBColumn = "clusters.last_reported_at"
 	DefaultNsRecsDBColumn        = "clusters.last_reported_at"
 )
@@ -30,10 +30,10 @@ type ListOptions struct {
 	Format   string
 }
 
-// OrderByMap maps allowed JSON keys to DB columns
+// OrderByMap maps allowed JSON keys to DB columns.
 type OrderByMap map[string]string
 
-// API-specific maps and defaults
+// API-specific maps and defaults.
 var ContainerAllowedOrderBy = OrderByMap{
 	"cluster":       "clusters.cluster_alias",
 	"workload_type": "workloads.workload_type",
