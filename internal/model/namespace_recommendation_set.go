@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/redhatinsights/ros-ocp-backend/internal/api/common"
+	"github.com/redhatinsights/ros-ocp-backend/internal/api/listoptions"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
 	"github.com/redhatinsights/ros-ocp-backend/internal/rbac"
@@ -47,8 +47,6 @@ type NamespaceRecommendationSetResult struct {
 	Recommendations      datatypes.JSON `json:"-"`
 	RecommendationsJSON  map[string]any `gorm:"-" json:"recommendations"`
 	SourceID             string         `json:"source_id"`
-	Workload             string         `json:"workload"`
-	WorkloadType         string         `json:"workload_type"`
 }
 
 func (r *NamespaceRecommendationSet) AfterFind(tx *gorm.DB) error {
@@ -56,7 +54,7 @@ func (r *NamespaceRecommendationSet) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
-func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string, opts common.ListOptions, queryParams map[string]interface{}, user_permissions map[string][]string) ([]NamespaceRecommendationSetResult, int, error) {
+func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string, opts listoptions.ListOptions, queryParams map[string]interface{}, user_permissions map[string][]string) ([]NamespaceRecommendationSetResult, int, error) {
 	var recommendationSets []NamespaceRecommendationSetResult
 	var count int64 = 0
 	query := getNamespaceRecommendationQuery(orgID)
@@ -83,9 +81,7 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 	}
 
 	query.Count(&count)
-	if opts.OrderBy != "" {
-		query = query.Order(opts.OrderBy + " " + opts.OrderHow)
-	}
+	query = query.Order(opts.OrderBy + " " + opts.OrderHow)
 
 	limit := opts.Limit
 	if opts.Format == "csv" {

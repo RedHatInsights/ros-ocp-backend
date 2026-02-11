@@ -1,4 +1,4 @@
-package common
+package listoptions
 
 import (
 	"fmt"
@@ -16,6 +16,10 @@ const (
 	OrderDesc          = "desc"
 	ResponseFormatJSON = "json"
 	ResponseFormatCSV  = "csv"
+
+	// Default DB columns for OrderBy
+	DefaultContainerRecsDBColumn = "clusters.last_reported_at"
+	DefaultNsRecsDBColumn        = "clusters.last_reported_at"
 )
 
 type ListOptions struct {
@@ -24,6 +28,29 @@ type ListOptions struct {
 	OrderBy  string
 	OrderHow string
 	Format   string
+}
+
+// OrderByMap maps allowed JSON keys to DB columns
+type OrderByMap map[string]string
+
+// API-specific maps and defaults
+var ContainerAllowedOrderBy = OrderByMap{
+	"cluster":       "clusters.cluster_alias",
+	"workload_type": "workloads.workload_type",
+	"workload":      "workloads.workload_name",
+	"project":       "workloads.namespace",
+	"container":     "recommendation_sets.container_name",
+	"last_reported": "clusters.last_reported_at",
+}
+
+var NsAllowedOrderBy = OrderByMap{
+	"cluster":                "clusters.cluster_alias",
+	"project":                "namespace_recommendation_sets.namespace_name",
+	"cpu_request_current":    "namespace_recommendation_sets.cpu_request_current",
+	"cpu_variation":          "namespace_recommendation_sets.cpu_variation",
+	"memory_request_current": "namespace_recommendation_sets.memory_request_current",
+	"memory_variation":       "namespace_recommendation_sets.memory_variation",
+	"last_reported":          "clusters.last_reported_at",
 }
 
 func parseInt(val string, def int) int {
@@ -36,7 +63,7 @@ func parseInt(val string, def int) int {
 	return def
 }
 
-func ListAPIOptions(c echo.Context, defaultDBColumn string, allowedOrderBy map[string]string) (ListOptions, error) {
+func ListAPIOptions(c echo.Context, defaultDBColumn string, allowedOrderBy OrderByMap) (ListOptions, error) {
 
 	limit := parseInt(c.QueryParam("limit"), DefaultLimit)
 	offset := parseInt(c.QueryParam("offset"), DefaultOffset)

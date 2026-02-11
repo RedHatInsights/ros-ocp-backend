@@ -11,7 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/redhatinsights/platform-go-middlewares/identity"
-	"github.com/redhatinsights/ros-ocp-backend/internal/api/common"
+	"github.com/redhatinsights/ros-ocp-backend/internal/api/listoptions"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 )
 
@@ -55,16 +55,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		unitChoices["memory"] = "bytes"
 	}
 
-	allowedOrderBy := map[string]string{
-		"cluster":       "clusters.cluster_alias",
-		"workload_type": "workloads.workload_type",
-		"workload":      "workloads.workload_name",
-		"project":       "workloads.namespace",
-		"container":     "recommendation_sets.container_name",
-		"last_reported": "clusters.last_reported_at",
-	}
-	defaultDBColumn := "clusters.last_reported_at"
-	listOptions, err := common.ListAPIOptions(c, defaultDBColumn, allowedOrderBy)
+	apiListOptions, err := listoptions.ListAPIOptions(c, listoptions.DefaultContainerRecsDBColumn, listoptions.ContainerAllowedOrderBy)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"status":  "error",
@@ -77,7 +68,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
 	}
 	recommendationSet := model.RecommendationSet{}
-	recommendationSets, count, queryErr := recommendationSet.GetRecommendationSets(OrgID, listOptions, queryParams, user_permissions)
+	recommendationSets, count, queryErr := recommendationSet.GetRecommendationSets(OrgID, apiListOptions, queryParams, user_permissions)
 	if queryErr != nil {
 		log.Errorf("unable to fetch records from database; %v", queryErr)
 	}
@@ -104,15 +95,15 @@ func GetRecommendationSetList(c echo.Context) error {
 		)
 	}
 
-	switch listOptions.Format {
-	case common.ResponseFormatJSON:
+	switch apiListOptions.Format {
+	case listoptions.ResponseFormatJSON:
 		interfaceSlice := make([]interface{}, len(recommendationSets))
 		for i, v := range recommendationSets {
 			interfaceSlice[i] = v
 		}
-		results := CollectionResponse(interfaceSlice, c.Request(), count, listOptions.Limit, listOptions.Offset)
+		results := CollectionResponse(interfaceSlice, c.Request(), count, apiListOptions.Limit, apiListOptions.Offset)
 		return c.JSON(http.StatusOK, results)
-	case common.ResponseFormatCSV:
+	case listoptions.ResponseFormatCSV:
 		filename := "recommendations-" + time.Now().Format("20060102")
 		c.Response().Header().Set(echo.HeaderContentType, "text/csv")
 		c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", filename))
@@ -265,18 +256,7 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 		unitChoices["memory"] = "bytes"
 	}
 
-	allowedOrderBy := map[string]string{
-		"cluster":                "clusters.cluster_alias",
-		"project":                "namespace_recommendation_sets.namespace_name",
-		"cpu_request_current":    "namespace_recommendation_sets.cpu_request_current",
-		"cpu_variation":          "namespace_recommendation_sets.cpu_variation",
-		"memory_request_current": "namespace_recommendation_sets.memory_request_current",
-		"memory_variation":       "namespace_recommendation_sets.memory_variation",
-		"last_reported":          "clusters.last_reported_at",
-	}
-	defaultDBColumn := "clusters.last_reported_at"
-
-	listOptions, err := common.ListAPIOptions(c, defaultDBColumn, allowedOrderBy)
+	apiListOptions, err := listoptions.ListAPIOptions(c, listoptions.DefaultNsRecsDBColumn, listoptions.NsAllowedOrderBy)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"status":  "error",
@@ -287,7 +267,9 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 	queryParams := make(map[string]interface{})
 
 	NamespaceRecommendationSet := model.NamespaceRecommendationSet{}
-	namespaceRecommendationSets, count, queryErr := NamespaceRecommendationSet.GetNamespaceRecommendationSets(OrgID, listOptions, queryParams, user_permissions)
+	namespaceRecommendationSets, count, queryErr := NamespaceRecommendationSet.GetNamespaceRecommendationSets(
+		OrgID, apiListOptions, queryParams, user_permissions,
+	)
 
 	if queryErr != nil {
 		log.Errorf("unable to fetch records from database; %v", queryErr)
@@ -315,15 +297,15 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 		)
 	}
 
-	switch listOptions.Format {
-	case common.ResponseFormatJSON:
+	switch apiListOptions.Format {
+	case listoptions.ResponseFormatJSON:
 		interfaceSlice := make([]interface{}, len(namespaceRecommendationSets))
 		for i, v := range namespaceRecommendationSets {
 			interfaceSlice[i] = v
 		}
-		results := CollectionResponse(interfaceSlice, c.Request(), count, listOptions.Limit, listOptions.Offset)
+		results := CollectionResponse(interfaceSlice, c.Request(), count, apiListOptions.Limit, apiListOptions.Offset)
 		return c.JSON(http.StatusOK, results)
-	case common.ResponseFormatCSV:
+	case listoptions.ResponseFormatCSV:
 		// TODO: Add CSV support when export feature is enabled
 		return c.JSON(http.StatusNotAcceptable, map[string]string{
 			"message": "CSV format is not supported. Please use application/json.",

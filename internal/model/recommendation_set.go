@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/redhatinsights/ros-ocp-backend/internal/api/common"
+	"github.com/redhatinsights/ros-ocp-backend/internal/api/listoptions"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
 	"github.com/redhatinsights/ros-ocp-backend/internal/rbac"
@@ -62,7 +62,7 @@ func GetFirstRecommendationSetsByWorkloadID(workload_id uint) (RecommendationSet
 	return recommendationSets, query.Error
 }
 
-func (r *RecommendationSet) GetRecommendationSets(orgID string, opts common.ListOptions, queryParams map[string]interface{}, user_permissions map[string][]string) ([]RecommendationSetResult, int, error) {
+func (r *RecommendationSet) GetRecommendationSets(orgID string, opts listoptions.ListOptions, queryParams map[string]interface{}, user_permissions map[string][]string) ([]RecommendationSetResult, int, error) {
 	var recommendationSets []RecommendationSetResult
 	var count int64 = 0
 	query := getRecommendationQuery(orgID)
@@ -90,9 +90,7 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, opts common.List
 	}
 
 	query.Count(&count)
-	if opts.OrderBy != "" {
-		query = query.Order(opts.OrderBy + " " + opts.OrderHow)
-	}
+	query = query.Order(opts.OrderBy + " " + opts.OrderHow)
 
 	limit := opts.Limit
 	if opts.Format == "csv" {
