@@ -30,14 +30,14 @@ func commitKafkaMsg(msg *kafka.Message, consumer_object *kafka.Consumer) {
 }
 
 func fetchRecommendationFromKruize(
-	orgId string,
 	experimentName string,
 	maxEndTime time.Time,
 	experimentType types.PayloadType,
+	orgId string,
 ) (any, error) {
 	log := logging.GetLogger()
 
-	response, err := kruize.Update_recommendations(orgId, experimentName, maxEndTime, experimentType)
+	response, err := kruize.Update_recommendations(experimentName, maxEndTime, experimentType, orgId)
 	if err != nil {
 		endInterval := utils.ConvertDateToISO8601(maxEndTime.String())
 		notFoundMsg := fmt.Sprintf("Recommendation for timestamp - \" %s \" does not exist", endInterval)
@@ -127,7 +127,7 @@ func transactionForNamespaceRecommendation(recommendationSetList []model.Namespa
  * Adding interfaces will change the flow structurally, might increase the complexity of this service
  */
 
-func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recommendationType string, isNsEnabled bool) bool {
+func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recommendationType string, orgId string) bool {
 	log := logging.GetLogger()
 	experiment_name := kafkaMsg.Metadata.Experiment_name
 	maxEndTimeFromReport := kafkaMsg.Metadata.Max_endtime_report
@@ -141,7 +141,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 
 	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeContainer {
 		recommendationResponse, err := fetchRecommendationFromKruize(
-			kafkaMsg.Metadata.Org_id, experiment_name, maxEndTimeFromReport, types.PayloadTypeContainer)
+			experiment_name, maxEndTimeFromReport, types.PayloadTypeContainer, kafkaMsg.Metadata.Org_id)
 		if err != nil {
 			return poll_cycle_complete
 		}
@@ -198,9 +198,9 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 
 	}
 
-	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && isNsEnabled {
+	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId) {
 		namespaceRecommendation, err := fetchRecommendationFromKruize(
-			kafkaMsg.Metadata.Org_id, experiment_name, maxEndTimeFromReport, types.PayloadTypeNamespace)
+			experiment_name, maxEndTimeFromReport, types.PayloadTypeNamespace, kafkaMsg.Metadata.Org_id)
 		if err != nil {
 			return poll_cycle_complete
 		}
@@ -296,7 +296,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 		}
 	}
 
-	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && isNsEnabled {
+	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId) {
 		if len(namespaceRecommendationSetList) > 0 {
 			txError := transactionForNamespaceRecommendation(namespaceRecommendationSetList, namespaceHistRecommendationSetList, experiment_name, recommendationType)
 			if txError == nil {
@@ -336,7 +336,6 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 
 	maxEndTimeFromReport := kafkaMsg.Metadata.Max_endtime_report
 	workloadID := kafkaMsg.Metadata.Workload_id
-	isNsEnabled := featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id)
 
 	var recommendation_stored_in_db any
 	var checkRecommExistsErr error
@@ -347,7 +346,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 			log.Errorf("error while checking for container recommendation_set record: %s", checkRecommExistsErr.Error())
 			return
 		}
-	} else if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && isNsEnabled {
+	} else if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id) {
 		recommendation_stored_in_db, checkRecommExistsErr = model.GetFirstNamespaceRecommendationSetsByWorkloadID(workloadID)
 		if checkRecommExistsErr != nil {
 			log.Errorf("error while checking for namespace recommendation_set record: %s", checkRecommExistsErr.Error())
@@ -366,7 +365,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 
 		switch recommendationFound {
 		case false:
-			poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "New", isNsEnabled)
+			poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "New", kafkaMsg.Metadata.Org_id)
 			if poll_cycle_complete {
 				commitKafkaMsg(msg, consumer_object)
 			}
@@ -389,7 +388,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 				duration := maxEndTimeFromReport.Sub(lastRecommRecordDate)
 
 				if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours || utils.NeedRecommOnFirstOfMonth(lastRecommRecordDate, maxEndTimeFromReport) {
-					poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update", isNsEnabled)
+					poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update", kafkaMsg.Metadata.Org_id)
 					if poll_cycle_complete {
 						commitKafkaMsg(msg, consumer_object)
 					}

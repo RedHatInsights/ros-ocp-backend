@@ -148,7 +148,7 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 	return payload_data, nil
 }
 
-func Update_recommendations(orgId string, experiment_name string, interval_end_time time.Time, experimentType types.PayloadType) (any, error) {
+func Update_recommendations(experiment_name string, interval_end_time time.Time, experimentType types.PayloadType, orgId string) (any, error) {
 	url := cfg.KruizeUrl + "/updateRecommendations"
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, nil)
