@@ -176,6 +176,11 @@ func GenerateExperimentName(org_id, source_id, cluster_id, namespace, k8s_object
 
 }
 
+func GenerateNamespaceExperimentName(org_id, source_id, cluster_id, namespace string) string {
+	return fmt.Sprintf("%s|%s|%s|%s|namespace", org_id, source_id, cluster_id, namespace)
+
+}
+
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
@@ -209,16 +214,11 @@ func isItFirstOfMonth(d time.Time) bool {
 	return day == 1
 }
 
-func DetermineCSVType(fileName string) (types.PayloadType, bool) {
+func DetermineCSVType(fileName string) types.PayloadType {
 	isNamespace := strings.Contains(fileName, "namespace")
 
-	if isNamespace && cfg.DisableNamespaceRecommendation {
-		log.Warnf("namespace recommendation disabled, skipped %s", fileName)
-		return "", true // true i.e. should skip file
-	}
-
 	if isNamespace {
-		return types.PayloadTypeNamespace, false
+		return types.PayloadTypeNamespace
 	}
-	return types.PayloadTypeContainer, false
+	return types.PayloadTypeContainer
 }

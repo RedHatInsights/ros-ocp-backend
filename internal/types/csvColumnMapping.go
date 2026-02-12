@@ -69,3 +69,10 @@ var NamespaceCSVColumnMapping = map[string]series.Type{
 	"namespace_total_pods_max":       series.Float,
 	"namespace_total_pods_avg":       series.Float,
 }
+
+func GetColumnMapping(csvType PayloadType) map[string]series.Type {
+	if csvType == PayloadTypeNamespace {
+		return NamespaceCSVColumnMapping
+	}
+	return CSVColumnMapping // default as container
+}
