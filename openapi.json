@@ -340,9 +340,7 @@
                 "cluster",
                 "project",
                 "cpu_request_current",
-                "cpu_variation",
                 "memory_request_current",
-                "memory_variation",
                 "last_reported"
               ],
               "example": "last_reported"
@@ -1533,20 +1531,6 @@
               }
             }
           },
-          "cpu_variation": {
-            "type": "object",
-            "properties": {
-              "value": {
-                "type": "number",
-                "format": "float",
-                "example": 12.5
-              },
-              "format": {
-                "type": "string",
-                "example": "percent"
-              }
-            }
-          },
           "memory_request_current": {
             "type": "object",
             "properties": {
@@ -1558,20 +1542,6 @@
               "format": {
                 "type": "string",
                 "example": "bytes"
-              }
-            }
-          },
-          "memory_variation": {
-            "type": "object",
-            "properties": {
-              "value": {
-                "type": "number",
-                "format": "float",
-                "example": 12
-              },
-              "format": {
-                "type": "string",
-                "example": "percent"
               }
             }
           },

@@ -620,6 +620,9 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 	data = transformComponentUnits(unitsToTransform, updateUnitsk8s, data) // cpu: core values require truncation
 	data = filterNotifications(recommendationID, clusterUUID, data)
 	data = convertVariationToPercentage(data)
+	if handlerName == "namespace-recommendationset-list" {
+		data = flattenCurrentRequests(data)
+	}
 	return data
 }
 
@@ -763,4 +766,14 @@ func GenerateAndStreamCSV(w io.Writer, recommendationSets []model.Recommendation
 		return fmt.Errorf("flush error: %w", err)
 	}
 	return nil
+}
+
+func flattenCurrentRequests(recommendationJSON map[string]interface{}) map[string]interface{} {
+	if current, ok := recommendationJSON["current"].(map[string]interface{}); ok {
+		if requests, ok := current["requests"].(map[string]interface{}); ok {
+			recommendationJSON["cpu_request_current"] = requests["cpu"]
+			recommendationJSON["memory_request_current"] = requests["memory"]
+		}
+	}
+	return recommendationJSON
 }
