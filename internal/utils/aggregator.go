@@ -239,11 +239,7 @@ func hasMissingColumns(requiredColumns []string, csvColumns []string) bool {
 }
 
 func hasMissingColumnsCSV(csvType types.PayloadType, df dataframe.DataFrame) error {
-	// Check if all the required columns are present in CSV
-	columnHeaders := types.CSVColumnMapping
-	if csvType == types.PayloadTypeNamespace {
-		columnHeaders = types.NamespaceCSVColumnMapping
-	}
+	columnHeaders := types.GetColumnMapping(csvType)
 	all_required_columns := make([]string, 0, len(columnHeaders))
 	for k := range columnHeaders {
 		all_required_columns = append(all_required_columns, k)

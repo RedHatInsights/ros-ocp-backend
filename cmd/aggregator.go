@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
@@ -48,14 +49,12 @@ var (
 			if err != nil {
 				panic(err.Error())
 			}
-			csvType, skip := utils.DetermineCSVType(input_file)
-			if skip {
-				log.Warn("namespace recommendations are disabled")
+			csvType := utils.DetermineCSVType(input_file)
+			if csvType == types.PayloadTypeNamespace && config.GetConfig().DisableNamespaceRecommendation {
+				log.Warnf("namespace recommendation disabled, skipped %s", input_file)
+				return
 			}
-			columnHeaders := types.CSVColumnMapping
-			if csvType == types.PayloadTypeNamespace {
-				columnHeaders = types.NamespaceCSVColumnMapping
-			}
+			columnHeaders := types.GetColumnMapping(csvType)
 			df := dataframe.LoadRecords(records, dataframe.WithTypes(columnHeaders))
 			df, err = utils.Aggregate_data(csvType, df)
 			if err != nil {

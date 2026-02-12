@@ -96,6 +96,58 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 	return container_names, nil
 }
 
+func CreateNamespaceExperiment(experiment_name string, cluster_identifier string, namespace string) error {
+
+	payload := namespacePayload.GetCreateNamespaceExperimentPayload(experiment_name, cluster_identifier, namespace)
+
+	postBody, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("unable to create payload: %v", err)
+	}
+	log.Debugf("creating namespace experiment with payload: %s", string(postBody))
+
+	url := cfg.KruizeUrl + "/createExperiment"
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
+	if err != nil {
+		kruizeAPIException.WithLabelValues("/createExperiment").Inc()
+		return fmt.Errorf("error occured while creating namespace experiment: %v", err)
+	}
+	createExperimentRequest.Inc()
+
+	defer func() {
+		_ = res.Body.Close()
+	}()
+	body, _ := io.ReadAll(res.Body)
+
+	log.Debugf("namespace experiment creation response: %s", string(body))
+
+	if res.StatusCode != 201 {
+		resdata := map[string]any{}
+		if err := json.Unmarshal(body, &resdata); err != nil {
+			return fmt.Errorf("can not unmarshal response data: %v", err)
+		}
+
+		// Temporary fix: performance profile not loaded on Kruize init
+		if strings.Contains(resdata["message"].(string), "Performance Profile doesn't exist") && experimentCreateAttempt {
+			log.Error("Performance profile does not exist")
+			log.Info("Trying to create resource_optimization_openshift performance profile")
+			utils.Setup_kruize_performance_profile()
+			experimentCreateAttempt = false
+			err := CreateNamespaceExperiment(experiment_name, cluster_identifier, namespace)
+			experimentCreateAttempt = true
+			return err
+		}
+
+		if strings.Contains(resdata["message"].(string), "Experiment name already exists") {
+			log.Debug("Namespace experiment already exists")
+		} else {
+			return fmt.Errorf("%s", resdata["message"])
+		}
+	}
+
+	return nil
+}
+
 func Update_results(experiment_name string, payload_data []kruizePayload.UpdateResult) ([]kruizePayload.UpdateResult, error) {
 	postBody, err := json.Marshal(payload_data)
 	if err != nil {
@@ -148,7 +200,61 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 	return payload_data, nil
 }
 
-func Update_recommendations(experiment_name string, interval_end_time time.Time, experimentType types.PayloadType, orgId string) (any, error) {
+func UpdateNamespaceResults(experiment_name string, payload_data []namespacePayload.UpdateNamespaceResult) ([]namespacePayload.UpdateNamespaceResult, error) {
+	postBody, err := json.Marshal(payload_data)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create payload: %v", err)
+	}
+
+	// Update metrics to kruize experiment
+	url := cfg.KruizeUrl + "/updateResults"
+	log.Debugf("\n Sending /updateResult request to kruize with namespace payload - %s \n", string(postBody))
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
+	if err != nil {
+		kruizeAPIException.WithLabelValues("/updateResults").Inc()
+		return nil, fmt.Errorf("an Error Occured while sending namespace metrics: %v", err)
+	}
+	updateResultRequest.Inc()
+	defer func() {
+		_ = res.Body.Close()
+	}()
+	body, _ := io.ReadAll(res.Body)
+	log.Debugf("\n Response from API /updateResult - %s \n", string(body))
+	if res.StatusCode != 201 {
+		resdata := namespacePayload.UpdateNamespaceResultResponse{}
+		if err := json.Unmarshal(body, &resdata); err != nil {
+			return nil, fmt.Errorf("can not unmarshal response data: %v", err)
+		}
+
+		// Comparing string should be changed once kruize fix it some standard error message
+		if strings.Contains(resdata.Message, "because \"performanceProfile\" is null") {
+			log.Error("Performance profile does not exist")
+			log.Info("Trying to create resource_optimization_openshift performance profile")
+			utils.Setup_kruize_performance_profile()
+			if payload_data, err := UpdateNamespaceResults(experiment_name, payload_data); err != nil {
+				return nil, err
+			} else {
+				return payload_data, nil
+			}
+		}
+
+		if len(resdata.Data) > 0 {
+			for _, err := range resdata.Data {
+				if len(err.Errors) > 0 {
+					if err.Errors[0].Message == "An entry for this record already exists!" {
+						continue
+					} else {
+						log.Error(err.Errors[0].Message)
+					}
+				}
+			}
+		}
+	}
+
+	return payload_data, nil
+}
+
+func Update_recommendations(experiment_name string, interval_end_time time.Time, experimentType types.PayloadType) (any, error) {
 	url := cfg.KruizeUrl + "/updateRecommendations"
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, nil)
