@@ -8,8 +8,10 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/api/listoptions"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
+	"github.com/redhatinsights/ros-ocp-backend/internal/rbac"
 )
 
 type NamespaceRecommendationSet struct {
@@ -45,8 +47,6 @@ type NamespaceRecommendationSetResult struct {
 	Recommendations      datatypes.JSON `json:"-"`
 	RecommendationsJSON  map[string]any `gorm:"-" json:"recommendations"`
 	SourceID             string         `json:"source_id"`
-	Workload             string         `json:"workload"`
-	WorkloadType         string         `json:"workload_type"`
 }
 
 func (r *NamespaceRecommendationSet) AfterFind(tx *gorm.DB) error {
@@ -54,11 +54,18 @@ func (r *NamespaceRecommendationSet) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
-func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string, orderQuery string, format string, limit int, offset int, queryParams map[string]interface{}, user_permissions map[string][]string) ([]NamespaceRecommendationSetResult, int, error) {
+func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string, opts listoptions.ListOptions, queryParams map[string]interface{}, user_permissions map[string][]string) ([]NamespaceRecommendationSetResult, int, error) {
 	var recommendationSets []NamespaceRecommendationSetResult
+	var count int64 = 0
 	query := getNamespaceRecommendationQuery(orgID)
 
-	add_rbac_filter(query, user_permissions)
+	if err := rbac.AddRBACFilter(
+		query,
+		user_permissions,
+		rbac.ResourceProject,
+	); err != nil {
+		return recommendationSets, int(count), err
+	}
 
 	for key, values := range queryParams {
 		switch v := values.(type) {
@@ -73,14 +80,14 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 		}
 	}
 
-	var count int64 = 0
 	query.Count(&count)
-	query.Order(orderQuery)
+	query = query.Order(opts.OrderBy + " " + opts.OrderHow)
 
-	if format == "csv" {
+	limit := opts.Limit
+	if opts.Format == "csv" {
 		limit = config.GetConfig().RecordLimitCSV
 	}
-	err := query.Offset(offset).Limit(limit).Scan(&recommendationSets).Error
+	err := query.Offset(opts.Offset).Limit(limit).Scan(&recommendationSets).Error
 
 	return recommendationSets, int(count), err
 
