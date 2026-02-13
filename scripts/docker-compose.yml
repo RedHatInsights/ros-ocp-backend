@@ -166,5 +166,9 @@ services:
       command: ["offline", "--client-tokens", "rosocp:dev.token", "--bootstrap-file", "/unleash/bootstrap.json"]
       ports:
         - "3063:3063"
+      environment:
+        - UNLEASH_CLIENT_ACCESS_TOKEN=rosocp:dev.token
+        - UNLEASH_APP_NAME=rosocp
+        - UNLEASH_PORT=3063
       volumes:
         - ../.unleash/bootstrap.json:/unleash/bootstrap.json

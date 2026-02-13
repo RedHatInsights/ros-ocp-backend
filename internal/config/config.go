@@ -73,6 +73,13 @@ type Config struct {
 
 	// Namespace recommendation config
 	DisableNamespaceRecommendation bool `mapstructure:"DISABLE_NAMESPACE_RECOMMENDATION"`
+
+	//Unleash config
+	UnleashClientAccessToken string
+	UnleashHostname          string
+	UnleashPort              int
+	UnleashScheme            string
+	UnleashFullURL           string
 }
 
 var cfg *Config = nil
@@ -137,6 +144,19 @@ func initConfig() {
 		// prometheus config
 		viper.SetDefault("PROMETHEUS_PORT", c.MetricsPort)
 
+		// Unleash config
+		if c.FeatureFlags != nil {
+			viper.SetDefault("UnleashClientAccessToken", *c.FeatureFlags.ClientAccessToken)
+			viper.SetDefault("UnleashHostname", c.FeatureFlags.Hostname)
+			viper.SetDefault("UnleashScheme", string(c.FeatureFlags.Scheme))
+			viper.SetDefault("UnleashPort", c.FeatureFlags.Port)
+			viper.SetDefault("UnleashFullURL",
+				fmt.Sprintf(
+					"%s://%s:%d/api/",
+					viper.GetString("UnleashScheme"),
+					viper.GetString("UnleashHostname"),
+					viper.GetInt("UnleashPort")))
+		}
 	} else {
 		viper.SetDefault("LogFormater", "text")
 
@@ -195,6 +215,20 @@ func initConfig() {
 	viper.SetDefault("RECORD_LIMIT_CSV", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
 	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", true)
+
+	// Unleash config
+	viper.SetDefault("UnleashClientAccessToken", "rosocp:dev.token")
+	viper.SetDefault("UnleashHostname", "0.0.0.0")
+	viper.SetDefault("UnleashScheme", "http")
+	viper.SetDefault("UnleashPort", 3063)
+	viper.SetDefault(
+		"UnleashFullURL",
+		fmt.Sprintf(
+			"%s://%s:%d/api/",
+			viper.GetString("UnleashScheme"),
+			viper.GetString("UnleashHostname"),
+			viper.GetInt("UnleashPort")),
+	)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}

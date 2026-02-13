@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	"github.com/redhatinsights/ros-ocp-backend/internal/featureflags"
 	kafka_internal "github.com/redhatinsights/ros-ocp-backend/internal/kafka"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
@@ -67,7 +68,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 
 	for _, file := range kafkaMsg.Files {
 		if strings.Contains(file, "namespace") {
-			if cfg.DisableNamespaceRecommendation {
+			if !featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id) {
 				log.Warnf("namespace recommendation disabled, skipped %s", file)
 				continue
 			}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
+	"github.com/redhatinsights/ros-ocp-backend/internal/featureflags"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
@@ -32,10 +33,11 @@ func fetchRecommendationFromKruize(
 	experimentName string,
 	maxEndTime time.Time,
 	experimentType types.PayloadType,
+	orgId string,
 ) (any, error) {
 	log := logging.GetLogger()
 
-	response, err := kruize.Update_recommendations(experimentName, maxEndTime, experimentType)
+	response, err := kruize.Update_recommendations(experimentName, maxEndTime, experimentType, orgId)
 	if err != nil {
 		endInterval := utils.ConvertDateToISO8601(maxEndTime.String())
 		notFoundMsg := fmt.Sprintf("Recommendation for timestamp - \" %s \" does not exist", endInterval)
@@ -125,9 +127,8 @@ func transactionForNamespaceRecommendation(recommendationSetList []model.Namespa
  * Adding interfaces will change the flow structurally, might increase the complexity of this service
  */
 
-func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recommendationType string) bool {
+func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recommendationType string, orgId string) bool {
 	log := logging.GetLogger()
-	cfg := config.GetConfig()
 	experiment_name := kafkaMsg.Metadata.Experiment_name
 	maxEndTimeFromReport := kafkaMsg.Metadata.Max_endtime_report
 	poll_cycle_complete := false
@@ -139,7 +140,8 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 	namespaceHistRecommendationSetList := []model.HistoricalNamespaceRecommendationSet{}
 
 	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeContainer {
-		recommendationResponse, err := fetchRecommendationFromKruize(experiment_name, maxEndTimeFromReport, types.PayloadTypeContainer)
+		recommendationResponse, err := fetchRecommendationFromKruize(
+			experiment_name, maxEndTimeFromReport, types.PayloadTypeContainer, kafkaMsg.Metadata.Org_id)
 		if err != nil {
 			return poll_cycle_complete
 		}
@@ -196,90 +198,89 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 
 	}
 
-	if !cfg.DisableNamespaceRecommendation {
-		if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace {
-			namespaceRecommendation, err := fetchRecommendationFromKruize(experiment_name, maxEndTimeFromReport, types.PayloadTypeNamespace)
-			if err != nil {
+	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId) {
+		namespaceRecommendation, err := fetchRecommendationFromKruize(
+			experiment_name, maxEndTimeFromReport, types.PayloadTypeNamespace, kafkaMsg.Metadata.Org_id)
+		if err != nil {
+			return poll_cycle_complete
+		}
+		namespaceRecommendationRequest.Inc()
+
+		if typedNamespaceObj, ok := namespaceRecommendation.(namespacePayload.NamespaceRecommendationResponse); ok {
+
+			if len(typedNamespaceObj) == 0 || len(typedNamespaceObj[0].KubernetesObjects) == 0 {
+				log.Warnf("empty namespace recommendation response for experiment %s", experiment_name)
 				return poll_cycle_complete
 			}
-			namespaceRecommendationRequest.Inc()
 
-			if typedNamespaceObj, ok := namespaceRecommendation.(namespacePayload.NamespaceRecommendationResponse); ok {
+			if typedNamespaceObj[0].ExperimentType != string(types.PayloadTypeNamespace) {
+				log.Errorf("experiment type mismatch: expected %s, got %s", types.PayloadTypeNamespace, typedNamespaceObj[0].ExperimentType)
+				return poll_cycle_complete
+			}
 
-				if len(typedNamespaceObj) == 0 || len(typedNamespaceObj[0].KubernetesObjects) == 0 {
-					log.Warnf("empty namespace recommendation response for experiment %s", experiment_name)
-					return poll_cycle_complete
-				}
-
-				if typedNamespaceObj[0].ExperimentType != string(types.PayloadTypeNamespace) {
-					log.Errorf("experiment type mismatch: expected %s, got %s", types.PayloadTypeNamespace, typedNamespaceObj[0].ExperimentType)
-					return poll_cycle_complete
-				}
-
-				typedNamespaceRecommendation := typedNamespaceObj[0].KubernetesObjects[0].Namespaces
-				if kruize.Is_valid_recommendation(typedNamespaceRecommendation.Recommendations, experiment_name, maxEndTimeFromReport) {
-					for _, v := range typedNamespaceRecommendation.Recommendations.Data {
-						marshalData, err := json.Marshal(v)
-						if err != nil {
-							log.Errorf("unable to list recommendation for: %v", err)
-							continue
-						}
-						recommendationSet := model.NamespaceRecommendationSet{
-							WorkloadID:           kafkaMsg.Metadata.Workload_id,
-							NamespaceName:        typedNamespaceRecommendation.Namespace,
-							CPURequestCurrent:    v.Current.Requests.Cpu.Amount,
-							MemoryRequestCurrent: v.Current.Requests.Memory.Amount,
-							/* TODO
-							 	* Add and populate columns for each term and recommendation type,
-									cpu_variation_short_cost
-									cpu_variation_short_performance
-									cpu_variation_medium_cost
-									cpu_variation_medium_performance
-									cpu_variation_long_cost
-									cpu_variation_long_performance
-									memory_variation_short_cost
-									memory_variation_short_performance
-									memory_variation_medium_cost
-									memory_variation_medium_performance
-									memory_variation_long_cost
-									memory_variation_long_performance
-							*/
-							MonitoringStartTime: v.RecommendationTerms.Short_term.MonitoringStartTime,
-							MonitoringEndTime:   v.MonitoringEndTime,
-							Recommendations:     marshalData,
-						}
-						namespaceRecommendationSetList = append(namespaceRecommendationSetList, recommendationSet)
-
-						historicalRecommendationSet := model.HistoricalNamespaceRecommendationSet{
-							OrgID:                kafkaMsg.Metadata.Org_id,
-							WorkloadID:           kafkaMsg.Metadata.Workload_id,
-							NamespaceName:        typedNamespaceRecommendation.Namespace,
-							CPURequestCurrent:    v.Current.Requests.Cpu.Amount,
-							MemoryRequestCurrent: v.Current.Requests.Memory.Amount,
-							/* TODO
-							 	* Add and populate variation columns for each term and recommendation type,
-									cpu_variation_short_cost
-									cpu_variation_short_performance
-									cpu_variation_medium_cost
-									cpu_variation_medium_performance
-									cpu_variation_long_cost
-									cpu_variation_long_performance
-									memory_variation_short_cost
-									memory_variation_short_performance
-									memory_variation_medium_cost
-									memory_variation_medium_performance
-									memory_variation_long_cost
-									memory_variation_long_performance
-							*/
-							MonitoringStartTime: v.RecommendationTerms.Short_term.MonitoringStartTime,
-							MonitoringEndTime:   v.MonitoringEndTime,
-							Recommendations:     marshalData,
-						}
-						namespaceHistRecommendationSetList = append(namespaceHistRecommendationSetList, historicalRecommendationSet)
+			typedNamespaceRecommendation := typedNamespaceObj[0].KubernetesObjects[0].Namespaces
+			if kruize.Is_valid_recommendation(typedNamespaceRecommendation.Recommendations, experiment_name, maxEndTimeFromReport) {
+				for _, v := range typedNamespaceRecommendation.Recommendations.Data {
+					marshalData, err := json.Marshal(v)
+					if err != nil {
+						log.Errorf("unable to list recommendation for: %v", err)
+						continue
 					}
-				} else {
-					poll_cycle_complete = true
+					recommendationSet := model.NamespaceRecommendationSet{
+						WorkloadID:           kafkaMsg.Metadata.Workload_id,
+						NamespaceName:        typedNamespaceRecommendation.Namespace,
+						CPURequestCurrent:    v.Current.Requests.Cpu.Amount,
+						MemoryRequestCurrent: v.Current.Requests.Memory.Amount,
+						/* TODO
+						 	* Add and populate columns for each term and recommendation type,
+								cpu_variation_short_cost
+								cpu_variation_short_performance
+								cpu_variation_medium_cost
+								cpu_variation_medium_performance
+								cpu_variation_long_cost
+								cpu_variation_long_performance
+								memory_variation_short_cost
+								memory_variation_short_performance
+								memory_variation_medium_cost
+								memory_variation_medium_performance
+								memory_variation_long_cost
+								memory_variation_long_performance
+						*/
+						MonitoringStartTime: v.RecommendationTerms.Short_term.MonitoringStartTime,
+						MonitoringEndTime:   v.MonitoringEndTime,
+						Recommendations:     marshalData,
+					}
+					namespaceRecommendationSetList = append(namespaceRecommendationSetList, recommendationSet)
+
+					historicalRecommendationSet := model.HistoricalNamespaceRecommendationSet{
+						OrgID:                kafkaMsg.Metadata.Org_id,
+						WorkloadID:           kafkaMsg.Metadata.Workload_id,
+						NamespaceName:        typedNamespaceRecommendation.Namespace,
+						CPURequestCurrent:    v.Current.Requests.Cpu.Amount,
+						MemoryRequestCurrent: v.Current.Requests.Memory.Amount,
+						/* TODO
+						 	* Add and populate variation columns for each term and recommendation type,
+								cpu_variation_short_cost
+								cpu_variation_short_performance
+								cpu_variation_medium_cost
+								cpu_variation_medium_performance
+								cpu_variation_long_cost
+								cpu_variation_long_performance
+								memory_variation_short_cost
+								memory_variation_short_performance
+								memory_variation_medium_cost
+								memory_variation_medium_performance
+								memory_variation_long_cost
+								memory_variation_long_performance
+						*/
+						MonitoringStartTime: v.RecommendationTerms.Short_term.MonitoringStartTime,
+						MonitoringEndTime:   v.MonitoringEndTime,
+						Recommendations:     marshalData,
+					}
+					namespaceHistRecommendationSetList = append(namespaceHistRecommendationSetList, historicalRecommendationSet)
 				}
+			} else {
+				poll_cycle_complete = true
 			}
 		}
 
@@ -295,7 +296,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 		}
 	}
 
-	if !cfg.DisableNamespaceRecommendation {
+	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId) {
 		if len(namespaceRecommendationSetList) > 0 {
 			txError := transactionForNamespaceRecommendation(namespaceRecommendationSetList, namespaceHistRecommendationSetList, experiment_name, recommendationType)
 			if txError == nil {
@@ -312,6 +313,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 
 func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer) {
 	log := logging.GetLogger()
+	cfg := config.GetConfig()
 	validate := validator.New()
 	var kafkaMsg types.RecommendationKafkaMsg
 
@@ -344,7 +346,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 			log.Errorf("error while checking for container recommendation_set record: %s", checkRecommExistsErr.Error())
 			return
 		}
-	} else if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && !cfg.DisableNamespaceRecommendation {
+	} else if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id) {
 		recommendation_stored_in_db, checkRecommExistsErr = model.GetFirstNamespaceRecommendationSetsByWorkloadID(workloadID)
 		if checkRecommExistsErr != nil {
 			log.Errorf("error while checking for namespace recommendation_set record: %s", checkRecommExistsErr.Error())
@@ -363,7 +365,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 
 		switch recommendationFound {
 		case false:
-			poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "New")
+			poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "New", kafkaMsg.Metadata.Org_id)
 			if poll_cycle_complete {
 				commitKafkaMsg(msg, consumer_object)
 			}
@@ -386,7 +388,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 				duration := maxEndTimeFromReport.Sub(lastRecommRecordDate)
 
 				if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours || utils.NeedRecommOnFirstOfMonth(lastRecommRecordDate, maxEndTimeFromReport) {
-					poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update")
+					poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update", kafkaMsg.Metadata.Org_id)
 					if poll_cycle_complete {
 						commitKafkaMsg(msg, consumer_object)
 					}
