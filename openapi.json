@@ -289,6 +289,137 @@
           }
         }
       }
+    },
+    "/openshift/namespace/recommendations": {
+      "get": {
+        "tags": [
+          "Namespace Optimizations"
+        ],
+        "summary": "Get all namespace recommendations",
+        "description": "Get resource optimization recommendations at the namespace level. This feature is in limited preview for select customers.",
+        "operationId": "getNamespaceRecommendationList",
+        "parameters": [
+          {
+            "name": "true-units",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Shows all values in true/real-world units. Accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False."
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Pagination offset",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Pagination limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Field to order results by",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cluster",
+                "project",
+                "cpu_request_current",
+                "memory_request_current",
+                "last_reported"
+              ],
+              "example": "last_reported"
+            }
+          },
+          {
+            "name": "order_how",
+            "in": "query",
+            "description": "Sort order direction",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
+              "example": "DESC"
+            }
+          },
+          {
+            "name": "memory-unit",
+            "in": "query",
+            "description": "unit preference for memory",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bytes",
+                "MiB",
+                "GiB"
+              ],
+              "default": "bytes"
+            }
+          },
+          {
+            "name": "cpu-unit",
+            "in": "query",
+            "description": "unit preference for cpu",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "millicores",
+                "cores"
+              ],
+              "default": "cores"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamespaceRecommendationList"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Requested response format is not supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "CSV format is not supported. Please use application/json."
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1305,6 +1436,568 @@
         "type": "number",
         "example": 238.2,
         "format": "float"
+      },
+      "NamespaceRecommendationList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NamespaceRecommendation"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0,
+                "example": 1
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "example": 10
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0,
+                "example": 0
+              }
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "first": {
+                "type": "string"
+              },
+              "previous": {
+                "type": "string"
+              },
+              "next": {
+                "type": "string"
+              },
+              "last": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "NamespaceRecommendation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
+          },
+          "project": {
+            "type": "string",
+            "example": "ros-prod"
+          },
+          "cluster_alias": {
+            "type": "string",
+            "example": "demolab"
+          },
+          "cluster_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "example": "d29c4b8b-f1a8-471c-ab95-b64e36bb51a9"
+          },
+          "source_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "0920ff0d-f1d6-4fe2-8bf3-18e6074bd27b"
+          },
+          "last_reported": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-04-18T15:48:54.000Z"
+          },
+          "cpu_request_current": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "number",
+                "format": "float",
+                "example": 0.25
+              },
+              "format": {
+                "type": "string",
+                "example": "cores"
+              }
+            }
+          },
+          "memory_request_current": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "number",
+                "format": "float",
+                "example": 67108864
+              },
+              "format": {
+                "type": "string",
+                "example": "bytes"
+              }
+            }
+          },
+          "recommendations": {
+            "type": "object",
+            "properties": {
+              "current": {
+                "type": "object",
+                "properties": {
+                  "limits": {
+                    "type": "object",
+                    "properties": {
+                      "cpu": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "type": "number",
+                            "example": 2
+                          },
+                          "format": {
+                            "type": "string",
+                            "example": "cores"
+                          }
+                        }
+                      },
+                      "memory": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "type": "number",
+                            "example": 32212255
+                          },
+                          "format": {
+                            "type": "string",
+                            "example": "bytes"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "requests": {
+                    "type": "object",
+                    "properties": {
+                      "cpu": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "type": "number",
+                            "example": 2
+                          },
+                          "format": {
+                            "type": "string",
+                            "example": "cores"
+                          }
+                        }
+                      },
+                      "memory": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "type": "number",
+                            "example": 21382267
+                          },
+                          "format": {
+                            "type": "string",
+                            "example": "bytes"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "monitoring_end_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "recommendation_terms": {
+                "type": "object",
+                "properties": {
+                  "long_term": {
+                    "$ref": "#/components/schemas/NamespaceLongTermRecommendation"
+                  },
+                  "medium_term": {
+                    "$ref": "#/components/schemas/NamespaceMediumTermRecommendation"
+                  },
+                  "short_term": {
+                    "$ref": "#/components/schemas/NamespaceShortTermRecommendation"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "NamespaceLongTermRecommendation": {
+        "type": "object",
+        "properties": {
+          "duration_in_hours": {
+            "type": "number",
+            "format": "float",
+            "example": 360
+          },
+          "monitoring_start_time": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-06-02T00:45:00Z"
+          },
+          "recommendation_engines": {
+            "type": "object",
+            "properties": {
+              "cost": {
+                "$ref": "#/components/schemas/NamespaceCostRecommendation"
+              },
+              "performance": {
+                "$ref": "#/components/schemas/NamespacePerformanceRecommendation"
+              }
+            }
+          }
+        }
+      },
+      "NamespaceMediumTermRecommendation": {
+        "type": "object",
+        "properties": {
+          "duration_in_hours": {
+            "type": "number",
+            "format": "float",
+            "example": 168
+          },
+          "monitoring_start_time": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-06-02T00:45:00Z"
+          },
+          "recommendation_engines": {
+            "type": "object",
+            "properties": {
+              "cost": {
+                "$ref": "#/components/schemas/NamespaceCostRecommendation"
+              },
+              "performance": {
+                "$ref": "#/components/schemas/NamespacePerformanceRecommendation"
+              }
+            }
+          }
+        }
+      },
+      "NamespaceShortTermRecommendation": {
+        "type": "object",
+        "properties": {
+          "duration_in_hours": {
+            "type": "number",
+            "format": "float",
+            "example": 24
+          },
+          "monitoring_start_time": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-09-24T09:46:20.000Z"
+          },
+          "recommendation_engines": {
+            "type": "object",
+            "properties": {
+              "cost": {
+                "$ref": "#/components/schemas/NamespaceCostRecommendation"
+              },
+              "performance": {
+                "$ref": "#/components/schemas/NamespacePerformanceRecommendation"
+              }
+            }
+          }
+        }
+      },
+      "NamespaceCostRecommendation": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object",
+            "properties": {
+              "limits": {
+                "type": "object",
+                "properties": {
+                  "cpu": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 5.834
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "cores"
+                      }
+                    }
+                  },
+                  "memory": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 1442955264
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "bytes"
+                      }
+                    }
+                  }
+                }
+              },
+              "requests": {
+                "type": "object",
+                "properties": {
+                  "cpu": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 5.834
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "cores"
+                      }
+                    }
+                  },
+                  "memory": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 1442955264
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "bytes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variation": {
+            "type": "object",
+            "properties": {
+              "limits": {
+                "type": "object",
+                "properties": {
+                  "cpu": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 5.834
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "cores"
+                      }
+                    }
+                  },
+                  "memory": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 1442955264
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "bytes"
+                      }
+                    }
+                  }
+                }
+              },
+              "requests": {
+                "type": "object",
+                "properties": {
+                  "cpu": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 5.834
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "cores"
+                      }
+                    }
+                  },
+                  "memory": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 1442955264
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "bytes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "notifications": {
+            "type": "object"
+          }
+        }
+      },
+      "NamespacePerformanceRecommendation": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object",
+            "properties": {
+              "limits": {
+                "type": "object",
+                "properties": {
+                  "cpu": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 5.834
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "cores"
+                      }
+                    }
+                  },
+                  "memory": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 1442955264
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "bytes"
+                      }
+                    }
+                  }
+                }
+              },
+              "requests": {
+                "type": "object",
+                "properties": {
+                  "cpu": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 5.834
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "cores"
+                      }
+                    }
+                  },
+                  "memory": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 1442955264
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "bytes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "variation": {
+            "type": "object",
+            "properties": {
+              "limits": {
+                "type": "object",
+                "properties": {
+                  "cpu": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 5.834
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "cores"
+                      }
+                    }
+                  },
+                  "memory": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 1442955264
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "bytes"
+                      }
+                    }
+                  }
+                }
+              },
+              "requests": {
+                "type": "object",
+                "properties": {
+                  "cpu": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 5.834
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "cores"
+                      }
+                    }
+                  },
+                  "memory": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "number",
+                        "example": 1442955264
+                      },
+                      "format": {
+                        "type": "string",
+                        "example": "bytes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "notifications": {
+            "type": "object"
+          }
+        }
       }
     }
   }

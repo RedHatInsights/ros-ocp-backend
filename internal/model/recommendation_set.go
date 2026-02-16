@@ -8,9 +8,10 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/api/listoptions"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
-	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
+	"github.com/redhatinsights/ros-ocp-backend/internal/rbac"
 )
 
 type RecommendationSet struct {
@@ -61,11 +62,18 @@ func GetFirstRecommendationSetsByWorkloadID(workload_id uint) (RecommendationSet
 	return recommendationSets, query.Error
 }
 
-func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery string, format string, limit int, offset int, queryParams map[string]interface{}, user_permissions map[string][]string) ([]RecommendationSetResult, int, error) {
+func (r *RecommendationSet) GetRecommendationSets(orgID string, opts listoptions.ListOptions, queryParams map[string]interface{}, user_permissions map[string][]string) ([]RecommendationSetResult, int, error) {
 	var recommendationSets []RecommendationSetResult
+	var count int64 = 0
 	query := getRecommendationQuery(orgID)
 
-	add_rbac_filter(query, user_permissions)
+	if err := rbac.AddRBACFilter(
+		query,
+		user_permissions,
+		rbac.ResourceContainer,
+	); err != nil {
+		return recommendationSets, int(count), err
+	}
 
 	for key, values := range queryParams {
 		switch v := values.(type) {
@@ -81,11 +89,11 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 		}
 	}
 
-	var count int64 = 0
 	query.Count(&count)
-	query.Order(orderQuery)
+	query = query.Order(opts.OrderBy + " " + opts.OrderHow)
 
-	if format == "csv" {
+	limit := opts.Limit
+	if opts.Format == "csv" {
 		/*
 		 each db record has short, medium, long term recommendations
 		 each such term recommendation has two types, cost and performance
@@ -93,7 +101,7 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 		*/
 		limit = config.GetConfig().RecordLimitCSV
 	}
-	err := query.Offset(offset).Limit(limit).Scan(&recommendationSets).Error
+	err := query.Offset(opts.Offset).Limit(limit).Scan(&recommendationSets).Error
 
 	return recommendationSets, int(count), err
 }
@@ -104,7 +112,13 @@ func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendatio
 	query := getRecommendationQuery(orgID)
 	query.Where("recommendation_sets.id = ?", recommendationID)
 
-	add_rbac_filter(query, user_permissions)
+	if err := rbac.AddRBACFilter(
+		query,
+		user_permissions,
+		rbac.ResourceContainer,
+	); err != nil {
+		return recommendationSet, err
+	}
 
 	err := query.First(&recommendationSet).Error
 	return recommendationSet, err
@@ -122,53 +136,4 @@ func (r *RecommendationSet) CreateRecommendationSet(tx *gorm.DB) error {
 	}
 
 	return nil
-}
-
-func add_rbac_filter(query *gorm.DB, user_permissions map[string][]string) {
-	cfg := config.GetConfig()
-	if cfg.RBACEnabled {
-		if _, ok := user_permissions["*"]; ok {
-			return
-		}
-
-		if cluster_permissions, ok := user_permissions["openshift.cluster"]; ok {
-			if project_permissions, ok := user_permissions["openshift.project"]; ok {
-				if utils.StringInSlice("*", cluster_permissions) && utils.StringInSlice("*", project_permissions) {
-					return
-				} else if utils.StringInSlice("*", cluster_permissions) {
-					query.Where("workloads.namespace IN (?)", project_permissions)
-					return
-				} else if utils.StringInSlice("*", project_permissions) {
-					query.Where("clusters.cluster_uuid IN (?)", cluster_permissions)
-					return
-				} else {
-					query.Where("clusters.cluster_uuid IN (?)", cluster_permissions)
-					query.Where("workloads.namespace IN (?)", project_permissions)
-					return
-				}
-			}
-		}
-
-		// if user has cluster level permision but project level permissions is not explicitly set
-		// that means user have access to all projects in that cluster
-		if cluster_permissions, ok := user_permissions["openshift.cluster"]; ok {
-			if _, ok := user_permissions["openshift.project"]; !ok {
-				if !utils.StringInSlice("*", cluster_permissions) {
-					query.Where("clusters.cluster_uuid IN (?)", cluster_permissions)
-					return
-				}
-			}
-		}
-
-		// if user has project level permision but cluster level permissions is not explicitly set
-		// that means user have access to project in all the clusters
-		if _, ok := user_permissions["openshift.cluster"]; !ok {
-			if project_permissions, ok := user_permissions["openshift.project"]; ok {
-				if !utils.StringInSlice("*", project_permissions) {
-					query.Where("workloads.namespace IN (?)", project_permissions)
-					return
-				}
-			}
-		}
-	}
 }
