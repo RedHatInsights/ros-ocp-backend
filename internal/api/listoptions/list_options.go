@@ -83,6 +83,10 @@ func ListAPIOptions(c echo.Context, defaultDBColumn string, allowedOrderBy Order
 		offset = DefaultOffset
 	}
 
+	if limit < -1 {
+		return ListOptions{}, fmt.Errorf("limit cannot be less than -1")
+	}
+
 	if orderHow == "" {
 		orderHow = OrderDesc
 	}
