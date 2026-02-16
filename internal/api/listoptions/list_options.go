@@ -67,7 +67,7 @@ func ListAPIOptions(c echo.Context, defaultDBColumn string, allowedOrderBy Order
 
 	limit := parseInt(c.QueryParam("limit"), DefaultLimit)
 	offset := parseInt(c.QueryParam("offset"), DefaultOffset)
-	orderBy := strings.TrimSpace(c.QueryParam("order_by"))
+	orderBy := c.QueryParam("order_by")
 	orderHow := strings.ToLower(c.QueryParam("order_how"))
 
 	// Format handling
