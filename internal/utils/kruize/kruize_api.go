@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
-	"github.com/redhatinsights/ros-ocp-backend/internal/featureflags"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
@@ -286,7 +285,7 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time,
 
 	var response any
 
-	if experimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId) {
+	if experimentType == types.PayloadTypeNamespace {
 		var namespaceResponse namespacePayload.NamespaceRecommendationResponse
 		if err := json.Unmarshal(body, &namespaceResponse); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal response of /updateRecommendations API %v", err)

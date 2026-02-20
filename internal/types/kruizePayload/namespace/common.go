@@ -30,7 +30,7 @@ type NamespaceKubernetesObject struct {
 
 type NamespaceObject struct {
 	Namespace       string                       `json:"namespace,omitempty"`
-	Recommendations kruizePayload.Recommendation `json:"recommendations,omitzero"`
+	Recommendations kruizePayload.Recommendation `json:"recommendations"`
 }
 
 func makeNamespaceMetrics(row map[string]any) []kruizePayload.Metric {

@@ -6,10 +6,8 @@ import (
 	"os"
 
 	"github.com/go-gota/gota/dataframe"
-	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 
-	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
@@ -50,10 +48,6 @@ var (
 				panic(err.Error())
 			}
 			csvType := utils.DetermineCSVType(input_file)
-			if csvType == types.PayloadTypeNamespace && config.GetConfig().DisableNamespaceRecommendation {
-				log.Warnf("namespace recommendation disabled, skipped %s", input_file)
-				return
-			}
 			columnHeaders := types.GetColumnMapping(csvType)
 			df := dataframe.LoadRecords(records, dataframe.WithTypes(columnHeaders))
 			df, err = utils.Aggregate_data(csvType, df)

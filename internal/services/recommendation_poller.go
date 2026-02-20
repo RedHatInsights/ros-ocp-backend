@@ -33,11 +33,10 @@ func fetchRecommendationFromKruize(
 	experimentName string,
 	maxEndTime time.Time,
 	experimentType types.PayloadType,
-	orgId string,
 ) (any, error) {
 	log := logging.GetLogger()
 
-	response, err := kruize.Update_recommendations(experimentName, maxEndTime, experimentType, orgId)
+	response, err := kruize.Update_recommendations(experimentName, maxEndTime, experimentType)
 	if err != nil {
 		endInterval := utils.ConvertDateToISO8601(maxEndTime.String())
 		notFoundMsg := fmt.Sprintf("Recommendation for timestamp - \" %s \" does not exist", endInterval)
@@ -141,7 +140,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 
 	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeContainer {
 		recommendationResponse, err := fetchRecommendationFromKruize(
-			experiment_name, maxEndTimeFromReport, types.PayloadTypeContainer, kafkaMsg.Metadata.Org_id)
+			experiment_name, maxEndTimeFromReport, types.PayloadTypeContainer)
 		if err != nil {
 			return poll_cycle_complete
 		}
@@ -200,7 +199,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 
 	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId) {
 		namespaceRecommendation, err := fetchRecommendationFromKruize(
-			experiment_name, maxEndTimeFromReport, types.PayloadTypeNamespace, kafkaMsg.Metadata.Org_id)
+			experiment_name, maxEndTimeFromReport, types.PayloadTypeNamespace)
 		if err != nil {
 			return poll_cycle_complete
 		}

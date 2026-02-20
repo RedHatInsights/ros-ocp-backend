@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -47,9 +48,32 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 
 	for _, file := range kafkaMsg.Files {
 		csvType = utils.DetermineCSVType(file)
-		if csvType == types.PayloadTypeNamespace && cfg.DisableNamespaceRecommendation {
-			log.Warnf("namespace recommendation disabled, skipped %s", file)
-			continue
+		if strings.Contains(file, "namespace") {
+			if cfg.DisableNamespaceRecommendation {
+				log.Warnf("namespace recommendation disabled, skipped %s", file)
+				continue
+			}
+
+			if !featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id) {
+				continue
+			}
+		}
+		data, err := utils.ReadCSVFromUrl(file)
+		if err != nil {
+			invalidCSV.Inc()
+			// TODO update relevant metric
+			log.Errorf("Unable to read CSV from URL. Error: %s", err)
+			return
+		}
+		columnHeaders := types.GetColumnMapping(csvType)
+		df := dataframe.LoadRecords(
+			data,
+			dataframe.WithTypes(columnHeaders),
+		)
+		df, err = utils.Aggregate_data(csvType, df)
+		if err != nil {
+			log.Errorf("Error: %s", err)
+			return
 		}
 
 		// Create user account(if not present) for incoming archive.
@@ -68,45 +92,16 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 			SourceId:       kafkaMsg.Metadata.Source_id,
 			ClusterUUID:    kafkaMsg.Metadata.Cluster_uuid,
 			ClusterAlias:   kafkaMsg.Metadata.Cluster_alias,
-			LastReportedAt: time.Now(),
+			LastReportedAt: time.Now(), // TODO Do we need to update this everytime?
 		}
 		if err := cluster.CreateCluster(); err != nil {
 			log.Errorf("unable to get or add record to clusters table: %v. Error: %v", cluster, err)
 			return
 		}
 
-	for _, file := range kafkaMsg.Files {
-		if strings.Contains(file, "namespace") {
-			if cfg.DisableNamespaceRecommendation {
-                log.Warnf("namespace recommendation disabled, skipped %s", file)
-                continue
-            }
-
-            if !featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id) {
-                continue
-            }
-		}
-		data, err := utils.ReadCSVFromUrl(file)
-		if err != nil {
-			invalidCSV.Inc()
-			// todo update relevant metric
-			log.Errorf("Unable to read CSV from URL. Error: %s", err)
-			return
-		}
-		columnHeaders := types.GetColumnMapping(csvType)
-		df := dataframe.LoadRecords(
-			data,
-			dataframe.WithTypes(columnHeaders),
-		)
-		df, err = utils.Aggregate_data(csvType, df)
-		if err != nil {
-			log.Errorf("Error: %s", err)
-			return
-		}
-
 		switch csvType {
 		case types.PayloadTypeContainer:
-			// grouping container(row in csv) by there deployement.
+			// grouping container(row in csv) by deployment.
 			k8s_object_groups := df.GroupBy("namespace", "k8s_object_type", "k8s_object_name").GetGroups()
 
 			for _, v := range k8s_object_groups {
@@ -229,7 +224,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 
 				msgProduceErr := kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experiment_name)
 				if msgProduceErr != nil {
-					log.Errorf("Failed to produce message: %v for experiment - %s and end_interval - %s\n", err, experiment_name, maxEndtimeFromReport)
+					log.Errorf("Failed to produce message: %v for experiment - %s and end_interval - %s\n", msgProduceErr.Error(), experiment_name, maxEndtimeFromReport)
 				} else {
 					log.Infof("Recommendation request sent for experiment - %s and end_interval - %s", experiment_name, maxEndtimeFromReport)
 				}
@@ -350,7 +345,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 
 				msgProduceErr := kafka_internal.SendMessage(msgBytes, cfg.RecommendationTopic, experimentName)
 				if msgProduceErr != nil {
-					log.Errorf("failed to produce message: %v for experiment - %s and end_interval - %s\n", err, experimentName, maxEndtimeFromReport)
+					log.Errorf("failed to produce message: %v for experiment - %s and end_interval - %s\n", msgProduceErr.Error(), experimentName, maxEndtimeFromReport)
 				} else {
 					log.Infof("recommendation request sent for experiment - %s and end_interval - %s", experimentName, maxEndtimeFromReport)
 				}
