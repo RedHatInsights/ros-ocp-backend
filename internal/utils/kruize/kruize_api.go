@@ -331,7 +331,7 @@ func IsValidRecommendation(recommendation kruizePayload.Recommendation, experime
 	}
 }
 
-func Delete_experiment_from_kruize(experiment_name string) {
+func DeleteExperimentFromKruize(experiment_name string) {
 	deletion_err_log := func(err error) {
 		kruizeAPIException.WithLabelValues("/deleteExperiment").Inc()
 		log.Errorf("error occured while deleting experiment: %s. Error - %s", experiment_name, err)
