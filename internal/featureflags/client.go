@@ -24,7 +24,6 @@ func Init() error {
 			"Authorization": {cfg.UnleashClientAccessToken},
 		}),
 		unleash.WithRefreshInterval(15*time.Second),
-		unleash.WithListener(&unleash.DebugListener{}),
 	)
 
 	if err != nil {
