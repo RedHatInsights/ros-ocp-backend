@@ -160,7 +160,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 
 			containers := recommendation[0].Kubernetes_objects[0].Containers
 			for _, container := range containers {
-				if kruize.Is_valid_recommendation(container.Recommendations, experiment_name, maxEndTimeFromReport) {
+				if kruize.IsValidRecommendation(container.Recommendations, experiment_name, maxEndTimeFromReport, types.PayloadTypeContainer) {
 					for _, v := range container.Recommendations.Data {
 						marshalData, err := json.Marshal(v)
 						if err != nil {
@@ -218,7 +218,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 			}
 
 			typedNamespaceRecommendation := typedNamespaceObj[0].KubernetesObjects[0].Namespaces
-			if kruize.Is_valid_recommendation(typedNamespaceRecommendation.Recommendations, experiment_name, maxEndTimeFromReport) {
+			if kruize.IsValidRecommendation(typedNamespaceRecommendation.Recommendations, experiment_name, maxEndTimeFromReport, types.PayloadTypeNamespace) {
 				for _, v := range typedNamespaceRecommendation.Recommendations.Data {
 					marshalData, err := json.Marshal(v)
 					if err != nil {

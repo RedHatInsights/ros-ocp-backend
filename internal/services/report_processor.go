@@ -46,8 +46,11 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 
 	var csvType types.PayloadType
 
-	var rh_account model.RHAccount
-	var rhAccountInitialized bool
+	var rhAccount model.RHAccount
+	var rhAccountCreated bool
+
+	var cluster model.Cluster
+	var clusterCreated bool
 
 	for _, file := range kafkaMsg.Files {
 		csvType = utils.DetermineCSVType(file)
@@ -61,11 +64,10 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 				continue
 			}
 		}
-		data, err := utils.ReadCSVFromUrl(file)
-		if err != nil {
-			invalidCSV.Inc()
-			// TODO update relevant metric
-			log.Errorf("Unable to read CSV from URL. Error: %s", err)
+		data, fetchError := utils.ReadCSVFromUrl(file)
+		if fetchError != nil {
+			csvFetchError.Inc()
+			log.Errorf("unable to read CSV from URL: %s", fetchError.Error())
 			return
 		}
 		columnHeaders := types.GetColumnMapping(csvType)
@@ -73,35 +75,43 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 			data,
 			dataframe.WithTypes(columnHeaders),
 		)
-		df, err = utils.Aggregate_data(csvType, df)
-		if err != nil {
-			log.Errorf("Error: %s", err)
-			return
+		df, parseError := utils.Aggregate_data(csvType, df)
+		if parseError != nil {
+			switch csvType {
+			case types.PayloadTypeNamespace:
+				invalidNamespaceCSV.Inc()
+			case types.PayloadTypeContainer:
+				invalidCSV.Inc()
+				log.Errorf("unable to process CSV: %s", parseError.Error())
+				return
+			}
 		}
 
-		if !rhAccountInitialized {
-			rh_account = model.RHAccount{
+		if !rhAccountCreated {
+			rhAccount = model.RHAccount{
 				Account: kafkaMsg.Metadata.Account,
 				OrgId:   kafkaMsg.Metadata.Org_id,
 			}
-			if err := rh_account.CreateRHAccount(); err != nil {
-				log.Errorf("unable to get or add record to rh_accounts table: %v. Error: %v", rh_account, err)
+			if err := rhAccount.CreateRHAccount(); err != nil {
+				log.Errorf("unable to get or add record to rh_accounts table: %v. Error: %v", rhAccount, err)
 				return
 			}
-			rhAccountInitialized = true
+			rhAccountCreated = true
 		}
 
-		// Create cluster record(if not present) for incoming archive.
-		cluster := model.Cluster{
-			TenantID:       rh_account.ID,
-			SourceId:       kafkaMsg.Metadata.Source_id,
-			ClusterUUID:    kafkaMsg.Metadata.Cluster_uuid,
-			ClusterAlias:   kafkaMsg.Metadata.Cluster_alias,
-			LastReportedAt: time.Now(), // TODO Do we need to update this everytime?
-		}
-		if err := cluster.CreateCluster(); err != nil {
-			log.Errorf("unable to get or add record to clusters table: %v. Error: %v", cluster, err)
-			return
+		if !clusterCreated {
+			cluster = model.Cluster{
+				TenantID:       rhAccount.ID,
+				SourceId:       kafkaMsg.Metadata.Source_id,
+				ClusterUUID:    kafkaMsg.Metadata.Cluster_uuid,
+				ClusterAlias:   kafkaMsg.Metadata.Cluster_alias,
+				LastReportedAt: time.Now(),
+			}
+			if err := cluster.CreateCluster(); err != nil {
+				log.Errorf("unable to get or add record to clusters table: %v. Error: %v", cluster, err)
+				return
+			}
+			clusterCreated = true
 		}
 
 		switch csvType {
@@ -141,7 +151,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 
 				// Create workload entry into the table.
 				workload := model.Workload{
-					OrgId:           rh_account.OrgId,
+					OrgId:           rhAccount.OrgId,
 					ClusterID:       cluster.ID,
 					ExperimentName:  experiment_name,
 					Namespace:       namespace,
@@ -187,12 +197,12 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 						for _, container := range data.Kubernetes_objects[0].Containers {
 							container_usage_metrics, err := json.Marshal(container.Metrics)
 							if err != nil {
-								log.Errorf("Unable to marshal container usage data: %v", err)
+								log.Errorf("Unable to marshal container usage data: %v", err.Error())
 								continue
 							}
 
 							workload_metric := model.WorkloadMetrics{
-								OrgId:         rh_account.OrgId,
+								OrgId:         rhAccount.OrgId,
 								WorkloadID:    workload.ID,
 								ContainerName: container.Container_name,
 								IntervalStart: interval_start_time,
@@ -203,8 +213,8 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 						}
 
 					}
-					if err := model.BatchInsertWorkloadMetrics(workload_metric_arr, rh_account.OrgId); err != nil {
-						log.Errorf("unable to batch insert to workload_metrics table. Error: %v", err)
+					if err := model.BatchInsertWorkloadMetrics(workload_metric_arr, rhAccount.OrgId); err != nil {
+						log.Errorf("unable to batch insert to workload_metrics table. %v", err.Error())
 					}
 				}
 
@@ -265,7 +275,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 				}
 
 				workload := model.Workload{
-					OrgId:           rh_account.OrgId,
+					OrgId:           rhAccount.OrgId,
 					ClusterID:       cluster.ID,
 					ExperimentName:  experimentName,
 					Namespace:       namespaceName,
@@ -313,7 +323,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 						}
 
 						workloadMetricNamespace := model.WorkloadMetrics{
-							OrgId:         rh_account.OrgId,
+							OrgId:         rhAccount.OrgId,
 							WorkloadID:    workload.ID,
 							NamespaceName: namespaceName,
 							MetricType:    "namespace",
@@ -324,7 +334,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 						workloadMetricSlice = append(workloadMetricSlice, workloadMetricNamespace)
 					}
 
-					if err := model.BatchInsertWorkloadMetrics(workloadMetricSlice, rh_account.OrgId); err != nil {
+					if err := model.BatchInsertWorkloadMetrics(workloadMetricSlice, rhAccount.OrgId); err != nil {
 						log.Errorf("unable to batch insert namespace metrics to workload_metrics table. Error: %v", err)
 					}
 				}

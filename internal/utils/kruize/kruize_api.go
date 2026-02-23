@@ -117,7 +117,7 @@ func CreateNamespaceExperiment(experiment_name string, cluster_identifier string
 		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return fmt.Errorf("error occured while creating namespace experiment: %v", err)
 	}
-	createExperimentRequest.Inc()
+	createNamespaceExperimentRequest.Inc()
 
 	defer func() {
 		_ = res.Body.Close()
@@ -219,7 +219,7 @@ func UpdateNamespaceResults(experiment_name string, payload_data []namespacePayl
 		kruizeAPIException.WithLabelValues(KruizeUpdateResults).Inc()
 		return nil, fmt.Errorf("an Error Occured while sending namespace metrics: %v", err)
 	}
-	updateResultRequest.Inc()
+	updateNamespaceResultRequest.Inc()
 	defer func() {
 		_ = res.Body.Close()
 	}()
@@ -308,7 +308,7 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time,
 	return response, nil
 }
 
-func Is_valid_recommendation(recommendation kruizePayload.Recommendation, experiment_name string, maxEndTime time.Time) bool {
+func IsValidRecommendation(recommendation kruizePayload.Recommendation, experiment_name string, maxEndTime time.Time, experimentType types.PayloadType) bool {
 	validRecommendationCode := "111000"
 	_, recommendationIsValid := recommendation.Notifications[validRecommendationCode]
 	if recommendationIsValid {
@@ -317,7 +317,12 @@ func Is_valid_recommendation(recommendation kruizePayload.Recommendation, experi
 		_, timeStampisValid := recommendation.Data[formattedMaxEndTime]
 		if !timeStampisValid {
 			log.Error("recommendation not found for endtime: ", formattedMaxEndTime)
-			invalidRecommendation.Inc()
+			switch experimentType {
+			case types.PayloadTypeNamespace:
+				invalidNamespaceRecommendation.Inc()
+			case types.PayloadTypeContainer:
+				invalidRecommendation.Inc()
+			}
 			return false
 		}
 		return true

@@ -14,6 +14,7 @@ func TestDisableNamespaceRecommendation(t *testing.T) {
 	cfg := config.GetConfig()
 	if cfg == nil {
 		t.Fatal("unable to fetch config")
+		return
 	}
 
 	if !cfg.DisableNamespaceRecommendation {

@@ -141,6 +141,7 @@ func TestNonClowderConfigurationLoads(t *testing.T) {
 	// Verify configuration loaded successfully
 	if config == nil {
 		t.Fatal("GetConfig() returned nil")
+		return
 	}
 
 	// Verify environment variables were applied
