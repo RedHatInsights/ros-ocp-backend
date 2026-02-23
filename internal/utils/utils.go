@@ -177,8 +177,7 @@ func GenerateExperimentName(org_id, source_id, cluster_id, namespace, k8s_object
 }
 
 func GenerateNamespaceExperimentName(org_id, source_id, cluster_id, namespace string) string {
-	return fmt.Sprintf("%s|%s|%s|%s|namespace", org_id, source_id, cluster_id, namespace)
-
+	return fmt.Sprintf("%s|%s|%s|namespace|%s", org_id, source_id, cluster_id, namespace)
 }
 
 func StringInSlice(a string, list []string) bool {

@@ -46,6 +46,9 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 
 	var csvType types.PayloadType
 
+	var rh_account model.RHAccount
+	var rhAccountInitialized bool
+
 	for _, file := range kafkaMsg.Files {
 		csvType = utils.DetermineCSVType(file)
 		if strings.Contains(file, "namespace") {
@@ -76,14 +79,16 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 			return
 		}
 
-		// Create user account(if not present) for incoming archive.
-		rh_account := model.RHAccount{
-			Account: kafkaMsg.Metadata.Account,
-			OrgId:   kafkaMsg.Metadata.Org_id,
-		}
-		if err := rh_account.CreateRHAccount(); err != nil {
-			log.Errorf("unable to get or add record to rh_accounts table: %v. Error: %v", rh_account, err)
-			return
+		if !rhAccountInitialized {
+			rh_account = model.RHAccount{
+				Account: kafkaMsg.Metadata.Account,
+				OrgId:   kafkaMsg.Metadata.Org_id,
+			}
+			if err := rh_account.CreateRHAccount(); err != nil {
+				log.Errorf("unable to get or add record to rh_accounts table: %v. Error: %v", rh_account, err)
+				return
+			}
+			rhAccountInitialized = true
 		}
 
 		// Create cluster record(if not present) for incoming archive.
@@ -153,7 +158,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 				var k8s_object_chunks [][]kruizePayload.UpdateResult
 				update_result_payload_data := kruizePayload.GetUpdateResultPayload(experiment_name, k8s_object)
 				if len(update_result_payload_data) > cfg.KruizeMaxBulkChunkSize {
-					k8s_object_chunks = sliceUpdatePayloadToChunks(update_result_payload_data)
+					k8s_object_chunks = SliceMetricsUpdatePayloadToChunks(update_result_payload_data)
 				} else {
 					k8s_object_chunks = append(k8s_object_chunks, update_result_payload_data)
 				}
@@ -232,30 +237,30 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 			}
 
 		case types.PayloadTypeNamespace:
-			namespace_groups := df.GroupBy("namespace").GetGroups()
-			for _, v := range namespace_groups {
+			namespaceGroupMap := df.GroupBy("namespace").GetGroups()
+			for _, v := range namespaceGroupMap {
 
-				all_interval_end_time := v.Col("interval_end").Records()
-				maxEndTime, err := utils.MaxIntervalEndTime(all_interval_end_time)
+				intervalEndTimeValues := v.Col("interval_end").Records()
+				maxEndTime, err := utils.MaxIntervalEndTime(intervalEndTimeValues)
 				if err != nil {
 					log.Errorf("unable to convert string to time: %s", err)
 					continue
 				}
 
-				k8s_object := v.Maps()
-				namespace := kruizePayload.AssertAndConvertToString(k8s_object[0]["namespace"])
+				namespaceRows := v.Maps()
+				namespaceName := kruizePayload.AssertAndConvertToString(namespaceRows[0]["namespace"])
 
 				experimentName := utils.GenerateNamespaceExperimentName(
 					kafkaMsg.Metadata.Org_id,
 					kafkaMsg.Metadata.Source_id,
 					kafkaMsg.Metadata.Cluster_uuid,
-					namespace,
+					namespaceName,
 				)
 
-				cluster_identifier := kafkaMsg.Metadata.Org_id + ";" + kafkaMsg.Metadata.Cluster_uuid
-				experimentCreateError := kruize.CreateNamespaceExperiment(experimentName, cluster_identifier, namespace)
+				clusterIdentifier := kafkaMsg.Metadata.Org_id + ";" + kafkaMsg.Metadata.Cluster_uuid
+				experimentCreateError := kruize.CreateNamespaceExperiment(experimentName, clusterIdentifier, namespaceName)
 				if experimentCreateError != nil {
-					log.Error(experimentCreateError)
+					log.Error(experimentCreateError.Error())
 					continue
 				}
 
@@ -263,7 +268,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 					OrgId:           rh_account.OrgId,
 					ClusterID:       cluster.ID,
 					ExperimentName:  experimentName,
-					Namespace:       namespace,
+					Namespace:       namespaceName,
 					WorkloadType:    w.Namespace,
 					MetricsUploadAt: maxEndTime,
 				}
@@ -273,9 +278,9 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 				}
 
 				var namespaceChunks [][]namespacePayload.UpdateNamespaceResult
-				updateResultPayload := namespacePayload.GetUpdateNamespaceResultPayload(experimentName, k8s_object)
+				updateResultPayload := namespacePayload.GetUpdateNamespaceResultPayload(experimentName, namespaceRows)
 				if len(updateResultPayload) > cfg.KruizeMaxBulkChunkSize {
-					namespaceChunks = sliceNamespaceUpdatePayloadToChunks(updateResultPayload)
+					namespaceChunks = SliceMetricsUpdatePayloadToChunks(updateResultPayload)
 				} else {
 					namespaceChunks = append(namespaceChunks, updateResultPayload)
 				}
@@ -300,23 +305,23 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 							continue
 						}
 
-						namespace_metrics := data.KubernetesObjects[0].Namespaces.Metrics
-						namespace_usage_metrics, err := json.Marshal(namespace_metrics)
+						namespaceMetrics := data.KubernetesObjects[0].Namespaces.Metrics
+						namespaceUsageMetrics, err := json.Marshal(namespaceMetrics)
 						if err != nil {
 							log.Errorf("unable to marshal namespace usage data: %v", err)
 							continue
 						}
 
-						workload_metric := model.WorkloadMetrics{
+						workloadMetricNamespace := model.WorkloadMetrics{
 							OrgId:         rh_account.OrgId,
 							WorkloadID:    workload.ID,
-							NamespaceName: namespace,
+							NamespaceName: namespaceName,
 							MetricType:    "namespace",
 							IntervalStart: interval_start_time,
 							IntervalEnd:   interval_end_time,
-							UsageMetrics:  namespace_usage_metrics,
+							UsageMetrics:  namespaceUsageMetrics,
 						}
-						workloadMetricSlice = append(workloadMetricSlice, workload_metric)
+						workloadMetricSlice = append(workloadMetricSlice, workloadMetricNamespace)
 					}
 
 					if err := model.BatchInsertWorkloadMetrics(workloadMetricSlice, rh_account.OrgId); err != nil {
@@ -355,36 +360,4 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 
 	}
 
-}
-
-func sliceUpdatePayloadToChunks(k8s_objects []kruizePayload.UpdateResult) [][]kruizePayload.UpdateResult {
-	var chunks [][]kruizePayload.UpdateResult
-	chunkSize := cfg.KruizeMaxBulkChunkSize
-	for i := 0; i < len(k8s_objects); i += chunkSize {
-		end := i + chunkSize
-
-		if end > len(k8s_objects) {
-			end = len(k8s_objects)
-		}
-
-		chunks = append(chunks, k8s_objects[i:end])
-	}
-
-	return chunks
-}
-
-func sliceNamespaceUpdatePayloadToChunks(namespace_objects []namespacePayload.UpdateNamespaceResult) [][]namespacePayload.UpdateNamespaceResult {
-	var chunks [][]namespacePayload.UpdateNamespaceResult
-	chunkSize := cfg.KruizeMaxBulkChunkSize
-	for i := 0; i < len(namespace_objects); i += chunkSize {
-		end := i + chunkSize
-
-		if end > len(namespace_objects) {
-			end = len(namespace_objects)
-		}
-
-		chunks = append(chunks, namespace_objects[i:end])
-	}
-
-	return chunks
 }

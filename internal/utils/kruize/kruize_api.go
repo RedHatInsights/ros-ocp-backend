@@ -24,6 +24,12 @@ var (
 	experimentCreateAttempt bool           = true
 )
 
+const (
+	KruizeCreateExperiment      string = "/createExperiment"
+	KruizeUpdateResults         string = "/updateResults"
+	KruizeUpdateRecommendations string = "/updateRecommendations"
+)
+
 func Create_kruize_experiments(experiment_name string, cluster_identifier string, k8s_object []map[string]interface{}) ([]string, error) {
 	// k8s_object (can) contain multiple containers of same k8s object type.
 	data := map[string]string{
@@ -48,10 +54,10 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 		return nil, fmt.Errorf("unable to create payload: %v", err)
 	}
 	// Create experiment in kruize
-	url := cfg.KruizeUrl + "/createExperiment"
+	url := cfg.KruizeUrl + KruizeCreateExperiment
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
-		kruizeAPIException.WithLabelValues("/createExperiment").Inc()
+		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return nil, fmt.Errorf("error Occured while creating experiment: %v", err)
 	}
 	createExperimentRequest.Inc()
@@ -105,10 +111,10 @@ func CreateNamespaceExperiment(experiment_name string, cluster_identifier string
 	}
 	log.Debugf("creating namespace experiment with payload: %s", string(postBody))
 
-	url := cfg.KruizeUrl + "/createExperiment"
+	url := cfg.KruizeUrl + KruizeCreateExperiment
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
-		kruizeAPIException.WithLabelValues("/createExperiment").Inc()
+		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return fmt.Errorf("error occured while creating namespace experiment: %v", err)
 	}
 	createExperimentRequest.Inc()
@@ -154,11 +160,11 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 	}
 
 	// Update metrics to kruize experiment
-	url := cfg.KruizeUrl + "/updateResults"
+	url := cfg.KruizeUrl + KruizeUpdateResults
 	log.Debugf("\n Sending /updateResult request to kruize with payload - %s \n", string(postBody))
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
-		kruizeAPIException.WithLabelValues("/updateResults").Inc()
+		kruizeAPIException.WithLabelValues(KruizeUpdateResults).Inc()
 		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
 	}
 	updateResultRequest.Inc()
@@ -206,11 +212,11 @@ func UpdateNamespaceResults(experiment_name string, payload_data []namespacePayl
 	}
 
 	// Update metrics to kruize experiment
-	url := cfg.KruizeUrl + "/updateResults"
+	url := cfg.KruizeUrl + KruizeUpdateResults
 	log.Debugf("\n Sending /updateResult request to kruize with namespace payload - %s \n", string(postBody))
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
-		kruizeAPIException.WithLabelValues("/updateResults").Inc()
+		kruizeAPIException.WithLabelValues(KruizeUpdateResults).Inc()
 		return nil, fmt.Errorf("an Error Occured while sending namespace metrics: %v", err)
 	}
 	updateResultRequest.Inc()
@@ -254,7 +260,7 @@ func UpdateNamespaceResults(experiment_name string, payload_data []namespacePayl
 }
 
 func Update_recommendations(experiment_name string, interval_end_time time.Time, experimentType types.PayloadType) (any, error) {
-	url := cfg.KruizeUrl + "/updateRecommendations"
+	url := cfg.KruizeUrl + KruizeUpdateRecommendations
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
@@ -267,7 +273,7 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time,
 	log.Debugf("\n Sending /updateRecommendations request to kruize - %s \n", q)
 	res, err := client.Do(req)
 	if err != nil {
-		kruizeAPIException.WithLabelValues("/updateRecommendations").Inc()
+		kruizeAPIException.WithLabelValues(KruizeUpdateRecommendations).Inc()
 		return nil, fmt.Errorf("error Occured while calling /updateRecommendations API %v", err)
 	}
 	defer func() {
@@ -326,7 +332,7 @@ func Delete_experiment_from_kruize(experiment_name string) {
 		log.Errorf("error occured while deleting experiment: %s. Error - %s", experiment_name, err)
 	}
 
-	url := cfg.KruizeUrl + "/createExperiment"
+	url := cfg.KruizeUrl + KruizeCreateExperiment
 	data := []map[string]string{
 		{"experiment_name": experiment_name},
 	}
