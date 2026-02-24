@@ -14,6 +14,7 @@ import (
 
 	"gorm.io/datatypes"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
