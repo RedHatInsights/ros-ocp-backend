@@ -11,7 +11,6 @@ import (
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
-	"github.com/redhatinsights/ros-ocp-backend/internal/featureflags"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
@@ -126,7 +125,7 @@ func transactionForNamespaceRecommendation(recommendationSetList []model.Namespa
  * Adding interfaces will change the flow structurally, might increase the complexity of this service
  */
 
-func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recommendationType string, orgId string) bool {
+func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recommendationType string) bool {
 	log := logging.GetLogger()
 	experiment_name := kafkaMsg.Metadata.Experiment_name
 	maxEndTimeFromReport := kafkaMsg.Metadata.Max_endtime_report
@@ -197,7 +196,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 
 	}
 
-	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId) {
+	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && !cfg.DisableNamespaceRecommendation {
 		namespaceRecommendation, err := fetchRecommendationFromKruize(
 			experiment_name, maxEndTimeFromReport, types.PayloadTypeNamespace)
 		if err != nil {
@@ -295,15 +294,18 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 		}
 	}
 
-	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(orgId) {
-		if len(namespaceRecommendationSetList) > 0 {
-			txError := transactionForNamespaceRecommendation(namespaceRecommendationSetList, namespaceHistRecommendationSetList, experiment_name, recommendationType)
-			if txError == nil {
-				poll_cycle_complete = true
-				namespaceRecommendationSuccess.Inc()
-			} else {
-				poll_cycle_complete = false
-			}
+	if len(namespaceRecommendationSetList) > 0 {
+		txError := transactionForNamespaceRecommendation(
+			namespaceRecommendationSetList,
+			namespaceHistRecommendationSetList,
+			experiment_name,
+			recommendationType,
+		)
+		if txError == nil {
+			poll_cycle_complete = true
+			namespaceRecommendationSuccess.Inc()
+		} else {
+			poll_cycle_complete = false
 		}
 	}
 
@@ -345,7 +347,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 			log.Errorf("error while checking for container recommendation_set record: %s", checkRecommExistsErr.Error())
 			return
 		}
-	} else if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id) {
+	} else if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && !cfg.DisableNamespaceRecommendation {
 		recommendation_stored_in_db, checkRecommExistsErr = model.GetFirstNamespaceRecommendationSetsByWorkloadID(workloadID)
 		if checkRecommExistsErr != nil {
 			log.Errorf("error while checking for namespace recommendation_set record: %s", checkRecommExistsErr.Error())
@@ -364,7 +366,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 
 		switch recommendationFound {
 		case false:
-			poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "New", kafkaMsg.Metadata.Org_id)
+			poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "New")
 			if poll_cycle_complete {
 				commitKafkaMsg(msg, consumer_object)
 			}
@@ -387,7 +389,7 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 				duration := maxEndTimeFromReport.Sub(lastRecommRecordDate)
 
 				if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours || utils.NeedRecommOnFirstOfMonth(lastRecommRecordDate, maxEndTimeFromReport) {
-					poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update", kafkaMsg.Metadata.Org_id)
+					poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update")
 					if poll_cycle_complete {
 						commitKafkaMsg(msg, consumer_object)
 					}

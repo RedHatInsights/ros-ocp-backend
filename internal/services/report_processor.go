@@ -55,11 +55,6 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 	for _, file := range kafkaMsg.Files {
 		csvType = utils.DetermineCSVType(file)
 		if strings.Contains(file, "namespace") {
-			if cfg.DisableNamespaceRecommendation {
-				log.Warnf("namespace recommendation disabled, skipped %s", file)
-				continue
-			}
-
 			if !featureflags.IsNamespaceEnabled(kafkaMsg.Metadata.Org_id) {
 				continue
 			}
@@ -68,7 +63,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 		if fetchError != nil {
 			csvFetchError.Inc()
 			log.Errorf("unable to read CSV from URL: %s", fetchError.Error())
-			return
+			continue
 		}
 		columnHeaders := types.GetColumnMapping(csvType)
 		df := dataframe.LoadRecords(
@@ -80,11 +75,12 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 			switch csvType {
 			case types.PayloadTypeNamespace:
 				invalidNamespaceCSV.Inc()
+				log.Errorf("unable to process namespace CSV: %s", parseError.Error())
 			case types.PayloadTypeContainer:
 				invalidCSV.Inc()
-				log.Errorf("unable to process CSV: %s", parseError.Error())
-				return
+				log.Errorf("unable to process container CSV: %s", parseError.Error())
 			}
+			continue
 		}
 
 		if !rhAccountCreated {
@@ -94,7 +90,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 			}
 			if err := rhAccount.CreateRHAccount(); err != nil {
 				log.Errorf("unable to get or add record to rh_accounts table: %v. Error: %v", rhAccount, err)
-				return
+				continue
 			}
 			rhAccountCreated = true
 		}
@@ -109,7 +105,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 			}
 			if err := cluster.CreateCluster(); err != nil {
 				log.Errorf("unable to get or add record to clusters table: %v. Error: %v", cluster, err)
-				return
+				continue
 			}
 			clusterCreated = true
 		}
@@ -215,6 +211,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 					}
 					if err := model.BatchInsertWorkloadMetrics(workload_metric_arr, rhAccount.OrgId); err != nil {
 						log.Errorf("unable to batch insert to workload_metrics table. %v", err.Error())
+						continue
 					}
 				}
 
@@ -336,6 +333,7 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 
 					if err := model.BatchInsertWorkloadMetrics(workloadMetricSlice, rhAccount.OrgId); err != nil {
 						log.Errorf("unable to batch insert namespace metrics to workload_metrics table. Error: %v", err)
+						continue
 					}
 				}
 
