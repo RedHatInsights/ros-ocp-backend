@@ -37,7 +37,7 @@ func StartAPIServer() {
 			log.Fatal(err)
 		}
 	}()
-	app.Use(middleware.Logger())
+	app.Use(middleware.RequestLogger())
 	app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowMethods: []string{http.MethodGet},
 	}))
