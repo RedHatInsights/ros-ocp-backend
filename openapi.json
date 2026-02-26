@@ -426,7 +426,7 @@
               ],
               "example": "DESC"
             }
-          },
+          }
         ],
         "responses": {
           "200": {
