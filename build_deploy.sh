@@ -44,3 +44,4 @@ else
         docker --config="$DOCKER_CONF" push "${IMAGE_NAME}:${ADDITIONAL_TAG}"
     done
 fi
+# Test PR check
