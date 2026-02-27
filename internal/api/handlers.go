@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,40 +19,6 @@ func GetRecommendationSetList(c echo.Context) error {
 	OrgID := XRHID.Identity.OrgID
 	user_permissions := get_user_permissions(c)
 	handlerName := "recommendationset-list"
-	unitChoices := make(map[string]string)
-
-	cpuUnitParam := c.QueryParam("cpu-unit")
-	cpuUnitOptions := map[string]bool{
-		"millicores": true,
-		"cores":      true,
-	}
-
-	if cpuUnitParam != "" {
-		if !cpuUnitOptions[cpuUnitParam] {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid cpu unit"})
-		} else {
-			unitChoices["cpu"] = cpuUnitParam
-		}
-	} else {
-		unitChoices["cpu"] = "cores"
-	}
-
-	memoryUnitParam := c.QueryParam("memory-unit")
-	memoryUnitOptions := map[string]bool{
-		"bytes": true,
-		"MiB":   true,
-		"GiB":   true,
-	}
-
-	if memoryUnitParam != "" {
-		if !memoryUnitOptions[memoryUnitParam] {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid memory unit"})
-		} else {
-			unitChoices["memory"] = memoryUnitParam
-		}
-	} else {
-		unitChoices["memory"] = "bytes"
-	}
 
 	apiListOptions, err := listoptions.ListAPIOptions(c, listoptions.DefaultContainerRecsDBColumn, listoptions.ContainerAllowedOrderBy)
 	if err != nil {
@@ -67,22 +32,17 @@ func GetRecommendationSetList(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
 	}
+
+	unitChoices, setk8sUnits, unitParseErr := ParseUnitParams(c, "cores", "bytes")
+	if unitParseErr != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": unitParseErr.Error()})
+	}
+
 	recommendationSet := model.RecommendationSet{}
 	recommendationSets, count, queryErr := recommendationSet.GetRecommendationSets(OrgID, apiListOptions, queryParams, user_permissions)
 	if queryErr != nil {
 		log.Errorf("unable to fetch records from database; %v", queryErr)
 	}
-
-	trueUnitsStr := c.QueryParam("true-units")
-	var trueUnits bool
-
-	if trueUnitsStr != "" {
-		trueUnits, err = strconv.ParseBool(trueUnitsStr)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid value for true-units"})
-		}
-	}
-	setk8sUnits := !trueUnits
 
 	for i := range recommendationSets {
 		recommendationSets[i].RecommendationsJSON = UpdateRecommendationJSON(
@@ -97,7 +57,7 @@ func GetRecommendationSetList(c echo.Context) error {
 
 	switch apiListOptions.Format {
 	case listoptions.ResponseFormatJSON:
-		interfaceSlice := make([]interface{}, len(recommendationSets))
+		interfaceSlice := make([]any, len(recommendationSets))
 		for i, v := range recommendationSets {
 			interfaceSlice[i] = v
 		}
@@ -141,50 +101,9 @@ func GetRecommendationSet(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "bad recommendation_id"})
 	}
 
-	unitChoices := make(map[string]string)
-
-	trueUnitsStr := c.QueryParam("true-units")
-	var trueUnits bool
-
-	if trueUnitsStr != "" {
-		trueUnits, err = strconv.ParseBool(trueUnitsStr)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid value for true-units"})
-		}
-	}
-	setk8sUnits := !trueUnits
-
-	cpuUnitParam := c.QueryParam("cpu-unit")
-	cpuUnitOptions := map[string]bool{
-		"millicores": true,
-		"cores":      true,
-	}
-
-	if cpuUnitParam != "" {
-		if !cpuUnitOptions[cpuUnitParam] {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid cpu unit"})
-		} else {
-			unitChoices["cpu"] = cpuUnitParam
-		}
-	} else {
-		unitChoices["cpu"] = "cores"
-	}
-
-	memoryUnitParam := c.QueryParam("memory-unit")
-	memoryUnitOptions := map[string]bool{
-		"bytes": true,
-		"MiB":   true,
-		"GiB":   true,
-	}
-
-	if memoryUnitParam != "" {
-		if !memoryUnitOptions[memoryUnitParam] {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid memory unit"})
-		} else {
-			unitChoices["memory"] = memoryUnitParam
-		}
-	} else {
-		unitChoices["memory"] = "MiB"
+	unitChoices, setk8sUnits, unitParseErr := ParseUnitParams(c, "cores", "MiB")
+	if unitParseErr != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": unitParseErr.Error()})
 	}
 
 	recommendationSetVar := model.RecommendationSet{}
@@ -221,50 +140,25 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 	OrgID := XRHID.Identity.OrgID
 	user_permissions := get_user_permissions(c)
 	handlerName := "namespace-recommendationset-list"
-	unitChoices := make(map[string]string)
 
-	cpuUnitParam := c.QueryParam("cpu-unit")
-	cpuUnitOptions := map[string]bool{
-		"millicores": true,
-		"cores":      true,
-	}
-
-	if cpuUnitParam != "" {
-		if !cpuUnitOptions[cpuUnitParam] {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid cpu unit"})
-		} else {
-			unitChoices["cpu"] = cpuUnitParam
-		}
-	} else {
-		unitChoices["cpu"] = "cores"
-	}
-
-	memoryUnitParam := c.QueryParam("memory-unit")
-	memoryUnitOptions := map[string]bool{
-		"bytes": true,
-		"MiB":   true,
-		"GiB":   true,
-	}
-
-	if memoryUnitParam != "" {
-		if !memoryUnitOptions[memoryUnitParam] {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid memory unit"})
-		} else {
-			unitChoices["memory"] = memoryUnitParam
-		}
-	} else {
-		unitChoices["memory"] = "bytes"
-	}
-
-	apiListOptions, err := listoptions.ListAPIOptions(c, listoptions.DefaultNsRecsDBColumn, listoptions.NsAllowedOrderBy)
-	if err != nil {
+	apiListOptions, listOptionsErr := listoptions.ListAPIOptions(c, listoptions.DefaultNsRecsDBColumn, listoptions.NsAllowedOrderBy)
+	if listOptionsErr != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"status":  "error",
-			"message": err.Error(),
+			"message": listOptionsErr.Error(),
 		})
 	}
 
-	queryParams := make(map[string]interface{})
+	queryParams, paramErr := MapNamespaceQueryParameters(c)
+	if paramErr != nil {
+		log.Error(paramErr.Error())
+		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "unable to parse query parameters"})
+	}
+
+	unitChoices, setk8sUnits, err := ParseUnitParams(c, "cores", "bytes")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
+	}
 
 	NamespaceRecommendationSet := model.NamespaceRecommendationSet{}
 	namespaceRecommendationSets, count, queryErr := NamespaceRecommendationSet.GetNamespaceRecommendationSets(
@@ -274,17 +168,6 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 	if queryErr != nil {
 		log.Errorf("unable to fetch records from database; %v", queryErr)
 	}
-
-	trueUnitsStr := c.QueryParam("true-units")
-	var trueUnits bool
-
-	if trueUnitsStr != "" {
-		trueUnits, err = strconv.ParseBool(trueUnitsStr)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "invalid value for true-units"})
-		}
-	}
-	setk8sUnits := !trueUnits
 
 	for i := range namespaceRecommendationSets {
 		namespaceRecommendationSets[i].RecommendationsJSON = UpdateRecommendationJSON(
@@ -299,7 +182,7 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 
 	switch apiListOptions.Format {
 	case listoptions.ResponseFormatJSON:
-		interfaceSlice := make([]interface{}, len(namespaceRecommendationSets))
+		interfaceSlice := make([]any, len(namespaceRecommendationSets))
 		for i, v := range namespaceRecommendationSets {
 			interfaceSlice[i] = v
 		}

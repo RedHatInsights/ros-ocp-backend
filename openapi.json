@@ -300,6 +300,44 @@
         "operationId": "getNamespaceRecommendationList",
         "parameters": [
           {
+            "name": "start_date",
+            "in": "query",
+            "description": "Start date",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "YYYY-MM-DD"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "description": "End date",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "YYYY-MM-DD"
+          },
+          {
+            "name": "cluster",
+            "in": "query",
+            "description": "Cluster alias or UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "description": "Project name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "true-units",
             "in": "query",
             "required": false,
@@ -327,6 +365,35 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 100
+            }
+          },
+          {
+            "name": "memory-unit",
+            "in": "query",
+            "description": "unit preference for memory",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bytes",
+                "MiB",
+                "GiB"
+              ],
+              "default": "bytes"
+            }
+          },
+          {
+            "name": "cpu-unit",
+            "in": "query",
+            "description": "unit preference for cpu",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "millicores",
+                "cores"
+              ],
+              "default": "cores"
             }
           },
           {
@@ -358,35 +425,6 @@
                 "DESC"
               ],
               "example": "DESC"
-            }
-          },
-          {
-            "name": "memory-unit",
-            "in": "query",
-            "description": "unit preference for memory",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "bytes",
-                "MiB",
-                "GiB"
-              ],
-              "default": "bytes"
-            }
-          },
-          {
-            "name": "cpu-unit",
-            "in": "query",
-            "description": "unit preference for cpu",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "millicores",
-                "cores"
-              ],
-              "default": "cores"
             }
           }
         ],

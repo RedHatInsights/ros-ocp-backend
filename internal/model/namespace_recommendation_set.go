@@ -39,7 +39,7 @@ type NamespaceRecommendationSetResult struct {
 	ClusterUUID          string         `json:"cluster_uuid"`
 	ID                   string         `json:"id"`
 	LastReported         string         `json:"last_reported"`
-	Project              string         `json:"namespace_name"`
+	Project              string         `json:"project"`
 	CPURequestCurrent    float64        `json:"cpu_request_current"`
 	CPUvariation         float64        `json:"cpu_variation"`
 	MemoryRequestCurrent float64        `json:"memory_request_current"`
