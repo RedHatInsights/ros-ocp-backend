@@ -294,7 +294,7 @@ func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
 
 	project := c.QueryParam("project")
 	if project != "" {
-		queryParams["namespace_recommendation_sets.namespace_name = ?"] = project
+		queryParams["namespace_recommendation_sets.namespace_name ILIKE ?"] = "%" + project + "%"
 	}
 
 	return queryParams, nil
