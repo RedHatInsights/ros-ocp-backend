@@ -21,14 +21,14 @@ type container struct {
 
 type Metric struct {
 	Name    string `json:"name,omitempty"`
-	Results result `json:"results"`
+	Results Result `json:"results"`
 }
 
-type result struct {
-	Aggregation_info aggregation_info `json:"aggregation_info,omitempty"`
+type Result struct {
+	Aggregation_info AggregatedData `json:"aggregation_info,omitzero"`
 }
 
-type aggregation_info struct {
+type AggregatedData struct {
 	Min    string `json:"min,omitempty"`
 	Max    string `json:"max,omitempty"`
 	Sum    string `json:"sum,omitempty"`
@@ -257,8 +257,8 @@ func make_container_data(c map[string]interface{}) container {
 		if sum != "" && avg != "" {
 			metrics = append(metrics, Metric{
 				Name: metricName,
-				Results: result{
-					Aggregation_info: aggregation_info{
+				Results: Result{
+					Aggregation_info: AggregatedData{
 						Sum:    sum,
 						Avg:    avg,
 						Min:    min,

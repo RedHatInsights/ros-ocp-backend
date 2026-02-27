@@ -14,6 +14,7 @@ const (
 	Replicaset            WorkloadType = "replicaset"
 	Replicationcontroller WorkloadType = "replicationcontroller"
 	Statefulset           WorkloadType = "statefulset"
+	Namespace             WorkloadType = "namespace"
 )
 
 func (p *WorkloadType) Scan(value interface{}) error {
@@ -47,6 +48,8 @@ func (p WorkloadType) String() string {
 		return "statefulset"
 	case Daemonset:
 		return "daemonset"
+	case Namespace:
+		return "namespace"
 	}
 	return "unknown"
 }

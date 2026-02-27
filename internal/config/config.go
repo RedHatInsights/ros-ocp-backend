@@ -36,9 +36,10 @@ type Config struct {
 	KafkaCA               string
 
 	// Kruize config
-	KruizeUrl              string `mapstructure:"KRUIZE_URL"`
-	KruizeWaitTime         string `mapstructure:"KRUIZE_WAIT_TIME"`
-	KruizeMaxBulkChunkSize int    `mapstructure:"KRUIZE_MAX_BULK_CHUNK_SIZE"`
+	KruizeUrl                       string `mapstructure:"KRUIZE_URL"`
+	KruizeWaitTime                  string `mapstructure:"KRUIZE_WAIT_TIME"`
+	KruizeMaxBulkChunkSize          int    `mapstructure:"KRUIZE_MAX_BULK_CHUNK_SIZE"`
+	KruizePerformanceProfileVersion string `mapstructure:"KRUIZE_PERFORMANCE_PROFILE_VERSION"`
 
 	// Database config
 	DBName     string
@@ -209,6 +210,7 @@ func initConfig() {
 	viper.SetDefault("KRUIZE_HOST", "localhost")
 	viper.SetDefault("KRUIZE_PORT", "8080")
 	viper.SetDefault("KRUIZE_URL", fmt.Sprintf("http://%s:%s", viper.GetString("KRUIZE_HOST"), viper.GetString("KRUIZE_PORT")))
+	viper.SetDefault("KRUIZE_PERFORMANCE_PROFILE_VERSION", "v2.0")
 	viper.SetDefault("RECOMMENDATION_POLL_INTERVAL_HOURS", 24)
 	viper.SetDefault("DATA_RETENTION_PERIOD", 15)
 	viper.SetDefault("READ_HEADER_TIMEOUT", 15)

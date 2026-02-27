@@ -9,11 +9,13 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
+	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -174,6 +176,10 @@ func GenerateExperimentName(org_id, source_id, cluster_id, namespace, k8s_object
 
 }
 
+func GenerateNamespaceExperimentName(org_id, source_id, cluster_id, namespace string) string {
+	return fmt.Sprintf("%s|%s|%s|namespace|%s", org_id, source_id, cluster_id, namespace)
+}
+
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
@@ -205,4 +211,13 @@ func getDate(d time.Time) time.Time {
 func isItFirstOfMonth(d time.Time) bool {
 	_, _, day := d.Date()
 	return day == 1
+}
+
+func DetermineCSVType(fileName string) types.PayloadType {
+	isNamespace := strings.Contains(fileName, "namespace")
+
+	if isNamespace {
+		return types.PayloadTypeNamespace
+	}
+	return types.PayloadTypeContainer
 }
