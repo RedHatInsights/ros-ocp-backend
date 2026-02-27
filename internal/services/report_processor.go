@@ -72,13 +72,12 @@ func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
 		)
 		df, parseError := utils.Aggregate_data(csvType, df)
 		if parseError != nil {
+			log.Errorf("unable to process %s; error: %s ", file, parseError.Error())
 			switch csvType {
 			case types.PayloadTypeNamespace:
 				invalidNamespaceCSV.Inc()
-				log.Errorf("unable to process namespace CSV: %s", parseError.Error())
 			case types.PayloadTypeContainer:
 				invalidCSV.Inc()
-				log.Errorf("unable to process container CSV: %s", parseError.Error())
 			}
 			continue
 		}
