@@ -29,11 +29,11 @@ type Config struct {
 	UploadTopic           string `mapstructure:"UPLOAD_TOPIC"`
 	RecommendationTopic   string `mapstructure:"RECOMMENDATION_TOPIC"`
 	SourcesEventTopic     string `mapstructure:"SOURCES_EVENT_TOPIC"`
-	KafkaUsername         string
-	KafkaPassword         string
-	KafkaSASLMechanism    string
-	KafkaSecurityProtocol string
-	KafkaCA               string
+	KafkaUsername         string `mapstructure:"KAFKA_SASL_USERNAME"`
+	KafkaPassword         string `mapstructure:"KAFKA_SASL_PASSWORD"`
+	KafkaSASLMechanism    string `mapstructure:"KAFKA_SASL_MECHANISM"`
+	KafkaSecurityProtocol string `mapstructure:"KAFKA_SECURITY_PROTOCOL"`
+	KafkaCA               string `mapstructure:"KAFKA_SSL_CA_LOCATION"`
 
 	// Kruize config
 	KruizeUrl                       string `mapstructure:"KRUIZE_URL"`
@@ -99,10 +99,10 @@ func initConfig() {
 
 		// Kafka SSL Config
 		if broker.Authtype != nil {
-			viper.Set("KafkaUsername", broker.Sasl.Username)
-			viper.Set("KafkaPassword", broker.Sasl.Password)
-			viper.Set("KafkaSASLMechanism", broker.Sasl.SaslMechanism)
-			viper.Set("KafkaSecurityProtocol", broker.Sasl.SecurityProtocol) //nolint:all
+			viper.Set("KAFKA_SASL_USERNAME", broker.Sasl.Username)
+			viper.Set("KAFKA_SASL_PASSWORD", broker.Sasl.Password)
+			viper.Set("KAFKA_SASL_MECHANISM", broker.Sasl.SaslMechanism)
+			viper.Set("KAFKA_SECURITY_PROTOCOL", broker.Sasl.SecurityProtocol) //nolint:all
 		}
 
 		if broker.Cacert != nil {
@@ -110,7 +110,7 @@ func initConfig() {
 			if err != nil {
 				panic("Kafka CA failed to write")
 			}
-			viper.Set("KafkaCA", caPath)
+			viper.Set("KAFKA_SSL_CA_LOCATION", caPath)
 		}
 
 		// clowder DB Config
@@ -169,6 +169,13 @@ func initConfig() {
 		viper.SetDefault("UPLOAD_TOPIC", "hccm.ros.events")
 		viper.SetDefault("RECOMMENDATION_TOPIC", "rosocp.kruize.recommendations")
 		viper.SetDefault("SOURCES_EVENT_TOPIC", "platform.sources.event-stream")
+
+		// Kafka SASL/TLS - read from environment (optional; empty = PLAINTEXT)
+		viper.SetDefault("KAFKA_SASL_MECHANISM", "")
+		viper.SetDefault("KAFKA_SASL_USERNAME", "")
+		viper.SetDefault("KAFKA_SASL_PASSWORD", "")
+		viper.SetDefault("KAFKA_SECURITY_PROTOCOL", "PLAINTEXT")
+		viper.SetDefault("KAFKA_SSL_CA_LOCATION", "")
 
 		// DB Config
 		_ = viper.BindEnv("DBHost", "DB_HOST")
