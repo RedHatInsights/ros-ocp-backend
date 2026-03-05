@@ -93,6 +93,24 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 
 }
 
+func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSetByID(orgID string, recommendationID string, user_permissions map[string][]string) (NamespaceRecommendationSetResult, error) {
+	var nsRecommendationSet NamespaceRecommendationSetResult
+
+	query := getNamespaceRecommendationQuery(orgID)
+	query.Where("recommendation_sets.id = ?", recommendationID)
+
+	if err := rbac.AddRBACFilter(
+		query,
+		user_permissions,
+		rbac.ResourceProject,
+	); err != nil {
+		return nsRecommendationSet, err
+	}
+
+	err := query.First(&nsRecommendationSet).Error
+	return nsRecommendationSet, err
+}
+
 func (r *NamespaceRecommendationSet) CreateNamespaceRecommendationSet(tx *gorm.DB) error {
 	result := tx.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "workload_id"}},

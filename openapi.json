@@ -458,6 +458,129 @@
           }
         }
       }
+    },
+    "/recommendations/openshift/namespace/{recommendation-id}": {
+      "get": {
+        "tags": [
+          "Namespace Optimizations"
+        ],
+        "summary": "Get namespace recommendation by ID",
+        "description": "Get a single namespace resource optimization recommendation by UUID. This feature is in limited preview for select customers.",
+        "operationId": "getNamespaceRecommendationById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation-id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The project recommendation UUID"
+          },
+          {
+            "name": "true-units",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Shows all values in true/real-world units. Accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False."
+          },
+          {
+            "in": "query",
+            "name": "memory-unit",
+            "description": "Unit preference for memory",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bytes",
+                "MiB",
+                "GiB"
+              ],
+              "default": "MiB"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cpu-unit",
+            "description": "Unit preference for CPU",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "millicores",
+                "cores"
+              ],
+              "default": "cores"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamespaceRecommendation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Project recommendation ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "bad recommendation-id for project"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User is not authorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "User is not authorized to access the resource"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project recommendation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "not_found"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "project recommendation not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
