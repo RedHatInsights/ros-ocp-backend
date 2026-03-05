@@ -1,4 +1,21 @@
-def secrets = [
+def pullSecrets = [
+    [path: 'insights-cicd/ephemeral-bot-svc-account', secretValues: [
+        [envVar: 'OC_LOGIN_TOKEN_DEV', vaultKey: 'oc-login-token-dev'],
+        [envVar: 'OC_LOGIN_SERVER_DEV', vaultKey: 'oc-login-server-dev'],
+        [envVar: 'OC_LOGIN_TOKEN', vaultKey: 'oc-login-token'],
+        [envVar: 'OC_LOGIN_SERVER', vaultKey: 'oc-login-server']]],
+    [path: 'app-sre/quay/cloudservices-pull', secretValues: [
+        [envVar: 'QUAY_USER', vaultKey: 'user'],
+        [envVar: 'QUAY_TOKEN', vaultKey: 'token']]],
+    [path: 'insights-cicd/insightsdroid-github', secretValues: [
+        [envVar: 'GITHUB_TOKEN', vaultKey: 'token'],
+        [envVar: 'GITHUB_API_URL', vaultKey: 'mirror_url']]],
+    [path: 'insights-cicd/rh-registry-pull', secretValues: [
+        [envVar: 'RH_REGISTRY_USER', vaultKey: 'user'],
+        [envVar: 'RH_REGISTRY_TOKEN', vaultKey: 'token']]]
+]
+
+def pushSecrets = [
     [path: 'insights-cicd/ephemeral-bot-svc-account', secretValues: [
         [envVar: 'OC_LOGIN_TOKEN_DEV', vaultKey: 'oc-login-token-dev'],
         [envVar: 'OC_LOGIN_SERVER_DEV', vaultKey: 'oc-login-server-dev'],
@@ -30,7 +47,7 @@ pipeline {
     }
     
     environment {
-        APP_NAME = "ros-ocp"
+        APP_NAME = "ros"
     }
     
     stages {
@@ -39,7 +56,7 @@ pipeline {
                 changeRequest()
             }
             steps {
-                withVault([configuration: configuration, vaultSecrets: secrets]) {
+                withVault([configuration: configuration, vaultSecrets: pullSecrets]) {
                     sh 'bash pr_check.sh'
                 }
             }
@@ -50,7 +67,7 @@ pipeline {
                 not { changeRequest() }
             }
             steps {
-                withVault([configuration: configuration, vaultSecrets: secrets]) {
+                withVault([configuration: configuration, vaultSecrets: pushSecrets]) {
                     sh 'bash build_deploy.sh'
                 }
             }
