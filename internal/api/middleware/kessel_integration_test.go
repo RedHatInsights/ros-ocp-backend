@@ -180,7 +180,7 @@ func itCallMiddleware(t *testing.T, mw echo.MiddlewareFunc, orgID, username stri
 	return rec, c
 }
 
-// IT-MW-AUTH-001: user-1/org-1 -> 3 permissions, HTTP 200
+// IT-MW-AUTH-001: user-1/org-1 -> 3 permissions, HTTP 200.
 func TestITFullAccess(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, c := itCallMiddleware(t, mw, "org-1", "user-1")
@@ -194,7 +194,7 @@ func TestITFullAccess(t *testing.T) {
 	}
 }
 
-// IT-MW-AUTH-002: user-2/org-1 -> HTTP 403
+// IT-MW-AUTH-002: user-2/org-1 -> HTTP 403.
 func TestITNoPermissions(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, _ := itCallMiddleware(t, mw, "org-1", "user-2")
@@ -204,7 +204,7 @@ func TestITNoPermissions(t *testing.T) {
 	}
 }
 
-// IT-MW-AUTH-003: user-3/org-1 -> cluster only
+// IT-MW-AUTH-003: user-3/org-1 -> cluster only.
 func TestITPartialPermissions(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, c := itCallMiddleware(t, mw, "org-1", "user-3")
@@ -221,7 +221,7 @@ func TestITPartialPermissions(t *testing.T) {
 	}
 }
 
-// IT-MW-AUTH-004: user-4/org-1 -> 3 permissions via group
+// IT-MW-AUTH-004: user-4/org-1 -> 3 permissions via group.
 func TestITGroupAccess(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, c := itCallMiddleware(t, mw, "org-1", "user-4")
@@ -235,7 +235,7 @@ func TestITGroupAccess(t *testing.T) {
 	}
 }
 
-// IT-MW-AUTH-005: user-5/org-1 -> HTTP 403 (cross-tenant)
+// IT-MW-AUTH-005: user-5/org-1 -> HTTP 403 (cross-tenant).
 func TestITCrossTenantDenied(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, _ := itCallMiddleware(t, mw, "org-1", "user-5")
@@ -245,7 +245,7 @@ func TestITCrossTenantDenied(t *testing.T) {
 	}
 }
 
-// IT-MW-AUTH-006: user-6/org-3 -> HTTP 200
+// IT-MW-AUTH-006: user-6/org-3 -> HTTP 200.
 func TestITE2EAuthorized(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, _ := itCallMiddleware(t, mw, "org-3", "user-6")
@@ -255,7 +255,7 @@ func TestITE2EAuthorized(t *testing.T) {
 	}
 }
 
-// IT-MW-AUTH-007: user-7/org-3 -> HTTP 403
+// IT-MW-AUTH-007: user-7/org-3 -> HTTP 403.
 func TestITE2EUnauthorized(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, _ := itCallMiddleware(t, mw, "org-3", "user-7")
@@ -265,7 +265,7 @@ func TestITE2EUnauthorized(t *testing.T) {
 	}
 }
 
-// IT-MW-AUTH-008: Sequential requests user-6 (200) then user-7 (403)
+// IT-MW-AUTH-008: Sequential requests user-6 (200) then user-7 (403).
 func TestITSequentialRequests(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 
@@ -280,7 +280,7 @@ func TestITSequentialRequests(t *testing.T) {
 	}
 }
 
-// IT-MW-BACKEND-001: Kessel config -> 200; RBAC config -> uses RBAC middleware
+// IT-MW-BACKEND-001: Kessel config -> 200; RBAC config -> uses RBAC middleware.
 func TestITBackendSwitch(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, _ := itCallMiddleware(t, mw, "org-5", "user-9")
@@ -301,9 +301,9 @@ func TestITBackendSwitch(t *testing.T) {
 	}
 }
 
-// --- SLO (LookupResources) integration tests ---
+// --- SLO (LookupResources) integration tests ---.
 
-// IT-MW-SLO-001: user-1/org-1 gets specific cluster IDs via LookupResources
+// IT-MW-SLO-001: user-1/org-1 gets specific cluster IDs via LookupResources.
 func TestITSLOClusterIDs(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, c := itCallMiddleware(t, mw, "org-1", "user-1")
@@ -319,7 +319,7 @@ func TestITSLOClusterIDs(t *testing.T) {
 	}
 }
 
-// IT-MW-SLO-002: user-1/org-1 gets specific project IDs via LookupResources
+// IT-MW-SLO-002: user-1/org-1 gets specific project IDs via LookupResources.
 func TestITSLOProjectIDs(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, c := itCallMiddleware(t, mw, "org-1", "user-1")
@@ -335,7 +335,7 @@ func TestITSLOProjectIDs(t *testing.T) {
 	}
 }
 
-// IT-MW-SLO-003: user-1/org-1 node is always wildcard (no LookupResources for node)
+// IT-MW-SLO-003: user-1/org-1 node is always wildcard (no LookupResources for node).
 func TestITSLONodeWildcard(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, c := itCallMiddleware(t, mw, "org-1", "user-1")
@@ -351,7 +351,7 @@ func TestITSLONodeWildcard(t *testing.T) {
 	}
 }
 
-// IT-MW-SLO-004: user-2/org-1 (no bindings) -> no LookupResources results, no Check fallback -> 403
+// IT-MW-SLO-004: user-2/org-1 (no bindings) -> no LookupResources results, no Check fallback -> 403.
 func TestITSLONoAccess(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, _ := itCallMiddleware(t, mw, "org-1", "user-2")
@@ -387,7 +387,7 @@ func itAssertExactIDs(t *testing.T, testID, permKey string, got []string, want [
 	}
 }
 
-// IT-MW-COMBINED-001: Single request produces specific cluster IDs + specific project IDs + wildcard node
+// IT-MW-COMBINED-001: Single request produces specific cluster IDs + specific project IDs + wildcard node.
 func TestITCombinedClusterProjectNode(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, c := itCallMiddleware(t, mw, "org-1", "user-1")
@@ -410,7 +410,7 @@ func TestITCombinedClusterProjectNode(t *testing.T) {
 	}
 }
 
-// IT-MW-PARITY-001: RBAC-style and Kessel-style permissions have the same map structure
+// IT-MW-PARITY-001: RBAC-style and Kessel-style permissions have the same map structure.
 func TestITPermissionShapeParity(t *testing.T) {
 	mw := KesselMiddleware(kesselChecker)
 	rec, c := itCallMiddleware(t, mw, "org-1", "user-1")

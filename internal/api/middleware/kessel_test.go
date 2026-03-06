@@ -96,7 +96,7 @@ func callMiddleware(e *echo.Echo, rec *httptest.ResponseRecorder, mw echo.Middle
 	return c, code, err
 }
 
-// UT-MW-AUTH-001: Full access (all 3 permissions allowed)
+// UT-MW-AUTH-001: Full access (all 3 permissions allowed).
 func TestKesselMiddlewareFullAccess(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
@@ -136,7 +136,7 @@ func TestKesselMiddlewareFullAccess(t *testing.T) {
 	}
 }
 
-// UT-MW-AUTH-002: Partial access (cluster only)
+// UT-MW-AUTH-002: Partial access (cluster only).
 func TestKesselMiddlewarePartialAccess(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
@@ -164,7 +164,7 @@ func TestKesselMiddlewarePartialAccess(t *testing.T) {
 	}
 }
 
-// UT-MW-AUTH-003: Node + project access (2 of 3)
+// UT-MW-AUTH-003: Node + project access (2 of 3).
 func TestKesselMiddlewareNodeProjectAccess(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
@@ -190,7 +190,7 @@ func TestKesselMiddlewareNodeProjectAccess(t *testing.T) {
 	}
 }
 
-// UT-MW-AUTH-004: No permissions -> HTTP 403
+// UT-MW-AUTH-004: No permissions -> HTTP 403.
 func TestKesselMiddlewareNoPermissions(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{},
@@ -205,7 +205,7 @@ func TestKesselMiddlewareNoPermissions(t *testing.T) {
 	}
 }
 
-// UT-MW-AUTH-005: Missing identity -> HTTP 401
+// UT-MW-AUTH-005: Missing identity -> HTTP 401.
 func TestKesselMiddlewareMissingIdentity(t *testing.T) {
 	mock := &inputSensitiveMock{}
 
@@ -218,7 +218,7 @@ func TestKesselMiddlewareMissingIdentity(t *testing.T) {
 	}
 }
 
-// UT-MW-AUTH-006: Empty org ID -> HTTP 401
+// UT-MW-AUTH-006: Empty org ID -> HTTP 401.
 func TestKesselMiddlewareEmptyOrgID(t *testing.T) {
 	mock := &inputSensitiveMock{}
 
@@ -231,7 +231,7 @@ func TestKesselMiddlewareEmptyOrgID(t *testing.T) {
 	}
 }
 
-// UT-MW-AUTH-007: Empty username -> HTTP 401
+// UT-MW-AUTH-007: Empty username -> HTTP 401.
 func TestKesselMiddlewareEmptyUsername(t *testing.T) {
 	mock := &inputSensitiveMock{}
 
@@ -244,7 +244,7 @@ func TestKesselMiddlewareEmptyUsername(t *testing.T) {
 	}
 }
 
-// UT-MW-AUTH-008: Partial gRPC failure (1 of 3 errors) -> remaining permissions set
+// UT-MW-AUTH-008: Partial gRPC failure (1 of 3 errors) -> remaining permissions set.
 func TestKesselMiddlewarePartialGRPCFailure(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
@@ -276,7 +276,7 @@ func TestKesselMiddlewarePartialGRPCFailure(t *testing.T) {
 	}
 }
 
-// UT-MW-AUTH-009: Total gRPC failure -> HTTP 403
+// UT-MW-AUTH-009: Total gRPC failure -> HTTP 403.
 func TestKesselMiddlewareTotalGRPCFailure(t *testing.T) {
 	grpcErr := status.Errorf(codes.Unavailable, "connection refused")
 	mock := &inputSensitiveMock{
@@ -296,7 +296,7 @@ func TestKesselMiddlewareTotalGRPCFailure(t *testing.T) {
 	}
 }
 
-// UT-MW-BACKEND-001: SelectAuthMiddleware dispatches correctly
+// UT-MW-BACKEND-001: SelectAuthMiddleware dispatches correctly.
 func TestSelectAuthMiddleware(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
@@ -385,19 +385,19 @@ func TestSelectAuthMiddleware(t *testing.T) {
 	}
 }
 
-// --- LookupResources + Check Fallback middleware tests (UT-MW-SLO-*) ---
-// These tests verify the middleware uses ListAuthorizedResources for
-// openshift.cluster and openshift.project, with Check fallback for wildcard,
+// --- LookupResources + Check Fallback middleware tests (UT-MW-SLO-*) ---.
+// These tests verify the middleware uses ListAuthorizedResources for.
+// openshift.cluster and openshift.project, with Check fallback for wildcard,.
 // and CheckPermission only for openshift.node.
 
-// UT-MW-SLO-001: ListAuthorizedResources returns specific cluster IDs -> permissions contain those IDs
+// UT-MW-SLO-001: ListAuthorizedResources returns specific cluster IDs -> permissions contain those IDs.
 func TestKesselMiddlewareSLOClusterSpecificIDs(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
 			"org-1|cost_management_openshift_node_read|user-1": true,
 		},
 		authorizedIDs: map[string][]string{
-			"org-1|cost_management/openshift_cluster|read|user-1":  {"cluster-a", "cluster-b"},
+			"org-1|cost_management/openshift_cluster|read|user-1": {"cluster-a", "cluster-b"},
 			"org-1|cost_management/openshift_project|read|user-1": {"proj-x"},
 		},
 	}
@@ -420,14 +420,14 @@ func TestKesselMiddlewareSLOClusterSpecificIDs(t *testing.T) {
 	}
 }
 
-// UT-MW-SLO-002: ListAuthorizedResources returns specific project IDs
+// UT-MW-SLO-002: ListAuthorizedResources returns specific project IDs.
 func TestKesselMiddlewareSLOProjectSpecificIDs(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
 			"org-1|cost_management_openshift_node_read|user-1": true,
 		},
 		authorizedIDs: map[string][]string{
-			"org-1|cost_management/openshift_cluster|read|user-1":  {"cluster-a"},
+			"org-1|cost_management/openshift_cluster|read|user-1": {"cluster-a"},
 			"org-1|cost_management/openshift_project|read|user-1": {"proj-x", "proj-y", "proj-z"},
 		},
 	}
@@ -450,7 +450,7 @@ func TestKesselMiddlewareSLOProjectSpecificIDs(t *testing.T) {
 	}
 }
 
-// UT-MW-SLO-003: ListAuthorizedResources returns empty, Check returns true -> wildcard ["*"]
+// UT-MW-SLO-003: ListAuthorizedResources returns empty, Check returns true -> wildcard ["*"].
 func TestKesselMiddlewareSLOFallbackToWildcard(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
@@ -459,7 +459,7 @@ func TestKesselMiddlewareSLOFallbackToWildcard(t *testing.T) {
 			"org-1|cost_management_openshift_node_read|user-1":    true,
 		},
 		authorizedIDs: map[string][]string{
-			"org-1|cost_management/openshift_cluster|read|user-1":  {},
+			"org-1|cost_management/openshift_cluster|read|user-1": {},
 			"org-1|cost_management/openshift_project|read|user-1": {},
 		},
 	}
@@ -484,12 +484,12 @@ func TestKesselMiddlewareSLOFallbackToWildcard(t *testing.T) {
 	}
 }
 
-// UT-MW-SLO-004: ListAuthorizedResources returns empty + Check returns false -> no permission
+// UT-MW-SLO-004: ListAuthorizedResources returns empty + Check returns false -> no permission.
 func TestKesselMiddlewareSLONoAccessNoFallback(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{},
 		authorizedIDs: map[string][]string{
-			"org-1|cost_management/openshift_cluster|read|user-1":  {},
+			"org-1|cost_management/openshift_cluster|read|user-1": {},
 			"org-1|cost_management/openshift_project|read|user-1": {},
 		},
 	}
@@ -503,14 +503,14 @@ func TestKesselMiddlewareSLONoAccessNoFallback(t *testing.T) {
 	}
 }
 
-// UT-MW-SLO-005: Node always uses CheckPermission (not ListAuthorizedResources) -> ["*"]
+// UT-MW-SLO-005: Node always uses CheckPermission (not ListAuthorizedResources) -> ["*"].
 func TestKesselMiddlewareSLONodeAlwaysCheck(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
 			"org-1|cost_management_openshift_node_read|user-1": true,
 		},
 		authorizedIDs: map[string][]string{
-			"org-1|cost_management/openshift_cluster|read|user-1":  {"cluster-a"},
+			"org-1|cost_management/openshift_cluster|read|user-1": {"cluster-a"},
 			"org-1|cost_management/openshift_project|read|user-1": {"proj-x"},
 		},
 	}
@@ -533,7 +533,7 @@ func TestKesselMiddlewareSLONodeAlwaysCheck(t *testing.T) {
 	}
 }
 
-// UT-MW-SLO-006: ListAuthorizedResources error, Check fallback succeeds -> wildcard
+// UT-MW-SLO-006: ListAuthorizedResources error, Check fallback succeeds -> wildcard.
 func TestKesselMiddlewareSLOListErrorCheckFallback(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
@@ -541,7 +541,7 @@ func TestKesselMiddlewareSLOListErrorCheckFallback(t *testing.T) {
 			"org-1|cost_management_openshift_node_read|user-1":    true,
 		},
 		listErrors: map[string]error{
-			"org-1|cost_management/openshift_cluster|read|user-1":  status.Errorf(codes.Unavailable, "list error"),
+			"org-1|cost_management/openshift_cluster|read|user-1": status.Errorf(codes.Unavailable, "list error"),
 			"org-1|cost_management/openshift_project|read|user-1": status.Errorf(codes.Unavailable, "list error"),
 		},
 	}
@@ -564,14 +564,14 @@ func TestKesselMiddlewareSLOListErrorCheckFallback(t *testing.T) {
 	}
 }
 
-// UT-MW-SLO-007: ListAuthorizedResources error + Check error -> no permission for that type
+// UT-MW-SLO-007: ListAuthorizedResources error + Check error -> no permission for that type.
 func TestKesselMiddlewareSLOListErrorCheckError(t *testing.T) {
 	mock := &inputSensitiveMock{
 		errorTuples: map[string]error{
 			"org-1|cost_management_openshift_cluster_read|user-1": status.Errorf(codes.Unavailable, "check error"),
 		},
 		listErrors: map[string]error{
-			"org-1|cost_management/openshift_cluster|read|user-1":  status.Errorf(codes.Unavailable, "list error"),
+			"org-1|cost_management/openshift_cluster|read|user-1": status.Errorf(codes.Unavailable, "list error"),
 			"org-1|cost_management/openshift_project|read|user-1": status.Errorf(codes.Unavailable, "list error"),
 		},
 	}
@@ -585,7 +585,7 @@ func TestKesselMiddlewareSLOListErrorCheckError(t *testing.T) {
 	}
 }
 
-// UT-MW-SLO-008: Mixed scenario - cluster has IDs, project has wildcard fallback, node checked
+// UT-MW-SLO-008: Mixed scenario - cluster has IDs, project has wildcard fallback, node checked.
 func TestKesselMiddlewareSLOMixed(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
@@ -593,7 +593,7 @@ func TestKesselMiddlewareSLOMixed(t *testing.T) {
 			"org-1|cost_management_openshift_node_read|user-1":    true,
 		},
 		authorizedIDs: map[string][]string{
-			"org-1|cost_management/openshift_cluster|read|user-1":  {"cluster-x"},
+			"org-1|cost_management/openshift_cluster|read|user-1": {"cluster-x"},
 			"org-1|cost_management/openshift_project|read|user-1": {},
 		},
 	}
@@ -621,14 +621,14 @@ func TestKesselMiddlewareSLOMixed(t *testing.T) {
 	}
 }
 
-// UT-MW-SLO-009: Only node allowed, cluster/project denied -> 1 permission only
+// UT-MW-SLO-009: Only node allowed, cluster/project denied -> 1 permission only.
 func TestKesselMiddlewareSLONodeOnly(t *testing.T) {
 	mock := &inputSensitiveMock{
 		allowedTuples: map[string]bool{
 			"org-1|cost_management_openshift_node_read|user-1": true,
 		},
 		authorizedIDs: map[string][]string{
-			"org-1|cost_management/openshift_cluster|read|user-1":  {},
+			"org-1|cost_management/openshift_cluster|read|user-1": {},
 			"org-1|cost_management/openshift_project|read|user-1": {},
 		},
 	}

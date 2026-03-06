@@ -153,60 +153,60 @@ func ctLookupResources(t *testing.T, resourceNs, resourceName, relation, subject
 	return ids
 }
 
-// --- Check (tenant-level) contract tests ---
+// --- Check (tenant-level) contract tests ---.
 
-// CT-KESSEL-SCHEMA-001: ct-user-1 in org-ct1 has cluster_read
+// CT-KESSEL-SCHEMA-001: ct-user-1 in org-ct1 has cluster_read.
 func TestCTSchemaClusterRead(t *testing.T) {
 	if !ctCheck(t, "org-ct1", "cost_management_openshift_cluster_read", "ct-user-1") {
 		t.Error("CT-KESSEL-SCHEMA-001: expected ALLOWED_TRUE for cluster_read")
 	}
 }
 
-// CT-KESSEL-SCHEMA-002: ct-user-1 in org-ct1 has node_read
+// CT-KESSEL-SCHEMA-002: ct-user-1 in org-ct1 has node_read.
 func TestCTSchemaNodeRead(t *testing.T) {
 	if !ctCheck(t, "org-ct1", "cost_management_openshift_node_read", "ct-user-1") {
 		t.Error("CT-KESSEL-SCHEMA-002: expected ALLOWED_TRUE for node_read")
 	}
 }
 
-// CT-KESSEL-SCHEMA-003: ct-user-1 in org-ct1 has project_read
+// CT-KESSEL-SCHEMA-003: ct-user-1 in org-ct1 has project_read.
 func TestCTSchemaProjectRead(t *testing.T) {
 	if !ctCheck(t, "org-ct1", "cost_management_openshift_project_read", "ct-user-1") {
 		t.Error("CT-KESSEL-SCHEMA-003: expected ALLOWED_TRUE for project_read")
 	}
 }
 
-// CT-KESSEL-REL-001: ct-user-2 (unbound) -> ALLOWED_FALSE
+// CT-KESSEL-REL-001: ct-user-2 (unbound) -> ALLOWED_FALSE.
 func TestCTUnboundUser(t *testing.T) {
 	if ctCheck(t, "org-ct1", "cost_management_openshift_cluster_read", "ct-user-2") {
 		t.Error("CT-KESSEL-REL-001: expected ALLOWED_FALSE for unbound user")
 	}
 }
 
-// CT-KESSEL-REL-002: ct-user-iso with cluster-only binding, check node_read -> ALLOWED_FALSE
+// CT-KESSEL-REL-002: ct-user-iso with cluster-only binding, check node_read -> ALLOWED_FALSE.
 func TestCTPermissionIsolation(t *testing.T) {
 	if ctCheck(t, "org-ct1", "cost_management_openshift_node_read", "ct-user-iso") {
 		t.Error("CT-KESSEL-REL-002: expected ALLOWED_FALSE for node_read with cluster-only binding")
 	}
 }
 
-// CT-KESSEL-GRP-001: ct-user-3 (group member) -> ALLOWED_TRUE
+// CT-KESSEL-GRP-001: ct-user-3 (group member) -> ALLOWED_TRUE.
 func TestCTGroupMember(t *testing.T) {
 	if !ctCheck(t, "org-ct1", "cost_management_openshift_cluster_read", "ct-user-3") {
 		t.Error("CT-KESSEL-GRP-001: expected ALLOWED_TRUE for group member")
 	}
 }
 
-// CT-KESSEL-REL-003: ct-user-1 in org-ct2 -> ALLOWED_FALSE (cross-tenant)
+// CT-KESSEL-REL-003: ct-user-1 in org-ct2 -> ALLOWED_FALSE (cross-tenant).
 func TestCTCrossTenant(t *testing.T) {
 	if ctCheck(t, "org-ct2", "cost_management_openshift_cluster_read", "ct-user-1") {
 		t.Error("CT-KESSEL-REL-003: expected ALLOWED_FALSE for cross-tenant check")
 	}
 }
 
-// --- LookupResources contract tests ---
+// --- LookupResources contract tests ---.
 
-// CT-KESSEL-SLO-001: LookupResources returns cluster IDs for ct-user-1
+// CT-KESSEL-SLO-001: LookupResources returns cluster IDs for ct-user-1.
 func TestCTLookupClusterIDs(t *testing.T) {
 	ids := ctLookupResources(t, "cost_management", "openshift_cluster", "read", "ct-user-1")
 	if len(ids) != 2 {
@@ -217,7 +217,7 @@ func TestCTLookupClusterIDs(t *testing.T) {
 	}
 }
 
-// CT-KESSEL-SLO-002: LookupResources returns project IDs for ct-user-1
+// CT-KESSEL-SLO-002: LookupResources returns project IDs for ct-user-1.
 func TestCTLookupProjectIDs(t *testing.T) {
 	ids := ctLookupResources(t, "cost_management", "openshift_project", "read", "ct-user-1")
 	if len(ids) != 1 || ids[0] != "proj-ct-x" {
@@ -225,7 +225,7 @@ func TestCTLookupProjectIDs(t *testing.T) {
 	}
 }
 
-// CT-KESSEL-SLO-003: LookupResources for unbound user returns empty
+// CT-KESSEL-SLO-003: LookupResources for unbound user returns empty.
 func TestCTLookupUnboundUser(t *testing.T) {
 	ids := ctLookupResources(t, "cost_management", "openshift_cluster", "read", "ct-user-2")
 	if len(ids) != 0 {
@@ -233,7 +233,7 @@ func TestCTLookupUnboundUser(t *testing.T) {
 	}
 }
 
-// CT-KESSEL-SEED-001: CreateTuples idempotent upsert succeeds
+// CT-KESSEL-SEED-001: CreateTuples idempotent upsert succeeds.
 func TestCTSeedIdempotent(t *testing.T) {
 	ctx := context.Background()
 	rels := []*v1beta1.Relationship{
