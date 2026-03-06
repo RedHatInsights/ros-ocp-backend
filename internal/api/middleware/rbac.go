@@ -39,7 +39,12 @@ func Rbac(next echo.HandlerFunc) echo.HandlerFunc {
 func aggregate_permissions(acls []types.RbacData) map[string][]string {
 	permissions := map[string][]string{}
 	for _, acl := range acls {
-		resourceType := strings.Split(acl.Permission, ":")[1]
+		parts := strings.Split(acl.Permission, ":")
+		if len(parts) < 2 {
+			log.Warnf("skipping malformed RBAC permission string (no colon): %q", acl.Permission)
+			continue
+		}
+		resourceType := parts[1]
 		if strings.Contains(resourceType, "openshift") {
 			if _, ok := permissions[resourceType]; !ok {
 				permissions[resourceType] = []string{}
@@ -93,6 +98,7 @@ func request_user_access(url, encodedIdentity string) []types.RbacData {
 	res, err := client.Do(req)
 	if err != nil {
 		log.Errorf("error Occured while calling RBAC API %v", err)
+		return access
 	}
 	defer func() {
 		_ = res.Body.Close()

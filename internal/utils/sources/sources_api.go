@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
@@ -13,6 +14,14 @@ import (
 var cfg *config.Config = config.GetConfig()
 
 func GetCostApplicationID() (int, error) {
+	if envVal := os.Getenv("COST_APPLICATION_TYPE_ID"); envVal != "" {
+		id, err := strconv.Atoi(envVal)
+		if err != nil {
+			return 0, fmt.Errorf("invalid COST_APPLICATION_TYPE_ID %q: %w", envVal, err)
+		}
+		return id, nil
+	}
+
 	url := cfg.SourceApiBaseUrl + cfg.SourceApiPrefix + "/application_types?filter[name][eq]=/insights/platform/cost-management"
 	res, err := http.Get(url)
 	if err != nil {
@@ -29,8 +38,14 @@ func GetCostApplicationID() (int, error) {
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return 0, fmt.Errorf("unable to unmarshal response of sources /application_types API %v", err)
 	}
-	data := payload["data"].([]interface{})
-	app := data[0].(map[string]interface{})
+	data, ok := payload["data"].([]interface{})
+	if !ok || len(data) == 0 {
+		return 0, fmt.Errorf("sources /application_types API returned empty or missing data array")
+	}
+	app, ok := data[0].(map[string]interface{})
+	if !ok {
+		return 0, fmt.Errorf("sources /application_types API returned unexpected data format")
+	}
 	cost_app_id, _ := strconv.Atoi(app["id"].(string))
 	return cost_app_id, nil
 }

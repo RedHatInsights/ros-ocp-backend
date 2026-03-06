@@ -36,10 +36,9 @@ type Config struct {
 	KafkaCA               string
 
 	// Kruize config
-	KruizeUrl                       string `mapstructure:"KRUIZE_URL"`
-	KruizeWaitTime                  string `mapstructure:"KRUIZE_WAIT_TIME"`
-	KruizeMaxBulkChunkSize          int    `mapstructure:"KRUIZE_MAX_BULK_CHUNK_SIZE"`
-	KruizePerformanceProfileVersion string `mapstructure:"KRUIZE_PERFORMANCE_PROFILE_VERSION"`
+	KruizeUrl              string `mapstructure:"KRUIZE_URL"`
+	KruizeWaitTime         string `mapstructure:"KRUIZE_WAIT_TIME"`
+	KruizeMaxBulkChunkSize int    `mapstructure:"KRUIZE_MAX_BULK_CHUNK_SIZE"`
 
 	// Database config
 	DBName     string
@@ -55,6 +54,17 @@ type Config struct {
 	RBACPort     string
 	RBACProtocol string
 	RBACEnabled  bool `mapstructure:"RBAC_ENABLE"`
+
+	// Kessel/ReBAC config
+	AuthorizationBackend  string `mapstructure:"AUTHORIZATION_BACKEND"`
+	KesselRelationsURL    string `mapstructure:"KESSEL_RELATIONS_URL"`
+	KesselRelationsCAPath string `mapstructure:"KESSEL_RELATIONS_CA_PATH"`
+	// Unused: reserved for future Inventory API integration (currently using Relations API LookupResources)
+	KesselInventoryURL string `mapstructure:"KESSEL_INVENTORY_URL"`
+	// Unused: reserved for future Inventory API integration
+	KesselInventoryCAPath string `mapstructure:"KESSEL_INVENTORY_CA_PATH"`
+	// Unused: app connects to Relations API, not SpiceDB directly
+	SpiceDBPresharedKey string `mapstructure:"SPICEDB_PRESHARED_KEY"`
 
 	API_PORT string
 
@@ -199,6 +209,14 @@ func initConfig() {
 		viper.SetDefault("SOURCES_API_BASE_URL", "http://127.0.0.1:8002")
 	}
 
+	// Kessel/ReBAC defaults
+	viper.SetDefault("AUTHORIZATION_BACKEND", "rbac")
+	viper.SetDefault("KESSEL_RELATIONS_URL", "localhost:9000")
+	viper.SetDefault("KESSEL_RELATIONS_CA_PATH", "")
+	viper.SetDefault("KESSEL_INVENTORY_URL", "localhost:9081")
+	viper.SetDefault("KESSEL_INVENTORY_CA_PATH", "")
+	viper.SetDefault("SPICEDB_PRESHARED_KEY", "")
+
 	viper.SetDefault("SOURCES_API_PREFIX", "/api/sources/v3.1")
 	viper.SetDefault("SERVICE_NAME", "rosocp")
 	viper.SetDefault("API_PORT", "8000")
@@ -210,7 +228,6 @@ func initConfig() {
 	viper.SetDefault("KRUIZE_HOST", "localhost")
 	viper.SetDefault("KRUIZE_PORT", "8080")
 	viper.SetDefault("KRUIZE_URL", fmt.Sprintf("http://%s:%s", viper.GetString("KRUIZE_HOST"), viper.GetString("KRUIZE_PORT")))
-	viper.SetDefault("KRUIZE_PERFORMANCE_PROFILE_VERSION", "v2.0")
 	viper.SetDefault("RECOMMENDATION_POLL_INTERVAL_HOURS", 24)
 	viper.SetDefault("DATA_RETENTION_PERIOD", 15)
 	viper.SetDefault("READ_HEADER_TIMEOUT", 15)
@@ -255,4 +272,10 @@ func GetConfig() *Config {
 		fmt.Println("Config initialized")
 	}
 	return cfg
+}
+
+// ResetConfig clears the cached singleton so the next GetConfig() re-reads env vars.
+// Intended for use in tests only.
+func ResetConfig() {
+	cfg = nil
 }
