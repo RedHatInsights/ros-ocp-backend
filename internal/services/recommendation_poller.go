@@ -225,6 +225,7 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 						continue
 					}
 					recommendationSet := model.NamespaceRecommendationSet{
+						OrgID:                kafkaMsg.Metadata.Org_id,
 						WorkloadID:           kafkaMsg.Metadata.Workload_id,
 						NamespaceName:        typedNamespaceRecommendation.Namespace,
 						CPURequestCurrent:    v.Current.Requests.Cpu.Amount,
