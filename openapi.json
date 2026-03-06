@@ -1678,34 +1678,6 @@
             "format": "date-time",
             "example": "2023-04-18T15:48:54.000Z"
           },
-          "cpu_request_current": {
-            "type": "object",
-            "properties": {
-              "value": {
-                "type": "number",
-                "format": "float",
-                "example": 0.25
-              },
-              "format": {
-                "type": "string",
-                "example": "cores"
-              }
-            }
-          },
-          "memory_request_current": {
-            "type": "object",
-            "properties": {
-              "value": {
-                "type": "number",
-                "format": "float",
-                "example": 67108864
-              },
-              "format": {
-                "type": "string",
-                "example": "bytes"
-              }
-            }
-          },
           "recommendations": {
             "type": "object",
             "properties": {
@@ -1957,11 +1929,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 5.834
+                        "example": 10
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": "percent"
                       }
                     }
                   },
@@ -1970,11 +1942,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1442955264
+                        "example": 60
                       },
                       "format": {
                         "type": "string",
-                        "example": "bytes"
+                        "example": "percent"
                       }
                     }
                   }
@@ -1988,11 +1960,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 5.834
+                        "example": 10
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": "percent"
                       }
                     }
                   },
@@ -2001,11 +1973,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1442955264
+                        "example": 60
                       },
                       "format": {
                         "type": "string",
-                        "example": "bytes"
+                        "example": "percent"
                       }
                     }
                   }
@@ -2099,11 +2071,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 5.834
+                        "example": 10
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": "percent"
                       }
                     }
                   },
@@ -2112,11 +2084,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1442955264
+                        "example": 60
                       },
                       "format": {
                         "type": "string",
-                        "example": "bytes"
+                        "example": "percent"
                       }
                     }
                   }
@@ -2130,11 +2102,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 5.834
+                        "example": 10
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": "percent"
                       }
                     }
                   },
@@ -2143,11 +2115,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1442955264
+                        "example": 60
                       },
                       "format": {
                         "type": "string",
-                        "example": "bytes"
+                        "example": "percent"
                       }
                     }
                   }

@@ -35,18 +35,14 @@ type NamespaceRecommendationSet struct {
 }
 
 type NamespaceRecommendationSetResult struct {
-	ClusterAlias         string         `json:"cluster_alias"`
-	ClusterUUID          string         `json:"cluster_uuid"`
-	ID                   string         `json:"id"`
-	LastReported         string         `json:"last_reported"`
-	Project              string         `json:"project"`
-	CPURequestCurrent    float64        `json:"cpu_request_current"`
-	CPUvariation         float64        `json:"cpu_variation"`
-	MemoryRequestCurrent float64        `json:"memory_request_current"`
-	MemoryVariation      float64        `json:"memory_variation"`
-	Recommendations      datatypes.JSON `json:"-"`
-	RecommendationsJSON  map[string]any `gorm:"-" json:"recommendations"`
-	SourceID             string         `json:"source_id"`
+	ClusterAlias        string         `json:"cluster_alias"`
+	ClusterUUID         string         `json:"cluster_uuid"`
+	ID                  string         `json:"id"`
+	LastReported        string         `json:"last_reported"`
+	Project             string         `json:"project"`
+	Recommendations     datatypes.JSON `json:"-"`
+	RecommendationsJSON map[string]any `gorm:"-" json:"recommendations"`
+	SourceID            string         `json:"source_id"`
 }
 
 func (r *NamespaceRecommendationSet) AfterFind(tx *gorm.DB) error {
@@ -97,7 +93,7 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSetByID(orgID str
 	var nsRecommendationSet NamespaceRecommendationSetResult
 
 	query := getNamespaceRecommendationQuery(orgID)
-	query.Where("recommendation_sets.id = ?", recommendationID)
+	query.Where("namespace_recommendation_sets.id = ?", recommendationID)
 
 	if err := rbac.AddRBACFilter(
 		query,
