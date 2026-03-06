@@ -728,8 +728,8 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 		return nil
 	}
 
-	// box-plots data is not required on the list endpoint
-	if handlerName == "recommendationset-list" {
+	// box-plots data is not required from list endpoints
+	if handlerName == "recommendationset-list" || handlerName == "namespace-recommendationset-list" {
 		data = dropBoxPlotsObject(data)
 	}
 
