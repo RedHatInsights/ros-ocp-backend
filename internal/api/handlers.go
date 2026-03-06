@@ -209,14 +209,14 @@ func GetNamespaceRecommendationSet(c echo.Context) error {
 	}
 
 	recommendationSetVar := model.NamespaceRecommendationSet{}
-	nsRecommendationSet, error := recommendationSetVar.GetNamespaceRecommendationSetByID(
+	nsRecommendationSet, getNSRecordErr := recommendationSetVar.GetNamespaceRecommendationSetByID(
 		OrgID,
 		RecommendationUUID.String(),
 		user_permissions,
 	)
 
-	if error != nil {
-		log.Errorf("unable to fetch project recommendation %s; error %v", RecommendationIDStr, error)
+	if getNSRecordErr != nil {
+		log.Errorf("unable to fetch project recommendation %s; error %v", RecommendationIDStr, getNSRecordErr.Error())
 		return c.JSON(http.StatusNotFound, echo.Map{"status": "error", "message": "unable to fetch project recommendation"})
 	}
 
