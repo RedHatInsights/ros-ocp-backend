@@ -22,9 +22,9 @@ func rbacDataFromJSON(t *testing.T, jsonStr string) []types.RbacData {
 	return data
 }
 
-// --- PERM tests: aggregate_permissions ---
+// --- PERM tests: aggregate_permissions ---.
 
-// UT-RBAC-PERM-001: Unrestricted cluster access grants wildcard
+// UT-RBAC-PERM-001: Unrestricted cluster access grants wildcard.
 func TestAggPermUnrestrictedCluster(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[{"Permission":"cost-management:openshift.cluster:read"}]`)
 	perms := ExportAggregatePermissions(acls)
@@ -37,7 +37,7 @@ func TestAggPermUnrestrictedCluster(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-002: Cluster access scoped to single UUID
+// UT-RBAC-PERM-002: Cluster access scoped to single UUID.
 func TestAggPermClusterSingleUUID(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[{"Permission":"cost-management:openshift.cluster:read","resourceDefinitions":[{"attributeFilter":{"Key":"uuid","Value":"uuid-abc","Operation":"equal"}}]}]`)
 	perms := ExportAggregatePermissions(acls)
@@ -47,7 +47,7 @@ func TestAggPermClusterSingleUUID(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-003: Cluster access scoped to multiple UUIDs (array value)
+// UT-RBAC-PERM-003: Cluster access scoped to multiple UUIDs (array value).
 func TestAggPermClusterMultipleUUIDs(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[{"Permission":"cost-management:openshift.cluster:read","resourceDefinitions":[{"attributeFilter":{"Key":"uuid","Value":["uuid-1","uuid-2"],"Operation":"in"}}]}]`)
 	perms := ExportAggregatePermissions(acls)
@@ -57,7 +57,7 @@ func TestAggPermClusterMultipleUUIDs(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-004: Project access scoped to single namespace
+// UT-RBAC-PERM-004: Project access scoped to single namespace.
 func TestAggPermProjectSingleNamespace(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[{"Permission":"cost-management:openshift.project:read","resourceDefinitions":[{"attributeFilter":{"Key":"namespace","Value":"my-namespace","Operation":"equal"}}]}]`)
 	perms := ExportAggregatePermissions(acls)
@@ -67,7 +67,7 @@ func TestAggPermProjectSingleNamespace(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-005: Unrestricted node access grants wildcard
+// UT-RBAC-PERM-005: Unrestricted node access grants wildcard.
 func TestAggPermUnrestrictedNode(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[{"Permission":"cost-management:openshift.node:read"}]`)
 	perms := ExportAggregatePermissions(acls)
@@ -77,7 +77,7 @@ func TestAggPermUnrestrictedNode(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-006: Wildcard resource type grants global access
+// UT-RBAC-PERM-006: Wildcard resource type grants global access.
 func TestAggPermWildcardType(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[{"Permission":"cost-management:*:read"}]`)
 	perms := ExportAggregatePermissions(acls)
@@ -90,7 +90,7 @@ func TestAggPermWildcardType(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-007: Non-openshift types are ignored
+// UT-RBAC-PERM-007: Non-openshift types are ignored.
 func TestAggPermNonOpenshiftIgnored(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[{"Permission":"cost-management:cost_model:write"}]`)
 	perms := ExportAggregatePermissions(acls)
@@ -99,7 +99,7 @@ func TestAggPermNonOpenshiftIgnored(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-008: No ACLs yields empty map
+// UT-RBAC-PERM-008: No ACLs yields empty map.
 func TestAggPermNoACLs(t *testing.T) {
 	perms := ExportAggregatePermissions([]types.RbacData{})
 	if len(perms) != 0 {
@@ -107,7 +107,7 @@ func TestAggPermNoACLs(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-009: Multiple ACLs for same type accumulate scopes
+// UT-RBAC-PERM-009: Multiple ACLs for same type accumulate scopes.
 func TestAggPermAccumulateScopes(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[
 		{"Permission":"cost-management:openshift.cluster:read","resourceDefinitions":[{"attributeFilter":{"Key":"uuid","Value":"uuid-1","Operation":"equal"}}]},
@@ -120,7 +120,7 @@ func TestAggPermAccumulateScopes(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-010: Mixed types from single RBAC response
+// UT-RBAC-PERM-010: Mixed types from single RBAC response.
 func TestAggPermMixedTypes(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[
 		{"Permission":"cost-management:openshift.cluster:read"},
@@ -142,7 +142,7 @@ func TestAggPermMixedTypes(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-011: Multiple resource definitions on single ACL
+// UT-RBAC-PERM-011: Multiple resource definitions on single ACL.
 func TestAggPermMultipleResourceDefs(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[{"Permission":"cost-management:openshift.cluster:read","resourceDefinitions":[
 		{"attributeFilter":{"Key":"uuid","Value":"uuid-a","Operation":"equal"}},
@@ -155,7 +155,7 @@ func TestAggPermMultipleResourceDefs(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-012: Extra colons in permission string
+// UT-RBAC-PERM-012: Extra colons in permission string.
 func TestAggPermExtraColons(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[{"Permission":"app:openshift.cluster:read:extra"}]`)
 	perms := ExportAggregatePermissions(acls)
@@ -165,7 +165,7 @@ func TestAggPermExtraColons(t *testing.T) {
 	}
 }
 
-// UT-RBAC-PERM-013: No-colon permission string is gracefully skipped
+// UT-RBAC-PERM-013: No-colon permission string is gracefully skipped.
 func TestAggPermNoColonSkipped(t *testing.T) {
 	acls := rbacDataFromJSON(t, `[{"Permission":"openshift"}]`)
 	perms := ExportAggregatePermissions(acls)
@@ -174,7 +174,7 @@ func TestAggPermNoColonSkipped(t *testing.T) {
 	}
 }
 
-// --- ACCESS tests: RBAC middleware via httptest ---
+// --- ACCESS tests: RBAC middleware via httptest ---.
 
 func rbacHTTPTestServer(t *testing.T, statusCode int, responseBody interface{}) *httptest.Server {
 	t.Helper()
@@ -183,7 +183,7 @@ func rbacHTTPTestServer(t *testing.T, statusCode int, responseBody interface{}) 
 		w.WriteHeader(statusCode)
 		if responseBody != nil {
 			b, _ := json.Marshal(responseBody)
-			w.Write(b)
+			_, _ = w.Write(b)
 		}
 	}))
 }
@@ -204,7 +204,7 @@ func setupRBACConfig(t *testing.T, server *httptest.Server) {
 	cfg = c
 }
 
-func makeRbacIdentityHeader(orgID, username string) string {
+func makeRbacIdentityHeader(orgID, username string) string { //nolint:unparam
 	id := map[string]interface{}{
 		"identity": map[string]interface{}{
 			"org_id": orgID,
@@ -235,7 +235,7 @@ func invokeRbacMiddleware(t *testing.T, identityHeader string) (*httptest.Respon
 	return rec, c
 }
 
-// UT-RBAC-ACCESS-001: User with RBAC permissions can proceed
+// UT-RBAC-ACCESS-001: User with RBAC permissions can proceed.
 func TestRbacMiddlewareAccessAllowed(t *testing.T) {
 	server := rbacHTTPTestServer(t, http.StatusOK, types.RbacResponse{
 		Data: []types.RbacData{
@@ -260,7 +260,7 @@ func TestRbacMiddlewareAccessAllowed(t *testing.T) {
 	}
 }
 
-// UT-RBAC-ACCESS-002: Empty RBAC data denies access
+// UT-RBAC-ACCESS-002: Empty RBAC data denies access.
 func TestRbacMiddlewareEmptyDataDenied(t *testing.T) {
 	server := rbacHTTPTestServer(t, http.StatusOK, types.RbacResponse{
 		Data: []types.RbacData{},
@@ -276,7 +276,7 @@ func TestRbacMiddlewareEmptyDataDenied(t *testing.T) {
 	}
 }
 
-// UT-RBAC-ACCESS-003: Non-openshift permissions denied
+// UT-RBAC-ACCESS-003: Non-openshift permissions denied.
 func TestRbacMiddlewareNonOpenshiftDenied(t *testing.T) {
 	server := rbacHTTPTestServer(t, http.StatusOK, types.RbacResponse{
 		Data: []types.RbacData{
@@ -294,7 +294,7 @@ func TestRbacMiddlewareNonOpenshiftDenied(t *testing.T) {
 	}
 }
 
-// UT-RBAC-ACCESS-004: Paginated RBAC response includes all pages
+// UT-RBAC-ACCESS-004: Paginated RBAC response includes all pages.
 func TestRbacMiddlewarePagination(t *testing.T) {
 	requestCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -319,7 +319,7 @@ func TestRbacMiddlewarePagination(t *testing.T) {
 			}
 		}
 		b, _ := json.Marshal(resp)
-		w.Write(b)
+		_, _ = w.Write(b)
 	}))
 	defer server.Close()
 
@@ -342,7 +342,7 @@ func TestRbacMiddlewarePagination(t *testing.T) {
 	}
 }
 
-// UT-RBAC-ACCESS-005: RBAC API server error denies access
+// UT-RBAC-ACCESS-005: RBAC API server error denies access.
 func TestRbacMiddlewareServerErrorDenied(t *testing.T) {
 	server := rbacHTTPTestServer(t, http.StatusInternalServerError, nil)
 	defer server.Close()
@@ -356,7 +356,7 @@ func TestRbacMiddlewareServerErrorDenied(t *testing.T) {
 	}
 }
 
-// UT-RBAC-ACCESS-006: RBAC API network failure denies access gracefully
+// UT-RBAC-ACCESS-006: RBAC API network failure denies access gracefully.
 func TestRbacMiddlewareNetworkFailureDenied(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	server.Close()
@@ -369,4 +369,3 @@ func TestRbacMiddlewareNetworkFailureDenied(t *testing.T) {
 		t.Errorf("UT-RBAC-ACCESS-006: expected HTTP 403 on network failure, got %d", rec.Code)
 	}
 }
-

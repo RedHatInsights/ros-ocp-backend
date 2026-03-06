@@ -9,7 +9,7 @@ import (
 	v1beta1 "github.com/project-kessel/relations-api/api/kessel/relations/v1beta1"
 )
 
-// PermissionChecker abstracts Kessel permission checks so both the real gRPC
+// PermissionChecker abstracts Kessel permission checks so both the real gRPC.
 // client and test mocks implement the same contract.
 type PermissionChecker interface {
 	CheckPermission(ctx context.Context, orgID, permission, username string) (bool, error)
@@ -18,7 +18,7 @@ type PermissionChecker interface {
 
 var _ PermissionChecker = (*KesselClient)(nil)
 
-// KesselClient wraps the Kessel Relations API gRPC clients for both
+// KesselClient wraps the Kessel Relations API gRPC clients for both.
 // permission checks and resource lookups.
 type KesselClient struct {
 	checkClient  v1beta1.KesselCheckServiceClient
@@ -36,7 +36,7 @@ func NewKesselClient(checkClient v1beta1.KesselCheckServiceClient, lookupClient 
 }
 
 // principalID returns the fully-qualified SpiceDB principal identifier.
-// On-prem principals are stored with a "redhat/" prefix by kessel-admin.sh
+// On-prem principals are stored with a "redhat/" prefix by kessel-admin.sh.
 // and Koku's access_provider.py to match the Kessel convention.
 func principalID(username string) string {
 	if strings.Contains(username, "/") {
@@ -73,11 +73,11 @@ func (k *KesselClient) CheckPermission(ctx context.Context, orgID, permission, u
 	return resp.Allowed == v1beta1.CheckResponse_ALLOWED_TRUE, nil
 }
 
-// ListAuthorizedResources returns the resource IDs the user is authorized to access
+// ListAuthorizedResources returns the resource IDs the user is authorized to access.
 // for the given resource type and permission, using the Relations API LookupResources.
 // resourceType should be in "namespace/name" format (e.g. "cost_management/openshift_cluster").
 //
-// orgID is validated but not sent in the LookupResourcesRequest (the Relations API has no
+// orgID is validated but not sent in the LookupResourcesRequest (the Relations API has no.
 // org field). Tenant scoping relies on the ZED schema hierarchy (resource -> workspace -> tenant).
 // The middleware calls this once per request, where the identity carries a single orgID.
 func (k *KesselClient) ListAuthorizedResources(ctx context.Context, orgID, resourceType, permission, username string) ([]string, error) {

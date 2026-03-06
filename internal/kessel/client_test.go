@@ -14,8 +14,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// mockCheckService implements v1beta1.KesselCheckServiceClient with
-// input-sensitive behavior: it returns ALLOWED_TRUE only for explicitly
+// mockCheckService implements v1beta1.KesselCheckServiceClient with.
+// input-sensitive behavior: it returns ALLOWED_TRUE only for explicitly.
 // registered tuples and error responses for registered error tuples.
 type mockCheckService struct {
 	allowedTuples map[string]bool
@@ -38,11 +38,11 @@ func (s *mockLookupStream) Recv() (*v1beta1.LookupResourcesResponse, error) {
 }
 
 func (s *mockLookupStream) Header() (metadata.MD, error) { return nil, nil }
-func (s *mockLookupStream) Trailer() metadata.MD          { return nil }
-func (s *mockLookupStream) CloseSend() error              { return nil }
-func (s *mockLookupStream) Context() context.Context      { return context.Background() }
-func (s *mockLookupStream) SendMsg(any) error             { return nil }
-func (s *mockLookupStream) RecvMsg(any) error             { return nil }
+func (s *mockLookupStream) Trailer() metadata.MD         { return nil }
+func (s *mockLookupStream) CloseSend() error             { return nil }
+func (s *mockLookupStream) Context() context.Context     { return context.Background() }
+func (s *mockLookupStream) SendMsg(any) error            { return nil }
+func (s *mockLookupStream) RecvMsg(any) error            { return nil }
 
 // mockLookupErrorStream returns an error on the first Recv (simulating a stream error).
 type mockLookupErrorStream struct {
@@ -54,11 +54,11 @@ func (s *mockLookupErrorStream) Recv() (*v1beta1.LookupResourcesResponse, error)
 }
 
 func (s *mockLookupErrorStream) Header() (metadata.MD, error) { return nil, nil }
-func (s *mockLookupErrorStream) Trailer() metadata.MD          { return nil }
-func (s *mockLookupErrorStream) CloseSend() error              { return nil }
-func (s *mockLookupErrorStream) Context() context.Context      { return context.Background() }
-func (s *mockLookupErrorStream) SendMsg(any) error             { return nil }
-func (s *mockLookupErrorStream) RecvMsg(any) error             { return nil }
+func (s *mockLookupErrorStream) Trailer() metadata.MD         { return nil }
+func (s *mockLookupErrorStream) CloseSend() error             { return nil }
+func (s *mockLookupErrorStream) Context() context.Context     { return context.Background() }
+func (s *mockLookupErrorStream) SendMsg(any) error            { return nil }
+func (s *mockLookupErrorStream) RecvMsg(any) error            { return nil }
 
 // mockLookupClient implements KesselLookupServiceClient for unit tests.
 type mockLookupClient struct {
@@ -103,7 +103,7 @@ func (m *mockCheckService) CheckBulk(ctx context.Context, in *v1beta1.CheckBulkR
 func TestCheckPermissionAllowed(t *testing.T) {
 	mock := &mockCheckService{
 		allowedTuples: map[string]bool{
-			"org-1|cost_management_openshift_cluster_read|user-1": true,
+			"org-1|cost_management_openshift_cluster_read|redhat/user-1": true,
 		},
 	}
 	client := NewKesselClient(mock)
@@ -120,7 +120,7 @@ func TestCheckPermissionAllowed(t *testing.T) {
 func TestCheckPermissionDeniedDifferentUser(t *testing.T) {
 	mock := &mockCheckService{
 		allowedTuples: map[string]bool{
-			"org-1|cost_management_openshift_cluster_read|user-1": true,
+			"org-1|cost_management_openshift_cluster_read|redhat/user-1": true,
 		},
 	}
 	client := NewKesselClient(mock)
@@ -137,7 +137,7 @@ func TestCheckPermissionDeniedDifferentUser(t *testing.T) {
 func TestCheckPermissionDeniedDifferentOrg(t *testing.T) {
 	mock := &mockCheckService{
 		allowedTuples: map[string]bool{
-			"org-1|cost_management_openshift_cluster_read|user-1": true,
+			"org-1|cost_management_openshift_cluster_read|redhat/user-1": true,
 		},
 	}
 	client := NewKesselClient(mock)
@@ -154,7 +154,7 @@ func TestCheckPermissionDeniedDifferentOrg(t *testing.T) {
 func TestCheckPermissionGRPCUnavailable(t *testing.T) {
 	mock := &mockCheckService{
 		errorTuples: map[string]error{
-			"org-1|cost_management_openshift_cluster_read|user-1": status.Errorf(codes.Unavailable, "connection refused"),
+			"org-1|cost_management_openshift_cluster_read|redhat/user-1": status.Errorf(codes.Unavailable, "connection refused"),
 		},
 	}
 	client := NewKesselClient(mock)
@@ -204,9 +204,9 @@ func TestCheckPermissionEmptyUsername(t *testing.T) {
 	}
 }
 
-// --- ListAuthorizedResources unit tests ---
+// --- ListAuthorizedResources unit tests ---.
 
-// UT-KESSEL-LIST-001: returns specific IDs for seeded resources
+// UT-KESSEL-LIST-001: returns specific IDs for seeded resources.
 func TestListAuthorizedResourcesReturnsIDs(t *testing.T) {
 	checker := &mockPermissionChecker{
 		authorizedIDs: map[string][]string{
@@ -226,7 +226,7 @@ func TestListAuthorizedResourcesReturnsIDs(t *testing.T) {
 	}
 }
 
-// UT-KESSEL-LIST-002: returns empty slice when no resource bindings exist
+// UT-KESSEL-LIST-002: returns empty slice when no resource bindings exist.
 func TestListAuthorizedResourcesEmpty(t *testing.T) {
 	checker := &mockPermissionChecker{
 		authorizedIDs: map[string][]string{},
@@ -241,7 +241,7 @@ func TestListAuthorizedResourcesEmpty(t *testing.T) {
 	}
 }
 
-// UT-KESSEL-LIST-003: propagates gRPC Unavailable error
+// UT-KESSEL-LIST-003: propagates gRPC Unavailable error.
 func TestListAuthorizedResourcesGRPCError(t *testing.T) {
 	checker := &mockPermissionChecker{
 		listErrors: map[string]error{
@@ -262,7 +262,7 @@ func TestListAuthorizedResourcesGRPCError(t *testing.T) {
 	}
 }
 
-// UT-KESSEL-LIST-004: empty orgID returns input validation error
+// UT-KESSEL-LIST-004: empty orgID returns input validation error.
 func TestListAuthorizedResourcesEmptyOrgID(t *testing.T) {
 	checker := &mockPermissionChecker{}
 
@@ -278,7 +278,7 @@ func TestListAuthorizedResourcesEmptyOrgID(t *testing.T) {
 	}
 }
 
-// UT-KESSEL-LIST-005: empty username returns input validation error
+// UT-KESSEL-LIST-005: empty username returns input validation error.
 func TestListAuthorizedResourcesEmptyUsername(t *testing.T) {
 	checker := &mockPermissionChecker{}
 
@@ -294,9 +294,9 @@ func TestListAuthorizedResourcesEmptyUsername(t *testing.T) {
 	}
 }
 
-// --- KesselClient.ListAuthorizedResources gRPC-level unit tests (F-6, F-7) ---
+// --- KesselClient.ListAuthorizedResources gRPC-level unit tests (F-6, F-7) ---.
 
-// UT-KESSEL-LIST-GRPC-001: KesselClient.ListAuthorizedResources returns IDs from stream
+// UT-KESSEL-LIST-GRPC-001: KesselClient.ListAuthorizedResources returns IDs from stream.
 func TestKesselClientListAuthorizedResourcesReturnsIDs(t *testing.T) {
 	checkMock := &mockCheckService{}
 	lookupMock := &mockLookupClient{
@@ -322,7 +322,7 @@ func TestKesselClientListAuthorizedResourcesReturnsIDs(t *testing.T) {
 	}
 }
 
-// UT-KESSEL-LIST-GRPC-002: empty stream returns empty slice
+// UT-KESSEL-LIST-GRPC-002: empty stream returns empty slice.
 func TestKesselClientListAuthorizedResourcesEmpty(t *testing.T) {
 	client := NewKesselClient(&mockCheckService{}, &mockLookupClient{})
 
@@ -335,7 +335,7 @@ func TestKesselClientListAuthorizedResourcesEmpty(t *testing.T) {
 	}
 }
 
-// UT-KESSEL-LIST-GRPC-003: LookupResources gRPC call error is propagated
+// UT-KESSEL-LIST-GRPC-003: LookupResources gRPC call error is propagated.
 func TestKesselClientListAuthorizedResourcesCallError(t *testing.T) {
 	lookupMock := &mockLookupClient{
 		lookupErr: status.Errorf(codes.Unavailable, "connection refused"),
@@ -351,7 +351,7 @@ func TestKesselClientListAuthorizedResourcesCallError(t *testing.T) {
 	}
 }
 
-// UT-KESSEL-LIST-GRPC-004: stream Recv error is propagated
+// UT-KESSEL-LIST-GRPC-004: stream Recv error is propagated.
 func TestKesselClientListAuthorizedResourcesStreamError(t *testing.T) {
 	lookupMock := &mockLookupClient{
 		streamErr: status.Errorf(codes.Internal, "stream broken"),
@@ -367,7 +367,7 @@ func TestKesselClientListAuthorizedResourcesStreamError(t *testing.T) {
 	}
 }
 
-// UT-KESSEL-LIST-GRPC-005: nil lookupClient returns empty slice
+// UT-KESSEL-LIST-GRPC-005: nil lookupClient returns empty slice.
 func TestKesselClientListAuthorizedResourcesNilLookup(t *testing.T) {
 	client := NewKesselClient(&mockCheckService{})
 
@@ -380,7 +380,7 @@ func TestKesselClientListAuthorizedResourcesNilLookup(t *testing.T) {
 	}
 }
 
-// UT-KESSEL-LIST-GRPC-006: invalid resourceType format returns error
+// UT-KESSEL-LIST-GRPC-006: invalid resourceType format returns error.
 func TestKesselClientListAuthorizedResourcesInvalidResourceType(t *testing.T) {
 	client := NewKesselClient(&mockCheckService{}, &mockLookupClient{})
 
@@ -396,7 +396,7 @@ func TestKesselClientListAuthorizedResourcesInvalidResourceType(t *testing.T) {
 	}
 }
 
-// mockPermissionChecker implements PermissionChecker for unit tests
+// mockPermissionChecker implements PermissionChecker for unit tests.
 // with both CheckPermission and ListAuthorizedResources using input-sensitive maps.
 var _ PermissionChecker = (*mockPermissionChecker)(nil)
 

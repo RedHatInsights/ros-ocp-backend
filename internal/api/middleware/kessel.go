@@ -21,7 +21,7 @@ var kesselPermissions = map[string]string{
 	"openshift.project": "cost_management_openshift_project_read",
 }
 
-// kesselResourceTypes maps RBAC-style keys that support LookupResources
+// kesselResourceTypes maps RBAC-style keys that support LookupResources.
 // to their Kessel resource type identifiers (namespace/name format).
 var kesselResourceTypes = map[string]string{
 	"openshift.cluster": "cost_management/openshift_cluster",
@@ -39,7 +39,7 @@ const kesselResourceRelation = "read"
 //
 // For node: always uses CheckPermission (no per-resource listing).
 //
-// This produces user.permissions in the same shape as the RBAC middleware:
+// This produces user.permissions in the same shape as the RBAC middleware:.
 //
 //	{"openshift.cluster": ["*"] | ["id1","id2"], ...}
 func KesselMiddleware(checker kessel.PermissionChecker) echo.MiddlewareFunc {
@@ -92,7 +92,7 @@ func KesselMiddleware(checker kessel.PermissionChecker) echo.MiddlewareFunc {
 	}
 }
 
-// SelectAuthMiddleware returns the appropriate authorization middleware based on
+// SelectAuthMiddleware returns the appropriate authorization middleware based on.
 // config. Returns nil when authorization is disabled (RBACEnabled=false).
 func SelectAuthMiddleware(cfg *config.Config, checker kessel.PermissionChecker) echo.MiddlewareFunc {
 	if !cfg.RBACEnabled {

@@ -173,9 +173,9 @@ func TestRBACDisabledOverridesBackend(t *testing.T) {
 	}
 }
 
-// --- Inventory API config tests ---
+// --- Inventory API config tests ---.
 
-// UT-CFG-INV-001: KESSEL_INVENTORY_URL defaults to localhost:9081
+// UT-CFG-INV-001: KESSEL_INVENTORY_URL defaults to localhost:9081.
 func TestKesselInventoryURLDefault(t *testing.T) {
 	resetTestEnv(t, kesselEnvKeys...)
 	t.Cleanup(func() { resetTestEnv(t, kesselEnvKeys...) })
@@ -188,7 +188,7 @@ func TestKesselInventoryURLDefault(t *testing.T) {
 	}
 }
 
-// UT-CFG-INV-002: KESSEL_INVENTORY_URL env override is read
+// UT-CFG-INV-002: KESSEL_INVENTORY_URL env override is read.
 func TestKesselInventoryURLOverride(t *testing.T) {
 	resetTestEnv(t, kesselEnvKeys...)
 	t.Cleanup(func() { resetTestEnv(t, kesselEnvKeys...) })
@@ -202,7 +202,7 @@ func TestKesselInventoryURLOverride(t *testing.T) {
 	}
 }
 
-// UT-CFG-INV-003: KESSEL_INVENTORY_CA_PATH env override is read
+// UT-CFG-INV-003: KESSEL_INVENTORY_CA_PATH env override is read.
 func TestKesselInventoryCAPathOverride(t *testing.T) {
 	resetTestEnv(t, kesselEnvKeys...)
 	t.Cleanup(func() { resetTestEnv(t, kesselEnvKeys...) })

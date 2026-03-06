@@ -20,13 +20,13 @@ func resetSourcesTestEnv(t *testing.T) {
 	cfg = nil
 }
 
-// UT-SRC-APPID-001: COST_APPLICATION_TYPE_ID=5 -> returns 5
+// UT-SRC-APPID-001: COST_APPLICATION_TYPE_ID=5 -> returns 5.
 func TestGetCostAppIDFromEnvValid(t *testing.T) {
 	resetSourcesTestEnv(t)
 	t.Cleanup(func() { resetSourcesTestEnv(t) })
 
 	_ = os.Setenv("COST_APPLICATION_TYPE_ID", "5")
-	defer os.Unsetenv("COST_APPLICATION_TYPE_ID")
+	defer func() { _ = os.Unsetenv("COST_APPLICATION_TYPE_ID") }()
 
 	id, err := GetCostApplicationID()
 	if err != nil {
@@ -37,13 +37,13 @@ func TestGetCostAppIDFromEnvValid(t *testing.T) {
 	}
 }
 
-// UT-SRC-APPID-002: COST_APPLICATION_TYPE_ID=0 -> returns 0
+// UT-SRC-APPID-002: COST_APPLICATION_TYPE_ID=0 -> returns 0.
 func TestGetCostAppIDFromEnvZero(t *testing.T) {
 	resetSourcesTestEnv(t)
 	t.Cleanup(func() { resetSourcesTestEnv(t) })
 
 	_ = os.Setenv("COST_APPLICATION_TYPE_ID", "0")
-	defer os.Unsetenv("COST_APPLICATION_TYPE_ID")
+	defer func() { _ = os.Unsetenv("COST_APPLICATION_TYPE_ID") }()
 
 	id, err := GetCostApplicationID()
 	if err != nil {
@@ -54,13 +54,13 @@ func TestGetCostAppIDFromEnvZero(t *testing.T) {
 	}
 }
 
-// UT-SRC-APPID-003: COST_APPLICATION_TYPE_ID=99999 -> returns 99999
+// UT-SRC-APPID-003: COST_APPLICATION_TYPE_ID=99999 -> returns 99999.
 func TestGetCostAppIDFromEnvLarge(t *testing.T) {
 	resetSourcesTestEnv(t)
 	t.Cleanup(func() { resetSourcesTestEnv(t) })
 
 	_ = os.Setenv("COST_APPLICATION_TYPE_ID", "99999")
-	defer os.Unsetenv("COST_APPLICATION_TYPE_ID")
+	defer func() { _ = os.Unsetenv("COST_APPLICATION_TYPE_ID") }()
 
 	id, err := GetCostApplicationID()
 	if err != nil {
@@ -71,13 +71,13 @@ func TestGetCostAppIDFromEnvLarge(t *testing.T) {
 	}
 }
 
-// UT-SRC-APPID-004: COST_APPLICATION_TYPE_ID=abc -> error containing "invalid"
+// UT-SRC-APPID-004: COST_APPLICATION_TYPE_ID=abc -> error containing "invalid".
 func TestGetCostAppIDFromEnvInvalid(t *testing.T) {
 	resetSourcesTestEnv(t)
 	t.Cleanup(func() { resetSourcesTestEnv(t) })
 
 	_ = os.Setenv("COST_APPLICATION_TYPE_ID", "abc")
-	defer os.Unsetenv("COST_APPLICATION_TYPE_ID")
+	defer func() { _ = os.Unsetenv("COST_APPLICATION_TYPE_ID") }()
 
 	id, err := GetCostApplicationID()
 	if err == nil {
@@ -97,7 +97,7 @@ func setupSourcesHTTPTest(t *testing.T, statusCode int, body interface{}) *httpt
 		w.WriteHeader(statusCode)
 		if body != nil {
 			b, _ := json.Marshal(body)
-			w.Write(b)
+			_, _ = w.Write(b)
 		}
 	}))
 	// Override the package-level cfg to point to the test server
@@ -110,7 +110,7 @@ func setupSourcesHTTPTest(t *testing.T, statusCode int, body interface{}) *httpt
 	return server
 }
 
-// UT-SRC-APPID-005: COST_APPLICATION_TYPE_ID="" (empty) -> falls through to HTTP, returns 7
+// UT-SRC-APPID-005: COST_APPLICATION_TYPE_ID="" (empty) -> falls through to HTTP, returns 7.
 func TestGetCostAppIDFallsToHTTPOnEmptyEnv(t *testing.T) {
 	resetSourcesTestEnv(t)
 	t.Cleanup(func() { resetSourcesTestEnv(t) })
@@ -133,7 +133,7 @@ func TestGetCostAppIDFallsToHTTPOnEmptyEnv(t *testing.T) {
 	}
 }
 
-// UT-SRC-APPID-006: env var unset -> falls through to HTTP, returns 3
+// UT-SRC-APPID-006: env var unset -> falls through to HTTP, returns 3.
 func TestGetCostAppIDFallsToHTTPOnUnset(t *testing.T) {
 	resetSourcesTestEnv(t)
 	t.Cleanup(func() { resetSourcesTestEnv(t) })
@@ -154,7 +154,7 @@ func TestGetCostAppIDFallsToHTTPOnUnset(t *testing.T) {
 	}
 }
 
-// UT-SRC-APPID-007: env var unset, httptest returns 404 -> error
+// UT-SRC-APPID-007: env var unset, httptest returns 404 -> error.
 func TestGetCostAppIDHTTP404(t *testing.T) {
 	resetSourcesTestEnv(t)
 	t.Cleanup(func() { resetSourcesTestEnv(t) })
@@ -168,14 +168,14 @@ func TestGetCostAppIDHTTP404(t *testing.T) {
 	}
 }
 
-// UT-SRC-APPID-008: env var unset, httptest returns garbage -> error
+// UT-SRC-APPID-008: env var unset, httptest returns garbage -> error.
 func TestGetCostAppIDHTTPGarbage(t *testing.T) {
 	resetSourcesTestEnv(t)
 	t.Cleanup(func() { resetSourcesTestEnv(t) })
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("not json"))
+		_, _ = w.Write([]byte("not json"))
 	}))
 	defer server.Close()
 
@@ -192,7 +192,7 @@ func TestGetCostAppIDHTTPGarbage(t *testing.T) {
 	}
 }
 
-// UT-SRC-APPID-009: env var unset, httptest returns {"data": []} -> error
+// UT-SRC-APPID-009: env var unset, httptest returns {"data": []} -> error.
 func TestGetCostAppIDEmptyDataReturnsError(t *testing.T) {
 	resetSourcesTestEnv(t)
 	t.Cleanup(func() { resetSourcesTestEnv(t) })
