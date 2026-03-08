@@ -22,13 +22,19 @@ import (
 var log *logrus.Entry = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
 
+// HTTPClient is the shared HTTP client for all outbound requests.
+// It enforces a 30-second timeout to prevent indefinite hangs when
+// downstream services (Kruize, RBAC) are slow or unresponsive.
+// See: FLPATH-3407.
+var HTTPClient = &http.Client{Timeout: 30 * time.Second}
+
 func Setup_kruize_performance_profile() {
 	// This func needs to be revisited once kruize implements this API
 	// Refer - https://github.com/kruize/autotune/blob/mvp_demo/src/main/java/com/autotune/analyzer/Analyzer.java#L50
 	list_performance_profile_url := cfg.KruizeUrl + "/listPerformanceProfiles"
 	for i := 0; i < 5; i++ {
 		log.Infof("Fetching performance profile list")
-		response, err := http.Get(list_performance_profile_url)
+		response, err := HTTPClient.Get(list_performance_profile_url)
 		if err != nil {
 			log.Errorf("An Error Occured %v \n", err)
 		} else {
@@ -41,7 +47,7 @@ func Setup_kruize_performance_profile() {
 				log.Errorf("File reading error: %v \n", err)
 				os.Exit(1)
 			}
-			res, e := http.Post(create_performance_profile_url, "application/json", bytes.NewBuffer(postBody))
+			res, e := HTTPClient.Post(create_performance_profile_url, "application/json", bytes.NewBuffer(postBody))
 			if e != nil {
 				log.Errorf("unable to create performance profile in kruize: %v \n", e)
 			}
@@ -70,7 +76,7 @@ func Setup_kruize_performance_profile() {
 }
 
 func ReadCSVFromUrl(url string) ([][]string, error) {
-	resp, err := http.Get(url)
+	resp, err := HTTPClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
