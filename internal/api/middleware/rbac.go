@@ -12,6 +12,7 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -84,13 +85,12 @@ func get_user_permissions_from_rbac(encodedIdentity string) map[string][]string 
 
 func request_user_access(url, encodedIdentity string) []types.RbacData {
 	access := []types.RbacData{}
-	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Errorf("an Error Occured %v", err)
 	}
 	req.Header.Set("x-rh-identity", encodedIdentity)
-	res, err := client.Do(req)
+	res, err := utils.HTTPClient.Do(req)
 	if err != nil {
 		log.Errorf("error Occured while calling RBAC API %v", err)
 	}
