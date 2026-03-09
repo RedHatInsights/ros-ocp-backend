@@ -435,16 +435,26 @@
           {
             "name": "order_by",
             "in": "query",
-            "description": "Field to order results by",
+            "description": "Field to order results by. Options: cluster, project, last_reported, and per-term variation fields (e.g. cpu_variation_short_cost, memory_variation_long_performance).",
             "required": false,
             "schema": {
               "type": "string",
               "enum": [
                 "cluster",
                 "project",
-                "cpu_request_current",
-                "memory_request_current",
-                "last_reported"
+                "last_reported",
+                "cpu_variation_short_cost",
+                "cpu_variation_short_performance",
+                "cpu_variation_medium_cost",
+                "cpu_variation_medium_performance",
+                "cpu_variation_long_cost",
+                "cpu_variation_long_performance",
+                "memory_variation_short_cost",
+                "memory_variation_short_performance",
+                "memory_variation_medium_cost",
+                "memory_variation_medium_performance",
+                "memory_variation_long_cost",
+                "memory_variation_long_performance"
               ],
               "example": "last_reported"
             }

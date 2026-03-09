@@ -15,15 +15,29 @@ import (
 )
 
 type NamespaceRecommendationSet struct {
-	ID                     string `gorm:"primaryKey;not null;autoIncrement"`
-	OrgID                  string `gorm:"type:text;not null"`
-	WorkloadID             uint
-	Workload               Workload `gorm:"foreignKey:WorkloadID"`
-	NamespaceName          string
-	CPURequestCurrent      float64
-	CPUVariation           float64
-	MemoryRequestCurrent   float64
-	MemoryVariation        float64
+	ID                   string `gorm:"primaryKey;not null;autoIncrement"`
+	OrgID                string `gorm:"type:text;not null"`
+	WorkloadID           uint
+	Workload             Workload `gorm:"foreignKey:WorkloadID"`
+	NamespaceName        string
+	CPURequestCurrent    float64
+	CPUVariation         float64
+	MemoryRequestCurrent float64
+	MemoryVariation      float64
+
+	CPUVariationShortCost            float64 `gorm:"column:cpu_variation_short_cost"`
+	CPUVariationShortPerformance     float64 `gorm:"column:cpu_variation_short_performance"`
+	CPUVariationMediumCost           float64 `gorm:"column:cpu_variation_medium_cost"`
+	CPUVariationMediumPerformance    float64 `gorm:"column:cpu_variation_medium_performance"`
+	CPUVariationLongCost             float64 `gorm:"column:cpu_variation_long_cost"`
+	CPUVariationLongPerformance      float64 `gorm:"column:cpu_variation_long_performance"`
+	MemoryVariationShortCost         float64 `gorm:"column:memory_variation_short_cost"`
+	MemoryVariationShortPerformance  float64 `gorm:"column:memory_variation_short_performance"`
+	MemoryVariationMediumCost        float64 `gorm:"column:memory_variation_medium_cost"`
+	MemoryVariationMediumPerformance float64 `gorm:"column:memory_variation_medium_performance"`
+	MemoryVariationLongCost          float64 `gorm:"column:memory_variation_long_cost"`
+	MemoryVariationLongPerformance   float64 `gorm:"column:memory_variation_long_performance"`
+
 	MonitoringStartTime    time.Time `gorm:"type:timestamp"`
 	MonitoringEndTime      time.Time `gorm:"type:timestamp"`
 	Recommendations        datatypes.JSON
@@ -35,11 +49,29 @@ type NamespaceRecommendationSet struct {
 }
 
 type NamespaceRecommendationSetResult struct {
-	ClusterAlias        string         `json:"cluster_alias"`
-	ClusterUUID         string         `json:"cluster_uuid"`
-	ID                  string         `json:"id"`
-	LastReported        string         `json:"last_reported"`
-	Project             string         `json:"project"`
+	ClusterAlias         string  `json:"cluster_alias"`
+	ClusterUUID          string  `json:"cluster_uuid"`
+	ID                   string  `json:"id"`
+	LastReported         string  `json:"last_reported"`
+	Project              string  `json:"project"`
+	CPURequestCurrent    float64 `json:"cpu_request_current"`
+	CPUvariation         float64 `json:"cpu_variation"`
+	MemoryRequestCurrent float64 `json:"memory_request_current"`
+	MemoryVariation      float64 `json:"memory_variation"`
+
+	CPUVariationShortCost            float64 `json:"-"`
+	CPUVariationShortPerformance     float64 `json:"-"`
+	CPUVariationMediumCost           float64 `json:"-"`
+	CPUVariationMediumPerformance    float64 `json:"-"`
+	CPUVariationLongCost             float64 `json:"-"`
+	CPUVariationLongPerformance      float64 `json:"-"`
+	MemoryVariationShortCost         float64 `json:"-"`
+	MemoryVariationShortPerformance  float64 `json:"-"`
+	MemoryVariationMediumCost        float64 `json:"-"`
+	MemoryVariationMediumPerformance float64 `json:"-"`
+	MemoryVariationLongCost          float64 `json:"-"`
+	MemoryVariationLongPerformance   float64 `json:"-"`
+
 	Recommendations     datatypes.JSON `json:"-"`
 	RecommendationsJSON map[string]any `gorm:"-" json:"recommendations"`
 	SourceID            string         `json:"source_id"`
@@ -109,8 +141,17 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSetByID(orgID str
 
 func (r *NamespaceRecommendationSet) CreateNamespaceRecommendationSet(tx *gorm.DB) error {
 	result := tx.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "workload_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"monitoring_start_time", "monitoring_end_time", "recommendations", "updated_at"}),
+		Columns: []clause.Column{{Name: "workload_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"monitoring_start_time", "monitoring_end_time", "recommendations", "updated_at",
+			"cpu_request_current", "memory_request_current",
+			"cpu_variation_short_cost", "cpu_variation_short_performance",
+			"cpu_variation_medium_cost", "cpu_variation_medium_performance",
+			"cpu_variation_long_cost", "cpu_variation_long_performance",
+			"memory_variation_short_cost", "memory_variation_short_performance",
+			"memory_variation_medium_cost", "memory_variation_medium_performance",
+			"memory_variation_long_cost", "memory_variation_long_performance",
+		}),
 	}).Create(r)
 
 	if result.Error != nil {
