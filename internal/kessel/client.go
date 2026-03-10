@@ -5,9 +5,61 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	v1beta1 "github.com/project-kessel/relations-api/api/kessel/relations/v1beta1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+const (
+	grpcMaxRetries  = 3
+	grpcBackoffBase = 100 * time.Millisecond
+)
+
+// RetryBackoff controls the base delay between retry attempts.
+// Tests can set this to near-zero to avoid slow runs.
+var RetryBackoff = grpcBackoffBase
+
+func pow5(n int) time.Duration {
+	r := time.Duration(1)
+	for range n {
+		r *= 5
+	}
+	return r
+}
+
+func isRetryable(err error) bool {
+	st, ok := status.FromError(err)
+	if !ok {
+		return false
+	}
+	switch st.Code() {
+	case codes.Unavailable, codes.DeadlineExceeded:
+		return true
+	}
+	return false
+}
+
+func retryGRPC[T any](fn func() (T, error)) (T, error) {
+	var lastErr error
+	var zero T
+	for attempt := range grpcMaxRetries {
+		result, err := fn()
+		if err == nil {
+			return result, nil
+		}
+		if !isRetryable(err) {
+			return zero, err
+		}
+		lastErr = err
+		if attempt < grpcMaxRetries-1 {
+			time.Sleep(RetryBackoff * pow5(attempt))
+		}
+	}
+	return zero, lastErr
+}
 
 // PermissionChecker abstracts Kessel permission checks so both the real gRPC.
 // client and test mocks implement the same contract.
@@ -53,7 +105,7 @@ func (k *KesselClient) CheckPermission(ctx context.Context, orgID, permission, u
 		return false, fmt.Errorf("username is required")
 	}
 
-	resp, err := k.checkClient.Check(ctx, &v1beta1.CheckRequest{
+	req := &v1beta1.CheckRequest{
 		Resource: &v1beta1.ObjectReference{
 			Type: &v1beta1.ObjectType{Namespace: "rbac", Name: "tenant"},
 			Id:   orgID,
@@ -65,6 +117,10 @@ func (k *KesselClient) CheckPermission(ctx context.Context, orgID, permission, u
 				Id:   principalID(username),
 			},
 		},
+	}
+
+	resp, err := retryGRPC(func() (*v1beta1.CheckResponse, error) {
+		return k.checkClient.Check(ctx, req)
 	})
 	if err != nil {
 		return false, err
@@ -97,7 +153,7 @@ func (k *KesselClient) ListAuthorizedResources(ctx context.Context, orgID, resou
 		return nil, fmt.Errorf("resourceType must be in namespace/name format, got %q", resourceType)
 	}
 
-	stream, err := k.lookupClient.LookupResources(ctx, &v1beta1.LookupResourcesRequest{
+	req := &v1beta1.LookupResourcesRequest{
 		ResourceType: &v1beta1.ObjectType{Namespace: parts[0], Name: parts[1]},
 		Relation:     permission,
 		Subject: &v1beta1.SubjectReference{
@@ -106,6 +162,10 @@ func (k *KesselClient) ListAuthorizedResources(ctx context.Context, orgID, resou
 				Id:   principalID(username),
 			},
 		},
+	}
+
+	stream, err := retryGRPC(func() (grpc.ServerStreamingClient[v1beta1.LookupResourcesResponse], error) {
+		return k.lookupClient.LookupResources(ctx, req)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("LookupResources: %w", err)

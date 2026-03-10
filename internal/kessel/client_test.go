@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	v1beta1 "github.com/project-kessel/relations-api/api/kessel/relations/v1beta1"
 	"google.golang.org/grpc"
@@ -430,4 +431,123 @@ func (m *mockPermissionChecker) ListAuthorizedResources(_ context.Context, orgID
 		return ids, nil
 	}
 	return []string{}, nil
+}
+
+// --- Retry tests (UT-KESSEL-RETRY-*) ---
+
+// retryableCheckService tracks call count and fails the first N attempts.
+type retryableCheckService struct {
+	callCount  int
+	failUntil  int // calls <= failUntil return Unavailable
+	allowAfter bool
+}
+
+func (r *retryableCheckService) Check(_ context.Context, in *v1beta1.CheckRequest, _ ...grpc.CallOption) (*v1beta1.CheckResponse, error) {
+	r.callCount++
+	if r.callCount <= r.failUntil {
+		return nil, status.Errorf(codes.Unavailable, "connection refused (attempt %d)", r.callCount)
+	}
+	if r.allowAfter {
+		return &v1beta1.CheckResponse{Allowed: v1beta1.CheckResponse_ALLOWED_TRUE}, nil
+	}
+	return &v1beta1.CheckResponse{Allowed: v1beta1.CheckResponse_ALLOWED_FALSE}, nil
+}
+
+func (r *retryableCheckService) CheckForUpdate(context.Context, *v1beta1.CheckForUpdateRequest, ...grpc.CallOption) (*v1beta1.CheckForUpdateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "not used")
+}
+
+func (r *retryableCheckService) CheckBulk(context.Context, *v1beta1.CheckBulkRequest, ...grpc.CallOption) (*v1beta1.CheckBulkResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "not used")
+}
+
+// retryableLookupClient tracks call count and fails the first N attempts.
+type retryableLookupClient struct {
+	callCount  int
+	failUntil  int
+	responses  []*v1beta1.LookupResourcesResponse
+}
+
+func (r *retryableLookupClient) LookupResources(_ context.Context, _ *v1beta1.LookupResourcesRequest, _ ...grpc.CallOption) (grpc.ServerStreamingClient[v1beta1.LookupResourcesResponse], error) {
+	r.callCount++
+	if r.callCount <= r.failUntil {
+		return nil, status.Errorf(codes.Unavailable, "connection refused (attempt %d)", r.callCount)
+	}
+	return &mockLookupStream{responses: r.responses}, nil
+}
+
+func (r *retryableLookupClient) LookupSubjects(context.Context, *v1beta1.LookupSubjectsRequest, ...grpc.CallOption) (grpc.ServerStreamingClient[v1beta1.LookupSubjectsResponse], error) {
+	return nil, status.Errorf(codes.Unimplemented, "not used")
+}
+
+// UT-KESSEL-RETRY-001: Check retries on Unavailable, succeeds on second attempt.
+func TestCheckPermissionRetryOnUnavailable(t *testing.T) {
+	origBackoff := RetryBackoff
+	RetryBackoff = time.Nanosecond
+	defer func() { RetryBackoff = origBackoff }()
+
+	checkMock := &retryableCheckService{failUntil: 1, allowAfter: true}
+	client := NewKesselClient(checkMock)
+
+	allowed, err := client.CheckPermission(context.Background(), "org-1", "cost_management_openshift_cluster_read", "user-1")
+	if err != nil {
+		t.Fatalf("UT-KESSEL-RETRY-001: unexpected error after retry: %v", err)
+	}
+	if !allowed {
+		t.Error("UT-KESSEL-RETRY-001: expected allowed=true after successful retry")
+	}
+	if checkMock.callCount != 2 {
+		t.Errorf("UT-KESSEL-RETRY-001: expected 2 calls (1 fail + 1 success), got %d", checkMock.callCount)
+	}
+}
+
+// UT-KESSEL-RETRY-002: LookupResources retries on Unavailable, succeeds on second attempt.
+func TestListAuthorizedResourcesRetryOnUnavailable(t *testing.T) {
+	origBackoff := RetryBackoff
+	RetryBackoff = time.Nanosecond
+	defer func() { RetryBackoff = origBackoff }()
+
+	lookupMock := &retryableLookupClient{
+		failUntil: 1,
+		responses: []*v1beta1.LookupResourcesResponse{
+			{Resource: &v1beta1.ObjectReference{
+				Type: &v1beta1.ObjectType{Namespace: "cost_management", Name: "openshift_cluster"},
+				Id:   "cluster-retry",
+			}},
+		},
+	}
+	client := NewKesselClient(&mockCheckService{}, lookupMock)
+
+	ids, err := client.ListAuthorizedResources(context.Background(), "org-1", "cost_management/openshift_cluster", "read", "user-1")
+	if err != nil {
+		t.Fatalf("UT-KESSEL-RETRY-002: unexpected error after retry: %v", err)
+	}
+	if len(ids) != 1 || ids[0] != "cluster-retry" {
+		t.Errorf("UT-KESSEL-RETRY-002: expected [cluster-retry], got %v", ids)
+	}
+	if lookupMock.callCount != 2 {
+		t.Errorf("UT-KESSEL-RETRY-002: expected 2 calls (1 fail + 1 success), got %d", lookupMock.callCount)
+	}
+}
+
+// UT-KESSEL-RETRY-003: Check exhausts retries and returns error.
+func TestCheckPermissionExhaustsRetries(t *testing.T) {
+	origBackoff := RetryBackoff
+	RetryBackoff = time.Nanosecond
+	defer func() { RetryBackoff = origBackoff }()
+
+	checkMock := &retryableCheckService{failUntil: 100, allowAfter: true}
+	client := NewKesselClient(checkMock)
+
+	allowed, err := client.CheckPermission(context.Background(), "org-1", "cost_management_openshift_cluster_read", "user-1")
+	if err == nil {
+		t.Fatal("UT-KESSEL-RETRY-003: expected error after exhausting retries, got nil")
+	}
+	if allowed {
+		t.Error("UT-KESSEL-RETRY-003: expected allowed=false after exhausting retries")
+	}
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.Unavailable {
+		t.Errorf("UT-KESSEL-RETRY-003: expected Unavailable status after retries, got %v", err)
+	}
 }
