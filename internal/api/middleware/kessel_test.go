@@ -276,7 +276,8 @@ func TestKesselMiddlewarePartialGRPCFailure(t *testing.T) {
 	}
 }
 
-// UT-MW-AUTH-009: Total gRPC failure -> HTTP 403.
+// UT-MW-AUTH-009: Total gRPC failure -> HTTP 424 (Failed Dependency).
+// Distinguishes "Kessel is down" from "user has no permissions" (which is 403).
 func TestKesselMiddlewareTotalGRPCFailure(t *testing.T) {
 	grpcErr := status.Errorf(codes.Unavailable, "connection refused")
 	mock := &inputSensitiveMock{
@@ -285,14 +286,38 @@ func TestKesselMiddlewareTotalGRPCFailure(t *testing.T) {
 			"org-1|cost_management_openshift_node_read|user-1":    grpcErr,
 			"org-1|cost_management_openshift_project_read|user-1": grpcErr,
 		},
+		listErrors: map[string]error{
+			"org-1|cost_management/openshift_cluster|read|user-1": grpcErr,
+			"org-1|cost_management/openshift_project|read|user-1": grpcErr,
+		},
 	}
 
 	e, rec := setupEchoWithKessel()
 	mw := KesselMiddleware(mock)
 	_, code, _ := callMiddleware(e, rec, mw, encodeIdentity("org-1", "user-1"))
 
+	if code != http.StatusFailedDependency {
+		t.Errorf("UT-MW-AUTH-009: expected HTTP 424 (Failed Dependency), got %d", code)
+	}
+}
+
+// UT-MW-AUTH-010: No permissions (all denied, no errors) -> HTTP 403.
+// Ensures genuine "no access" is still 403, distinct from total failure (424).
+func TestKesselMiddlewareNoDenialVsTotalFailure(t *testing.T) {
+	mock := &inputSensitiveMock{
+		allowedTuples: map[string]bool{},
+		authorizedIDs: map[string][]string{
+			"org-1|cost_management/openshift_cluster|read|user-1": {},
+			"org-1|cost_management/openshift_project|read|user-1": {},
+		},
+	}
+
+	e, rec := setupEchoWithKessel()
+	mw := KesselMiddleware(mock)
+	_, code, _ := callMiddleware(e, rec, mw, encodeIdentity("org-1", "user-denied"))
+
 	if code != http.StatusForbidden {
-		t.Errorf("UT-MW-AUTH-009: expected HTTP 403, got %d", code)
+		t.Errorf("UT-MW-AUTH-010: expected HTTP 403 for genuine no-access, got %d", code)
 	}
 }
 

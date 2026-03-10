@@ -58,13 +58,16 @@ func KesselMiddleware(checker kessel.PermissionChecker) echo.MiddlewareFunc {
 
 			permissions := map[string][]string{}
 			ctx := c.Request().Context()
+			callCount, errCount := 0, 0
 
 			for rbacKey, kesselPerm := range kesselPermissions {
 				resourceType, useList := kesselResourceTypes[rbacKey]
 
 				if useList {
+					callCount++
 					ids, err := checker.ListAuthorizedResources(ctx, orgID, resourceType, kesselResourceRelation, username)
 					if err != nil {
+						errCount++
 						kesselLog.Errorf("LookupResources failed for %s (org=%s, user=%s): %v", resourceType, orgID, username, err)
 					} else if len(ids) > 0 {
 						permissions[rbacKey] = ids
@@ -72,8 +75,10 @@ func KesselMiddleware(checker kessel.PermissionChecker) echo.MiddlewareFunc {
 					}
 				}
 
+				callCount++
 				allowed, err := checker.CheckPermission(ctx, orgID, kesselPerm, username)
 				if err != nil {
+					errCount++
 					kesselLog.Errorf("CheckPermission failed for %s (org=%s, user=%s): %v", kesselPerm, orgID, username, err)
 					continue
 				}
@@ -83,6 +88,9 @@ func KesselMiddleware(checker kessel.PermissionChecker) echo.MiddlewareFunc {
 			}
 
 			if len(permissions) == 0 {
+				if callCount > 0 && errCount == callCount {
+					return echo.NewHTTPError(http.StatusFailedDependency, "Kessel authorization service unavailable")
+				}
 				return echo.NewHTTPError(http.StatusForbidden, "User is not authorized")
 			}
 
