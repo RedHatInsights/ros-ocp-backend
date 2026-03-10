@@ -458,6 +458,129 @@
           }
         }
       }
+    },
+    "/recommendations/openshift/namespace/{recommendation-id}": {
+      "get": {
+        "tags": [
+          "Namespace Optimizations"
+        ],
+        "summary": "Get namespace recommendation by ID",
+        "description": "Get a single namespace resource optimization recommendation by UUID. This feature is in limited preview for select customers.",
+        "operationId": "getNamespaceRecommendationById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation-id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The project recommendation UUID"
+          },
+          {
+            "name": "true-units",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Shows all values in true/real-world units. Accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False."
+          },
+          {
+            "in": "query",
+            "name": "memory-unit",
+            "description": "Unit preference for memory",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bytes",
+                "MiB",
+                "GiB"
+              ],
+              "default": "MiB"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cpu-unit",
+            "description": "Unit preference for CPU",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "millicores",
+                "cores"
+              ],
+              "default": "cores"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NamespaceRecommendation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Project recommendation ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "bad recommendation-id for project"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User is not authorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "User is not authorized to access the resource"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project recommendation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "not_found"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "project recommendation not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1555,34 +1678,6 @@
             "format": "date-time",
             "example": "2023-04-18T15:48:54.000Z"
           },
-          "cpu_request_current": {
-            "type": "object",
-            "properties": {
-              "value": {
-                "type": "number",
-                "format": "float",
-                "example": 0.25
-              },
-              "format": {
-                "type": "string",
-                "example": "cores"
-              }
-            }
-          },
-          "memory_request_current": {
-            "type": "object",
-            "properties": {
-              "value": {
-                "type": "number",
-                "format": "float",
-                "example": 67108864
-              },
-              "format": {
-                "type": "string",
-                "example": "bytes"
-              }
-            }
-          },
           "recommendations": {
             "type": "object",
             "properties": {
@@ -1834,11 +1929,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 5.834
+                        "example": 10
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": "percent"
                       }
                     }
                   },
@@ -1847,11 +1942,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1442955264
+                        "example": 60
                       },
                       "format": {
                         "type": "string",
-                        "example": "bytes"
+                        "example": "percent"
                       }
                     }
                   }
@@ -1865,11 +1960,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 5.834
+                        "example": 10
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": "percent"
                       }
                     }
                   },
@@ -1878,11 +1973,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1442955264
+                        "example": 60
                       },
                       "format": {
                         "type": "string",
-                        "example": "bytes"
+                        "example": "percent"
                       }
                     }
                   }
@@ -1976,11 +2071,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 5.834
+                        "example": 10
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": "percent"
                       }
                     }
                   },
@@ -1989,11 +2084,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1442955264
+                        "example": 60
                       },
                       "format": {
                         "type": "string",
-                        "example": "bytes"
+                        "example": "percent"
                       }
                     }
                   }
@@ -2007,11 +2102,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 5.834
+                        "example": 10
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": "percent"
                       }
                     }
                   },
@@ -2020,11 +2115,11 @@
                     "properties": {
                       "amount": {
                         "type": "number",
-                        "example": 1442955264
+                        "example": 60
                       },
                       "format": {
                         "type": "string",
-                        "example": "bytes"
+                        "example": "percent"
                       }
                     }
                   }

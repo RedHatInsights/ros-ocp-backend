@@ -128,13 +128,6 @@ func GetRecommendationSet(c echo.Context) error {
 	}
 }
 
-func GetAppStatus(c echo.Context) error {
-	status := map[string]string{
-		"api-server": "working",
-	}
-	return c.JSON(http.StatusOK, status)
-}
-
 func GetNamespaceRecommendationSetList(c echo.Context) error {
 	XRHID := c.Get("Identity").(identity.XRHID)
 	OrgID := XRHID.Identity.OrgID
@@ -196,4 +189,54 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 	}
 	return nil
 
+}
+
+func GetNamespaceRecommendationSet(c echo.Context) error {
+	XRHID := c.Get("Identity").(identity.XRHID)
+	OrgID := XRHID.Identity.OrgID
+	user_permissions := get_user_permissions(c)
+	handlerName := "namespace-recommendationset"
+
+	RecommendationIDStr := c.Param("recommendation-id")
+	RecommendationUUID, err := uuid.Parse(RecommendationIDStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "bad recommendation-id for project"})
+	}
+
+	unitChoices, setk8sUnits, unitParseErr := ParseUnitParams(c, "cores", "MiB")
+	if unitParseErr != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": unitParseErr.Error()})
+	}
+
+	recommendationSetVar := model.NamespaceRecommendationSet{}
+	nsRecommendationSet, getNSRecordErr := recommendationSetVar.GetNamespaceRecommendationSetByID(
+		OrgID,
+		RecommendationUUID.String(),
+		user_permissions,
+	)
+
+	if getNSRecordErr != nil {
+		log.Errorf("unable to fetch project recommendation %s; error %v", RecommendationIDStr, getNSRecordErr.Error())
+		return c.JSON(http.StatusNotFound, echo.Map{"status": "error", "message": "unable to fetch project recommendation"})
+	}
+
+	if len(nsRecommendationSet.Recommendations) != 0 {
+		nsRecommendationSet.RecommendationsJSON = UpdateRecommendationJSON(
+			handlerName,
+			nsRecommendationSet.ID,
+			nsRecommendationSet.ClusterUUID,
+			unitChoices,
+			setk8sUnits,
+			nsRecommendationSet.Recommendations)
+		return c.JSON(http.StatusOK, nsRecommendationSet)
+	} else {
+		return c.JSON(http.StatusNotFound, echo.Map{"status": "not_found", "message": "project recommendation not found"})
+	}
+}
+
+func GetAppStatus(c echo.Context) error {
+	status := map[string]string{
+		"api-server": "working",
+	}
+	return c.JSON(http.StatusOK, status)
 }
