@@ -3,8 +3,10 @@ package api
 import (
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"net/http"
 	"net/url"
@@ -232,23 +234,151 @@ func ParseUnitParams(c echo.Context, defaultCPU, defaultMemory string) (map[stri
 	return unitChoices, !trueUnits, nil
 }
 
-func parseClusterParams(values []string) (string, []string) {
-	/*
-	   If value is valid UUID, exact match on cluster_uuid.
-	   Else ILIKE on cluster_alias for includes/substring matching.
-	*/
-	parts := []string{}
-	valuesSlice := []string{}
-	for _, value := range values {
-		if _, err := uuid.Parse(value); err == nil {
-			parts = append(parts, "clusters.cluster_uuid = ?")
-			valuesSlice = append(valuesSlice, value)
-		} else {
-			parts = append(parts, "clusters.cluster_alias ILIKE ?")
-			valuesSlice = append(valuesSlice, "%"+value+"%")
+func isCharSafe(c rune) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+		c == '-' || c == '_' || c == '.' || c == ' '
+}
+
+func sanitizeParamValue(paramName, s string, paramMaxLen int) (string, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", fmt.Errorf("empty value for %s", paramName)
+	}
+	if len(s) > paramMaxLen {
+		return "", fmt.Errorf("%s exceeds max length %d", paramName, paramMaxLen)
+	}
+	for _, c := range s {
+		if !isCharSafe(c) {
+			return "", fmt.Errorf("invalid character in %s value", paramName)
 		}
 	}
-	return strings.Join(parts, " OR "), valuesSlice
+	return s, nil
+}
+
+func parseClusterParams(value string, mode string) (string, []string, error) {
+	if value == "" {
+		return "", nil, nil
+	}
+	if _, err := uuid.Parse(value); err == nil {
+		suffix := " = ?"
+		if mode == FilterModeExclude {
+			suffix = " != ?"
+		}
+		return "clusters.cluster_uuid" + suffix, []string{value}, nil
+	}
+	s, err := sanitizeParamValue("cluster", value, model.ClusterMaxLen)
+	if err != nil {
+		return "", nil, err
+	}
+	modeClause := FilterModeClause[mode]
+	if modeClause.Suffix == "" {
+		return "", nil, fmt.Errorf("unknown cluster filter mode: %s", mode)
+	}
+	arg := s
+	if modeClause.Wrap {
+		arg = "%" + s + "%"
+	}
+	return "clusters.cluster_alias" + modeClause.Suffix, []string{arg}, nil
+}
+
+func buildModeClause(param, column, mode, value string) (map[string]any, error) {
+	if param == "cluster" {
+		clause, vals, err := parseClusterParams(value, mode)
+		if err != nil {
+			return nil, err
+		}
+		if clause == "" {
+			return nil, nil
+		}
+		return map[string]any{clause: vals}, nil
+	}
+	s, err := sanitizeParamValue(param, value, model.NamespaceMaxLen)
+	if err != nil {
+		return nil, err
+	}
+	modeClause := FilterModeClause[mode]
+	if modeClause.Suffix == "" {
+		return nil, fmt.Errorf("unknown filter mode: %s", mode)
+	}
+	arg := any(s)
+	if modeClause.Wrap {
+		arg = "%" + s + "%"
+	}
+	return map[string]any{column + modeClause.Suffix: arg}, nil
+}
+
+func addModeClauseIfPresent(clauseMap map[string]any, param, column, mode string, vals []string) error {
+	if len(vals) == 0 {
+		return nil
+	}
+	clause, err := buildModeClause(param, column, mode, vals[0])
+	if err != nil {
+		return err
+	}
+	if clause != nil {
+		maps.Copy(clauseMap, clause)
+	}
+	return nil
+}
+
+func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeVals []string, column string) (map[string]any, error) {
+	hasExclude, hasExact, hasInclude := len(excludeVals) > 0, len(exactVals) > 0, len(includeVals) > 0
+
+	if !hasExclude && !hasExact {
+		if !hasInclude {
+			return nil, nil
+		}
+		// early exit as default is includes i.e. param=value
+		return buildModeClause(param, column, FilterModeInclude, includeVals[0])
+	}
+
+	if hasExclude {
+		switch {
+		case hasExact && excludeVals[0] == exactVals[0]:
+			return nil, fmt.Errorf("exclude and exact cannot share values for %s", param)
+		case hasInclude && excludeVals[0] == includeVals[0]:
+			return nil, fmt.Errorf("exclude and include cannot share values for %s", param)
+		}
+	}
+
+	clauseMap := make(map[string]any)
+	if err := addModeClauseIfPresent(clauseMap, param, column, FilterModeExclude, excludeVals); err != nil {
+		return nil, err
+	}
+	if err := addModeClauseIfPresent(clauseMap, param, column, FilterModeExact, exactVals); err != nil {
+		return nil, err
+	}
+	if err := addModeClauseIfPresent(clauseMap, param, column, FilterModeInclude, includeVals); err != nil {
+		return nil, err
+	}
+	return clauseMap, nil
+}
+
+func applyParamFilter(c echo.Context, queryParams map[string]any, param, column string) error {
+	excludeKey := "exclude[" + param + "]"
+	exactKey := "exact[" + param + "]"
+	var includeVals, excludeVals, exactVals []string
+	if v := c.QueryParam(param); v != "" {
+		includeVals = []string{v}
+	}
+	if v := c.QueryParam(excludeKey); v != "" {
+		excludeVals = []string{v}
+	}
+	if v := c.QueryParam(exactKey); v != "" {
+		exactVals = []string{v}
+	}
+
+	if len(includeVals) == 0 && len(excludeVals) == 0 && len(exactVals) == 0 {
+		return nil
+	}
+	clauseMap, err := buildSQLClauseWithFilterType(param, includeVals, exactVals, excludeVals, column)
+	if err != nil {
+		return err
+	}
+	if clauseMap != nil {
+		maps.Copy(queryParams, clauseMap)
+	}
+	return nil
 }
 
 func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
@@ -286,15 +416,17 @@ func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
 	}
 	queryParams["namespace_recommendation_sets.monitoring_end_time < ?"] = endTimestamp
 
-	clusters := c.QueryParams()["cluster"]
-	if len(clusters) > 0 {
-		paramString, values := parseClusterParams(clusters)
-		queryParams[paramString] = values
-	}
+	// parsing of string params based on mode -> include, exclude, exact
 
-	project := c.QueryParam("project")
-	if project != "" {
-		queryParams["namespace_recommendation_sets.namespace_name ILIKE ?"] = "%" + project + "%"
+	var errs []error
+	if err := applyParamFilter(c, queryParams, "cluster", ""); err != nil {
+		errs = append(errs, err)
+	}
+	if err := applyParamFilter(c, queryParams, "project", "namespace_recommendation_sets.namespace_name"); err != nil {
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		return queryParams, errors.Join(errs...)
 	}
 
 	return queryParams, nil

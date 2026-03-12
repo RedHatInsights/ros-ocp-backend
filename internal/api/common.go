@@ -2,6 +2,23 @@ package api
 
 const timeLayout = "2006-01-02"
 
+// Filter modes for param-based query filters (cluster, project, etc.)
+const (
+	FilterModeInclude = "include"
+	FilterModeExact   = "exact"
+	FilterModeExclude = "exclude"
+)
+
+// FilterModeClause maps mode to SQL clause suffix and wrap for string params (cluster_alias, project)
+var FilterModeClause = map[string]struct {
+	Suffix string
+	Wrap   bool
+}{
+	FilterModeInclude: {" ILIKE ?", true},
+	FilterModeExact:   {" = ?", false},
+	FilterModeExclude: {" != ?", false},
+}
+
 type Collection struct {
 	Data  []interface{} `json:"data"`
 	Meta  Metadata      `json:"meta"`
@@ -78,4 +95,21 @@ var FlattenedCSVHeader = []string{
 	"variation_cpu_request_format",
 	"variation_memory_request_amount",
 	"variation_memory_request_format",
+}
+
+// Filter modes for param-based query filters (cluster, project, etc.)
+const (
+	FilterModeInclude = "include"
+	FilterModeExact   = "exact"
+	FilterModeExclude = "exclude"
+)
+
+// FilterModeClause maps mode to SQL clause suffix and wrap for string params (cluster_alias, project).
+var FilterModeClause = map[string]struct {
+	Suffix string
+	Wrap   bool
+}{
+	FilterModeInclude: {" ILIKE ?", true},
+	FilterModeExact:   {" = ?", false},
+	FilterModeExclude: {" != ?", false},
 }
