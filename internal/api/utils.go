@@ -234,12 +234,17 @@ func ParseUnitParams(c echo.Context, defaultCPU, defaultMemory string) (map[stri
 	return unitChoices, !trueUnits, nil
 }
 
-func isCharSafe(c rune) bool {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
-		c == '-' || c == '_' || c == '.' || c == ' '
+// isCharSafeRFC1123 returns true for chars valid in RFC 1123 DNS labels/subdomains.
+// allowDot: true for subdomains (cluster alias), false for single labels (namespace).
+// Ref - https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
+func isCharSafeRFC1123(c rune, allowDot bool) bool {
+	if c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-' {
+		return true
+	}
+	return allowDot && c == '.'
 }
 
-func sanitizeParamValue(paramName, s string, paramMaxLen int) (string, error) {
+func sanitizeParamValue(paramName, s string, paramMaxLen int, allowDot bool) (string, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return "", fmt.Errorf("empty value for %s", paramName)
@@ -248,7 +253,7 @@ func sanitizeParamValue(paramName, s string, paramMaxLen int) (string, error) {
 		return "", fmt.Errorf("%s exceeds max length %d", paramName, paramMaxLen)
 	}
 	for _, c := range s {
-		if !isCharSafe(c) {
+		if !isCharSafeRFC1123(c, allowDot) {
 			return "", fmt.Errorf("invalid character in %s value", paramName)
 		}
 	}
@@ -266,7 +271,7 @@ func parseClusterParams(value string, mode string) (string, []string, error) {
 		}
 		return "clusters.cluster_uuid" + suffix, []string{value}, nil
 	}
-	s, err := sanitizeParamValue("cluster", value, model.ClusterMaxLen)
+	s, err := sanitizeParamValue("cluster", value, model.ClusterMaxLen, true)
 	if err != nil {
 		return "", nil, err
 	}
@@ -292,7 +297,7 @@ func buildModeClause(param, column, mode, value string) (map[string]any, error) 
 		}
 		return map[string]any{clause: vals}, nil
 	}
-	s, err := sanitizeParamValue(param, value, model.NamespaceMaxLen)
+	s, err := sanitizeParamValue(param, value, model.NamespaceMaxLen, false)
 	if err != nil {
 		return nil, err
 	}
