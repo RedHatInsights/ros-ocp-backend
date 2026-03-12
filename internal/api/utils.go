@@ -361,7 +361,7 @@ func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeV
 
 func applyParamFilter(c echo.Context, queryParams map[string]any, param, column string) error {
 	excludeKey := "exclude[" + param + "]"
-	exactKey := "exact[" + param + "]"
+	exactKey := "filter[exact:" + param + "]"
 	var includeVals, excludeVals, exactVals []string
 	if v := c.QueryParam(param); v != "" {
 		includeVals = []string{v}
