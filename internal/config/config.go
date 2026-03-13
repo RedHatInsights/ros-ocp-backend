@@ -75,7 +75,6 @@ type Config struct {
 
 	// Namespace recommendation config
 	DisableNamespaceRecommendation bool `mapstructure:"DISABLE_NAMESPACE_RECOMMENDATION"`
-	MaxCountPerQueryParam          int  `mapstructure:"MAXIMUM_COUNT_PER_QUERY_PARAM"`
 
 	//Unleash config
 	UnleashClientAccessToken string
