@@ -9,9 +9,9 @@ else
     b64_identity=$(shell echo '${identity}' | base64 -w 0 -)
 endif
 
-ros_ocp_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"org_id": "3340851", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros-ocp-usage.csv"]}'
-ros_ocp_msg_24Hrs='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"org_id": "3340851", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros-ocp-usage-24Hrs.csv"]}'
-ros_ocp_namespace_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"org_id": "3340851", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros_ocp_namespace.csv"]}'
+ros_ocp_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"org_id": "3340851", "source_id": "111", "cluster_uuid": "1b36b20f-7fa0-4454-a6d2-008294e06378", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros-ocp-usage.csv"]}'
+ros_ocp_msg_24Hrs='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"org_id": "3340851", "source_id": "111", "cluster_uuid": "1b36b20f-7fa0-4454-a6d2-008294e06378", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros-ocp-usage-24Hrs.csv"]}'
+ros_ocp_namespace_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"org_id": "3340851", "source_id": "111", "cluster_uuid": "1b36b20f-7fa0-4454-a6d2-008294e06378", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros_ocp_namespace.csv"]}'
 file=./scripts/samples/cost-mgmt.tar.gz
 CSVfile=./scripts/samples/ros-ocp-usage.csv
 CSVfile_name_tuple := $(subst /, ,$(CSVfile:%=%))
@@ -110,7 +110,7 @@ else
 endif
 
 upload-msg-to-rosocp:
-	echo ${ros_ocp_msg} | docker-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
+	echo ${ros_ocp_msg} | docker compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
 
 upload-ns-msg-to-rosocp:
 	echo ${ros_ocp_namespace_msg} | docker compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092

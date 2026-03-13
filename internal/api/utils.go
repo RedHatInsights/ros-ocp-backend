@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -236,9 +237,10 @@ func ParseUnitParams(c echo.Context, defaultCPU, defaultMemory string) (map[stri
 
 // isCharSafeRFC1123 returns true for chars valid in RFC 1123 DNS labels/subdomains.
 // allowDot: true for subdomains (cluster alias), false for single labels (namespace).
+// Additionally, isCharSafeRFC1123 aims to provide necessary defense from SQL injection attacks.
 // Ref - https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
 func isCharSafeRFC1123(c rune, allowDot bool) bool {
-	if c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-' {
+	if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' {
 		return true
 	}
 	return allowDot && c == '.'
@@ -260,73 +262,77 @@ func sanitizeParamValue(paramName, s string, paramMaxLen int, allowDot bool) (st
 	return s, nil
 }
 
-func parseClusterParams(value string, mode string) (string, []string, error) {
+func parseClusterParams(value string, mode string) ([]string, []string, error) {
 	if value == "" {
-		return "", nil, nil
-	}
-	if _, err := uuid.Parse(value); err == nil {
-		suffix := " = ?"
-		if mode == FilterModeExclude {
-			suffix = " != ?"
-		}
-		return "clusters.cluster_uuid" + suffix, []string{value}, nil
-	}
-	s, err := sanitizeParamValue("cluster", value, model.ClusterMaxLen, true)
-	if err != nil {
-		return "", nil, err
+		return nil, nil, nil
 	}
 	modeClause := FilterModeClause[mode]
 	if modeClause.Suffix == "" {
-		return "", nil, fmt.Errorf("unknown cluster filter mode: %s", mode)
+		return nil, nil, fmt.Errorf("unknown cluster filter mode: %s", mode)
 	}
-	arg := s
+	if _, err := uuid.Parse(value); err == nil {
+		suffix := modeClause.Suffix
+		// for cluster_uuid exact is set for includes
+		if mode == FilterModeInclude {
+			suffix = FilterModeClause[FilterModeExact].Suffix
+		}
+		return []string{"clusters.cluster_uuid" + suffix}, []string{value}, nil
+	}
+	s, err := sanitizeParamValue("cluster", value, model.ClusterMaxLen, true)
+	if err != nil {
+		return nil, nil, err
+	}
 	if modeClause.Wrap {
-		arg = "%" + s + "%"
+		s = "%" + s + "%"
 	}
-	return "clusters.cluster_alias" + modeClause.Suffix, []string{arg}, nil
+	return []string{"clusters.cluster_alias" + modeClause.Suffix}, []string{s}, nil
 }
 
-func buildModeClause(param, column, mode, value string) (map[string]any, error) {
-	if param == "cluster" {
-		clause, vals, err := parseClusterParams(value, mode)
-		if err != nil {
-			return nil, err
-		}
-		if clause == "" {
-			return nil, nil
-		}
-		return map[string]any{clause: vals}, nil
-	}
-	s, err := sanitizeParamValue(param, value, model.NamespaceMaxLen, false)
-	if err != nil {
-		return nil, err
+func buildModeClause(param, column, mode string, vals []string, maxLen int, allowDot bool) (map[string]any, error) {
+	if len(vals) == 0 {
+		return nil, nil
 	}
 	modeClause := FilterModeClause[mode]
 	if modeClause.Suffix == "" {
 		return nil, fmt.Errorf("unknown filter mode: %s", mode)
 	}
-	arg := any(s)
-	if modeClause.Wrap {
-		arg = "%" + s + "%"
+
+	allSQLClauses := make([]string, 0, len(vals))
+	allParamVals := make([]string, 0, len(vals))
+	for _, val := range vals {
+		if val == "" {
+			continue
+		}
+		switch param {
+		case "cluster":
+			sqlClauses, paramVals, err := parseClusterParams(val, mode)
+			if err != nil {
+				return nil, err
+			}
+			allSQLClauses = append(allSQLClauses, sqlClauses...)
+			allParamVals = append(allParamVals, paramVals...)
+		default:
+			// handles all other string based query params
+			s, err := sanitizeParamValue(param, val, maxLen, allowDot)
+			if err != nil {
+				return nil, err
+			}
+			if modeClause.Wrap {
+				s = "%" + s + "%"
+			}
+			allParamVals = append(allParamVals, s)
+			allSQLClauses = append(allSQLClauses, column+modeClause.Suffix)
+		}
 	}
-	return map[string]any{column + modeClause.Suffix: arg}, nil
+	if len(allSQLClauses) == 0 {
+		return nil, nil
+	}
+	joinedSQLClause := strings.Join(allSQLClauses, modeClause.Join)
+	return map[string]any{joinedSQLClause: allParamVals}, nil
 }
 
-func addModeClauseIfPresent(clauseMap map[string]any, param, column, mode string, vals []string) error {
-	if len(vals) == 0 {
-		return nil
-	}
-	clause, err := buildModeClause(param, column, mode, vals[0])
-	if err != nil {
-		return err
-	}
-	if clause != nil {
-		maps.Copy(clauseMap, clause)
-	}
-	return nil
-}
-
-func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeVals []string, column string) (map[string]any, error) {
+// parsing of string params based on mode -> include, exclude, exact.
+func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeVals []string, column string, maxLen int, allowDot bool) (map[string]any, error) {
 	hasExclude, hasExact, hasInclude := len(excludeVals) > 0, len(exactVals) > 0, len(includeVals) > 0
 
 	if !hasExclude && !hasExact {
@@ -334,49 +340,105 @@ func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeV
 			return nil, nil
 		}
 		// early exit as default is includes i.e. param=value
-		return buildModeClause(param, column, FilterModeInclude, includeVals[0])
+		return buildModeClause(param, column, FilterModeInclude, includeVals, maxLen, allowDot)
 	}
 
 	if hasExclude {
-		switch {
-		case hasExact && excludeVals[0] == exactVals[0]:
-			return nil, fmt.Errorf("exclude and exact cannot share values for %s", param)
-		case hasInclude && excludeVals[0] == includeVals[0]:
-			return nil, fmt.Errorf("exclude and include cannot share values for %s", param)
+		for _, ev := range excludeVals {
+			if slices.Contains(exactVals, ev) {
+				return nil, fmt.Errorf("exclude and exact cannot share values for %s", param)
+			}
+			if slices.Contains(includeVals, ev) {
+				return nil, fmt.Errorf("exclude and include cannot share values for %s", param)
+			}
 		}
 	}
 
 	clauseMap := make(map[string]any)
-	if err := addModeClauseIfPresent(clauseMap, param, column, FilterModeExclude, excludeVals); err != nil {
-		return nil, err
+	if len(excludeVals) > 0 {
+		clause, err := buildModeClause(param, column, FilterModeExclude, excludeVals, maxLen, allowDot)
+		if err != nil {
+			return nil, err
+		}
+		if clause != nil {
+			maps.Copy(clauseMap, clause)
+		}
 	}
-	if err := addModeClauseIfPresent(clauseMap, param, column, FilterModeExact, exactVals); err != nil {
-		return nil, err
+	if len(exactVals) > 0 {
+		clause, err := buildModeClause(param, column, FilterModeExact, exactVals, maxLen, allowDot)
+		if err != nil {
+			return nil, err
+		}
+		if clause != nil {
+			maps.Copy(clauseMap, clause)
+		}
 	}
-	if err := addModeClauseIfPresent(clauseMap, param, column, FilterModeInclude, includeVals); err != nil {
-		return nil, err
+	// exact is priority when present with includes for the same value
+	var includeValsFiltered []string
+	if hasExact && hasInclude {
+		exactSet := make(map[string]bool)
+		for _, v := range exactVals {
+			exactSet[v] = true
+		}
+		for _, v := range includeVals {
+			if !exactSet[v] {
+				includeValsFiltered = append(includeValsFiltered, v)
+			}
+		}
+	} else {
+		includeValsFiltered = includeVals
+	}
+	if len(includeValsFiltered) > 0 {
+		clause, err := buildModeClause(param, column, FilterModeInclude, includeValsFiltered, maxLen, allowDot)
+		if err != nil {
+			return nil, err
+		}
+		if clause != nil {
+			maps.Copy(clauseMap, clause)
+		}
 	}
 	return clauseMap, nil
 }
 
-func applyParamFilter(c echo.Context, queryParams map[string]any, param, column string) error {
+func applyParamFilter(c echo.Context, queryParams map[string]any, param, column string, maxLen int, allowDot bool) error {
+	cfg := config.GetConfig()
 	excludeKey := "exclude[" + param + "]"
 	exactKey := "filter[exact:" + param + "]"
 	var includeVals, excludeVals, exactVals []string
-	if v := c.QueryParam(param); v != "" {
-		includeVals = []string{v}
+	for _, v := range c.QueryParams()[param] {
+		if v != "" {
+			includeVals = append(includeVals, v)
+		}
 	}
-	if v := c.QueryParam(excludeKey); v != "" {
-		excludeVals = []string{v}
+
+	if len(includeVals) > cfg.MaxCountPerQueryParam {
+		return fmt.Errorf("too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
 	}
-	if v := c.QueryParam(exactKey); v != "" {
-		exactVals = []string{v}
+
+	for _, v := range c.QueryParams()[excludeKey] {
+		if v != "" {
+			excludeVals = append(excludeVals, v)
+		}
+	}
+
+	if len(excludeVals) > cfg.MaxCountPerQueryParam {
+		return fmt.Errorf("too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
+	}
+
+	for _, v := range c.QueryParams()[exactKey] {
+		if v != "" {
+			exactVals = append(exactVals, v)
+		}
+	}
+
+	if len(exactVals) > cfg.MaxCountPerQueryParam {
+		return fmt.Errorf("too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
 	}
 
 	if len(includeVals) == 0 && len(excludeVals) == 0 && len(exactVals) == 0 {
 		return nil
 	}
-	clauseMap, err := buildSQLClauseWithFilterType(param, includeVals, exactVals, excludeVals, column)
+	clauseMap, err := buildSQLClauseWithFilterType(param, includeVals, exactVals, excludeVals, column, maxLen, allowDot)
 	if err != nil {
 		return err
 	}
@@ -421,13 +483,11 @@ func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
 	}
 	queryParams["namespace_recommendation_sets.monitoring_end_time < ?"] = endTimestamp
 
-	// parsing of string params based on mode -> include, exclude, exact
-
 	var errs []error
-	if err := applyParamFilter(c, queryParams, "cluster", ""); err != nil {
+	if err := applyParamFilter(c, queryParams, "cluster", "", model.ClusterMaxLen, true); err != nil {
 		errs = append(errs, err)
 	}
-	if err := applyParamFilter(c, queryParams, "project", "namespace_recommendation_sets.namespace_name"); err != nil {
+	if err := applyParamFilter(c, queryParams, "project", "namespace_recommendation_sets.namespace_name", model.NamespaceMaxLen, false); err != nil {
 		errs = append(errs, err)
 	}
 	if len(errs) > 0 {

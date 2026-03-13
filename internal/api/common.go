@@ -9,14 +9,15 @@ const (
 	FilterModeExclude = "exclude"
 )
 
-// FilterModeClause maps mode to SQL clause suffix and wrap for string params (cluster_alias, project).
+// FilterModeClause maps mode to SQL clause suffix, wrap for include, and join for multi-value params.
 var FilterModeClause = map[string]struct {
 	Suffix string
 	Wrap   bool
+	Join   string
 }{
-	FilterModeInclude: {" ILIKE ?", true},
-	FilterModeExact:   {" = ?", false},
-	FilterModeExclude: {" != ?", false},
+	FilterModeInclude: {" ILIKE ?", true, " OR "},
+	FilterModeExact:   {" = ?", false, " OR "},
+	FilterModeExclude: {" != ?", false, " AND "},
 }
 
 type Collection struct {
