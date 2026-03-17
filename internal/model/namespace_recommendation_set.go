@@ -47,14 +47,14 @@ type NamespaceRecommendationSet struct {
 }
 
 type NamespaceRecommendationSetResult struct {
-	ClusterAlias         string         `json:"cluster_alias"`
-	ClusterUUID          string         `json:"cluster_uuid"`
-	ID                   string         `json:"id"`
-	LastReported         string         `json:"last_reported"`
-	Project              string         `json:"project"`
-	Recommendations      datatypes.JSON `json:"-"`
-	RecommendationsJSON  map[string]any `gorm:"-" json:"recommendations"`
-	SourceID             string         `json:"source_id"`
+	ClusterAlias        string         `json:"cluster_alias"`
+	ClusterUUID         string         `json:"cluster_uuid"`
+	ID                  string         `json:"id"`
+	LastReported        string         `json:"last_reported"`
+	Project             string         `json:"project"`
+	Recommendations     datatypes.JSON `json:"-"`
+	RecommendationsJSON map[string]any `gorm:"-" json:"recommendations"`
+	SourceID            string         `json:"source_id"`
 }
 
 func (r *NamespaceRecommendationSet) AfterFind(tx *gorm.DB) error {
