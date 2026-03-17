@@ -117,7 +117,7 @@ upload-ns-msg-to-rosocp:
 
 
 upload-msg-to-rosocp-24Hrs:
-	echo ${ros_ocp_msg_24Hrs} | docker-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
+	echo ${ros_ocp_msg_24Hrs} | docker compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
 
 
 get-recommendations:
