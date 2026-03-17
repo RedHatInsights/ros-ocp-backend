@@ -235,12 +235,12 @@ func ParseUnitParams(c echo.Context, defaultCPU, defaultMemory string) (map[stri
 	return unitChoices, !trueUnits, nil
 }
 
-// isCharSafeRFC1123 returns true for chars valid in RFC 1123 DNS labels/subdomains.
+// isCharSafeRFC1123 returns true for chars valid in RFC 1123 DNS labels/subdomains, plus underscore.
 // allowDot: true for subdomains (cluster alias), false for single labels (namespace).
 // Additionally, isCharSafeRFC1123 aims to provide necessary defense from SQL injection attacks.
 // Ref - https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
 func isCharSafeRFC1123(c rune, allowDot bool) bool {
-	if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' {
+	if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == '_' {
 		return true
 	}
 	return allowDot && c == '.'
