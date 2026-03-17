@@ -47,11 +47,9 @@ var NsAllowedOrderBy = OrderByMap{
 	"cluster":       "clusters.cluster_alias",
 	"project":       "namespace_recommendation_sets.namespace_name",
 	"last_reported": "clusters.last_reported_at",
-	// Backward-compatible: keep previous coarse order-by keys for existing API clients
+	// Backward-compatible: keep current columns for order-by
 	"cpu_request_current":    "namespace_recommendation_sets.cpu_request_current",
 	"memory_request_current": "namespace_recommendation_sets.memory_request_current",
-	"cpu_variation":          "namespace_recommendation_sets.cpu_variation",
-	"memory_variation":       "namespace_recommendation_sets.memory_variation",
 	// Per-term, per-engine variation columns (fine-grained ordering)
 	"cpu_variation_short_cost":            "namespace_recommendation_sets.cpu_variation_short_cost",
 	"cpu_variation_short_performance":     "namespace_recommendation_sets.cpu_variation_short_performance",

@@ -13,10 +13,6 @@ type HistoricalNamespaceRecommendationSet struct {
 	OrgID                string `gorm:"type:text;not null"`
 	WorkloadID           uint   `gorm:"not null"`
 	NamespaceName        string `gorm:"type:text;not null"`
-	CPURequestCurrent    float64
-	CPUVariation         float64
-	MemoryRequestCurrent float64
-	MemoryVariation      float64
 	MonitoringStartTime  time.Time `gorm:"type:timestamp with time zone;not null"`
 	MonitoringEndTime    time.Time `gorm:"type:timestamp with time zone;not null"`
 	Recommendations      datatypes.JSON

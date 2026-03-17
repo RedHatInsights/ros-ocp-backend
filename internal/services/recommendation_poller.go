@@ -225,26 +225,26 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 						continue
 					}
 
-					cols := kruize.ExtractRecommendationColumnValues(v)
+					extractedNamespaceRecommVals := model.ExtractRecommendationColumnValues(v)
 
 					recommendationSet := model.NamespaceRecommendationSet{
 						OrgID:                            kafkaMsg.Metadata.Org_id,
 						WorkloadID:                       kafkaMsg.Metadata.Workload_id,
 						NamespaceName:                    typedNamespaceRecommendation.Namespace,
-						CPURequestCurrent:                cols.CPURequestCurrent,
-						MemoryRequestCurrent:             cols.MemoryRequestCurrent,
-						CPUVariationShortCost:            cols.CPUVariationShortCost,
-						CPUVariationShortPerformance:     cols.CPUVariationShortPerformance,
-						CPUVariationMediumCost:           cols.CPUVariationMediumCost,
-						CPUVariationMediumPerformance:    cols.CPUVariationMediumPerformance,
-						CPUVariationLongCost:             cols.CPUVariationLongCost,
-						CPUVariationLongPerformance:      cols.CPUVariationLongPerformance,
-						MemoryVariationShortCost:         cols.MemoryVariationShortCost,
-						MemoryVariationShortPerformance:  cols.MemoryVariationShortPerformance,
-						MemoryVariationMediumCost:        cols.MemoryVariationMediumCost,
-						MemoryVariationMediumPerformance: cols.MemoryVariationMediumPerformance,
-						MemoryVariationLongCost:          cols.MemoryVariationLongCost,
-						MemoryVariationLongPerformance:   cols.MemoryVariationLongPerformance,
+						CPURequestCurrent:                extractedNamespaceRecommVals.CPURequestCurrent,
+						MemoryRequestCurrent:             extractedNamespaceRecommVals.MemoryRequestCurrent,
+						CPUVariationShortCost:            extractedNamespaceRecommVals.CPUVariationShortCost,
+						CPUVariationShortPerformance:     extractedNamespaceRecommVals.CPUVariationShortPerformance,
+						CPUVariationMediumCost:           extractedNamespaceRecommVals.CPUVariationMediumCost,
+						CPUVariationMediumPerformance:    extractedNamespaceRecommVals.CPUVariationMediumPerformance,
+						CPUVariationLongCost:             extractedNamespaceRecommVals.CPUVariationLongCost,
+						CPUVariationLongPerformance:      extractedNamespaceRecommVals.CPUVariationLongPerformance,
+						MemoryVariationShortCost:         extractedNamespaceRecommVals.MemoryVariationShortCost,
+						MemoryVariationShortPerformance:  extractedNamespaceRecommVals.MemoryVariationShortPerformance,
+						MemoryVariationMediumCost:        extractedNamespaceRecommVals.MemoryVariationMediumCost,
+						MemoryVariationMediumPerformance: extractedNamespaceRecommVals.MemoryVariationMediumPerformance,
+						MemoryVariationLongCost:          extractedNamespaceRecommVals.MemoryVariationLongCost,
+						MemoryVariationLongPerformance:   extractedNamespaceRecommVals.MemoryVariationLongPerformance,
 						MonitoringStartTime:              v.RecommendationTerms.Short_term.MonitoringStartTime,
 						MonitoringEndTime:                v.MonitoringEndTime,
 						Recommendations:                  marshalData,
@@ -253,14 +253,12 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 					namespaceRecommendationSetList = append(namespaceRecommendationSetList, recommendationSet)
 
 					historicalRecommendationSet := model.HistoricalNamespaceRecommendationSet{
-						OrgID:                kafkaMsg.Metadata.Org_id,
-						WorkloadID:           kafkaMsg.Metadata.Workload_id,
-						NamespaceName:        typedNamespaceRecommendation.Namespace,
-						CPURequestCurrent:    cols.CPURequestCurrent,
-						MemoryRequestCurrent: cols.MemoryRequestCurrent,
-						MonitoringStartTime:  v.RecommendationTerms.Short_term.MonitoringStartTime,
-						MonitoringEndTime:    v.MonitoringEndTime,
-						Recommendations:      marshalData,
+						OrgID:               kafkaMsg.Metadata.Org_id,
+						WorkloadID:          kafkaMsg.Metadata.Workload_id,
+						NamespaceName:       typedNamespaceRecommendation.Namespace,
+						MonitoringStartTime: v.RecommendationTerms.Short_term.MonitoringStartTime,
+						MonitoringEndTime:   v.MonitoringEndTime,
+						Recommendations:     marshalData,
 					}
 					namespaceHistRecommendationSetList = append(namespaceHistRecommendationSetList, historicalRecommendationSet)
 				}
