@@ -240,23 +240,31 @@ func ParseUnitParams(c echo.Context, defaultCPU, defaultMemory string) (map[stri
 // Additionally, isCharSafeRFC1123 aims to provide necessary defense from SQL injection attacks.
 // Ref - https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
 func isCharSafeRFC1123(c rune, allowDot bool) bool {
-	if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == '_' {
+	switch {
+	case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z':
 		return true
+	case c >= '0' && c <= '9':
+		return true
+	case c == '-', c == '_':
+		return true
+	case allowDot && c == '.':
+		return true
+	default:
+		return false
 	}
-	return allowDot && c == '.'
 }
 
 func sanitizeParamValue(paramName, s string, paramMaxLen int, allowDot bool) (string, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return "", fmt.Errorf("empty value for %s", paramName)
+		return "", namespaceAPIErrf(true, "empty value for %s", paramName)
 	}
 	if len(s) > paramMaxLen {
-		return "", fmt.Errorf("%s exceeds max length %d", paramName, paramMaxLen)
+		return "", namespaceAPIErrf(true, "%s exceeds max length %d", paramName, paramMaxLen)
 	}
 	for _, c := range s {
 		if !isCharSafeRFC1123(c, allowDot) {
-			return "", fmt.Errorf("invalid character in %s value", paramName)
+			return "", namespaceAPIErrf(true, "invalid character in %s value", paramName)
 		}
 	}
 	return s, nil
@@ -268,7 +276,7 @@ func parseClusterParams(value string, mode string) ([]string, []string, error) {
 	}
 	modeClause := FilterModeClause[mode]
 	if modeClause.Suffix == "" {
-		return nil, nil, fmt.Errorf("unknown cluster filter mode: %s", mode)
+		return nil, nil, namespaceAPIErrf(false, "unknown cluster filter mode: %s", mode)
 	}
 	if _, err := uuid.Parse(value); err == nil {
 		suffix := modeClause.Suffix
@@ -294,7 +302,7 @@ func buildModeClause(param, column, mode string, vals []string, maxLen int, allo
 	}
 	modeClause := FilterModeClause[mode]
 	if modeClause.Suffix == "" {
-		return nil, fmt.Errorf("unknown filter mode: %s", mode)
+		return nil, namespaceAPIErrf(false, "unknown filter mode: %s", mode)
 	}
 
 	allSQLClauses := make([]string, 0, len(vals))
@@ -346,10 +354,10 @@ func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeV
 	if hasExclude {
 		for _, ev := range excludeVals {
 			if slices.Contains(exactVals, ev) {
-				return nil, fmt.Errorf("exclude and exact cannot share values for %s", param)
+				return nil, namespaceAPIErrf(true, "exclude and exact cannot share values for %s", param)
 			}
 			if slices.Contains(includeVals, ev) {
-				return nil, fmt.Errorf("exclude and include cannot share values for %s", param)
+				return nil, namespaceAPIErrf(true, "exclude and include cannot share values for %s", param)
 			}
 		}
 	}
@@ -412,7 +420,7 @@ func applyParamFilter(c echo.Context, queryParams map[string]any, param, column 
 	}
 
 	if len(includeVals) > cfg.MaxCountPerQueryParam {
-		return fmt.Errorf("too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
+		return namespaceAPIErrf(true, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
 	}
 
 	for _, v := range c.QueryParams()[excludeKey] {
@@ -422,7 +430,7 @@ func applyParamFilter(c echo.Context, queryParams map[string]any, param, column 
 	}
 
 	if len(excludeVals) > cfg.MaxCountPerQueryParam {
-		return fmt.Errorf("too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
+		return namespaceAPIErrf(true, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
 	}
 
 	for _, v := range c.QueryParams()[exactKey] {
@@ -432,7 +440,7 @@ func applyParamFilter(c echo.Context, queryParams map[string]any, param, column 
 	}
 
 	if len(exactVals) > cfg.MaxCountPerQueryParam {
-		return fmt.Errorf("too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
+		return namespaceAPIErrf(true, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
 	}
 
 	if len(includeVals) == 0 && len(excludeVals) == 0 && len(exactVals) == 0 {
@@ -464,7 +472,7 @@ func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
 		startTimestamp, err = time.Parse(timeLayout, startDateStr)
 		if err != nil {
 			log.Error("error parsing start_date:", err)
-			return queryParams, err
+			return queryParams, namespaceAPIErrf(true, "invalid start_date format, use YYYY-MM-DD")
 		}
 	}
 	queryParams["namespace_recommendation_sets.monitoring_end_time >= ?"] = startTimestamp
@@ -477,7 +485,7 @@ func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
 		endTimestamp, err = time.Parse(timeLayout, endDateStr)
 		if err != nil {
 			log.Error("error parsing end_date:", err)
-			return queryParams, err
+			return queryParams, namespaceAPIErrf(true, "invalid end_date format, use YYYY-MM-DD")
 		}
 		endTimestamp = endTimestamp.Add(24 * time.Hour)
 	}

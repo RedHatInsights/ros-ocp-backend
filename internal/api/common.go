@@ -1,6 +1,22 @@
 package api
 
+import "fmt"
+
 const timeLayout = "2006-01-02"
+
+// ParamError carries an error and whether it is safe to show to the user.
+// The handler uses UserErr to decide: show message or generic "unable to parse query parameters".
+type ParamError struct {
+	Err     error
+	UserErr bool
+}
+
+func (e *ParamError) Error() string { return e.Err.Error() }
+func (e *ParamError) Unwrap() error { return e.Err }
+
+func namespaceAPIErrf(userErr bool, format string, args ...any) *ParamError {
+	return &ParamError{Err: fmt.Errorf(format, args...), UserErr: userErr}
+}
 
 // Filter modes for param-based query filters (cluster, project, etc.).
 const (

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -145,6 +146,10 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 	queryParams, paramErr := MapNamespaceQueryParameters(c)
 	if paramErr != nil {
 		log.Error(paramErr.Error())
+		var pe *ParamError
+		if errors.As(paramErr, &pe) && pe.UserErr {
+			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": paramErr.Error()})
+		}
 		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "unable to parse query parameters"})
 	}
 
