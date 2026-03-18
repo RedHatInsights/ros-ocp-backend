@@ -21,6 +21,7 @@ type Config struct {
 	ReadHeaderTimeout               int    `mapstructure:"READ_HEADER_TIMEOUT"`
 	RecordLimitCSV                  int    `mapstructure:"RECORD_LIMIT_CSV"`
 	CSVStreamInterval               int    `mapstructure:"CSV_STREAM_INTERVAL"`
+	UpdateKruizePerfProfile         bool   `mapstructure:"UPDATE_KRUIZE_PERF_PROFILE"`
 
 	// Kafka config
 	KafkaBootstrapServers string `mapstructure:"KAFKA_BOOTSTRAP_SERVERS"`
@@ -217,6 +218,7 @@ func initConfig() {
 	viper.SetDefault("RECORD_LIMIT_CSV", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
 	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", true)
+	viper.SetDefault("UPDATE_KRUIZE_PERF_PROFILE", true)
 
 	// Unleash config
 	viper.SetDefault("UnleashClientAccessToken", "rosocp:dev.token")
