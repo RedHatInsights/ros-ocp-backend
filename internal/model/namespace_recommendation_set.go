@@ -1,13 +1,17 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"github.com/redhatinsights/ros-ocp-backend/internal/api/listoptions"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
+	"github.com/redhatinsights/ros-ocp-backend/internal/rbac"
 )
 
 type NamespaceRecommendationSet struct {
@@ -31,20 +35,14 @@ type NamespaceRecommendationSet struct {
 }
 
 type NamespaceRecommendationSetResult struct {
-	ClusterAlias         string         `json:"cluster_alias"`
-	ClusterUUID          string         `json:"cluster_uuid"`
-	ID                   string         `json:"id"`
-	LastReported         string         `json:"last_reported"`
-	Project              string         `json:"namespace_name"`
-	CPURequestCurrent    float64        `json:"cpu_request_current"`
-	CPUvariation         float64        `json:"cpu_variation"`
-	MemoryRequestCurrent float64        `json:"memory_request_current"`
-	MemoryVariation      float64        `json:"memory_variation"`
-	Recommendations      datatypes.JSON `json:"-"`
-	RecommendationsJSON  map[string]any `gorm:"-" json:"recommendations"`
-	SourceID             string         `json:"source_id"`
-	Workload             string         `json:"workload"`
-	WorkloadType         string         `json:"workload_type"`
+	ClusterAlias        string         `json:"cluster_alias"`
+	ClusterUUID         string         `json:"cluster_uuid"`
+	ID                  string         `json:"id"`
+	LastReported        string         `json:"last_reported"`
+	Project             string         `json:"project"`
+	Recommendations     datatypes.JSON `json:"-"`
+	RecommendationsJSON map[string]any `gorm:"-" json:"recommendations"`
+	SourceID            string         `json:"source_id"`
 }
 
 func (r *NamespaceRecommendationSet) AfterFind(tx *gorm.DB) error {
@@ -52,11 +50,18 @@ func (r *NamespaceRecommendationSet) AfterFind(tx *gorm.DB) error {
 	return nil
 }
 
-func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string, orderQuery string, format string, limit int, offset int, queryParams map[string]interface{}, user_permissions map[string][]string) ([]NamespaceRecommendationSetResult, int, error) {
+func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string, opts listoptions.ListOptions, queryParams map[string]interface{}, user_permissions map[string][]string) ([]NamespaceRecommendationSetResult, int, error) {
 	var recommendationSets []NamespaceRecommendationSetResult
+	var count int64 = 0
 	query := getNamespaceRecommendationQuery(orgID)
 
-	add_rbac_filter(query, user_permissions)
+	if err := rbac.AddRBACFilter(
+		query,
+		user_permissions,
+		rbac.ResourceProject,
+	); err != nil {
+		return recommendationSets, int(count), err
+	}
 
 	for key, values := range queryParams {
 		switch v := values.(type) {
@@ -71,17 +76,35 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 		}
 	}
 
-	var count int64 = 0
 	query.Count(&count)
-	query.Order(orderQuery)
+	query = query.Order(opts.OrderBy + " " + opts.OrderHow)
 
-	if format == "csv" {
+	limit := opts.Limit
+	if opts.Format == "csv" {
 		limit = config.GetConfig().RecordLimitCSV
 	}
-	err := query.Offset(offset).Limit(limit).Scan(&recommendationSets).Error
+	err := query.Offset(opts.Offset).Limit(limit).Scan(&recommendationSets).Error
 
 	return recommendationSets, int(count), err
 
+}
+
+func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSetByID(orgID string, recommendationID string, user_permissions map[string][]string) (NamespaceRecommendationSetResult, error) {
+	var nsRecommendationSet NamespaceRecommendationSetResult
+
+	query := getNamespaceRecommendationQuery(orgID)
+	query.Where("namespace_recommendation_sets.id = ?", recommendationID)
+
+	if err := rbac.AddRBACFilter(
+		query,
+		user_permissions,
+		rbac.ResourceProject,
+	); err != nil {
+		return nsRecommendationSet, err
+	}
+
+	err := query.First(&nsRecommendationSet).Error
+	return nsRecommendationSet, err
 }
 
 func (r *NamespaceRecommendationSet) CreateNamespaceRecommendationSet(tx *gorm.DB) error {
@@ -96,4 +119,14 @@ func (r *NamespaceRecommendationSet) CreateNamespaceRecommendationSet(tx *gorm.D
 	}
 
 	return nil
+}
+
+func GetFirstNamespaceRecommendationSetsByWorkloadID(workload_id uint) (NamespaceRecommendationSet, error) {
+	namespaceRecommendationSets := NamespaceRecommendationSet{}
+	db := database.GetDB()
+	query := db.Where("workload_id = ?", workload_id).First(&namespaceRecommendationSets)
+	if query.Error != nil && errors.Is(query.Error, gorm.ErrRecordNotFound) {
+		return namespaceRecommendationSets, nil
+	}
+	return namespaceRecommendationSets, query.Error
 }

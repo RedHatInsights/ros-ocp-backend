@@ -11,7 +11,7 @@ endif
 
 ros_ocp_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"org_id": "3340851", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros-ocp-usage.csv"]}'
 ros_ocp_msg_24Hrs='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"org_id": "3340851", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros-ocp-usage-24Hrs.csv"]}'
-
+ros_ocp_namespace_msg='{"request_id": "uuid1234", "b64_identity": "test", "metadata": {"org_id": "3340851", "source_id": "111", "cluster_uuid": "222", "cluster_alias": "name222"}, "files": ["http://localhost:8888/ros_ocp_namespace.csv"]}'
 file=./scripts/samples/cost-mgmt.tar.gz
 CSVfile=./scripts/samples/ros-ocp-usage.csv
 CSVfile_name_tuple := $(subst /, ,$(CSVfile:%=%))
@@ -112,6 +112,10 @@ endif
 upload-msg-to-rosocp:
 	echo ${ros_ocp_msg} | docker-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
 
+upload-ns-msg-to-rosocp:
+	echo ${ros_ocp_namespace_msg} | docker compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
+
+
 upload-msg-to-rosocp-24Hrs:
 	echo ${ros_ocp_msg_24Hrs} | docker-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
 
@@ -125,3 +129,19 @@ else
 		 -H "x-rh-request_id: testtesttest" \
 		 http://localhost:8000/api/cost-management/v1/recommendations/openshift?start_date=${start_date} | python -m json.tool
 endif
+
+get-ns-recommendations:
+ifdef env
+	$(eval APIPOD=$(shell oc get pods -o custom-columns=POD:.metadata.name --no-headers -n ${env} | grep ros-ocp-backend-api))
+	oc exec ${APIPOD} -c ros-ocp-backend-api -n ${env} -- /bin/bash -c 'curl -v -H "X-Rh-Identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/openshift/namespace/recommendations?start_date=${start_date}' | python -m json.tool
+else
+	curl -v -H "x-rh-identity: ${b64_identity}" \
+		 -H "x-rh-request_id: testtesttest" \
+		 "http://localhost:8000/api/cost-management/v1/openshift/namespace/recommendations?start_date=${start_date}" | python -m json.tool
+endif
+
+get_unleash_features:
+	curl -H "Authorization: rosocp:dev.token" http://localhost:3063/api/client/features && echo
+
+get-openapi:
+	curl -v -H "x-rh-identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/recommendations/openshift/openapi.json

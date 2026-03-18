@@ -37,7 +37,7 @@ func StartAPIServer() {
 			log.Fatal(err)
 		}
 	}()
-	app.Use(middleware.Logger())
+	app.Use(middleware.RequestLogger())
 	app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowMethods: []string{http.MethodGet},
 	}))
@@ -50,8 +50,14 @@ func StartAPIServer() {
 	if cfg.RBACEnabled {
 		v1.Use(ros_middleware.Rbac)
 	}
+
+	// Container
 	v1.GET("/recommendations/openshift", GetRecommendationSetList)
 	v1.GET("/recommendations/openshift/:recommendation-id", GetRecommendationSet)
+
+	// Project/Namespace
+	v1.GET("/openshift/namespace/recommendations", GetNamespaceRecommendationSetList)
+	v1.GET("/recommendations/openshift/namespace/:recommendation-id", GetNamespaceRecommendationSet)
 
 	s := http.Server{
 		Addr:              ":" + cfg.API_PORT, // local dev server

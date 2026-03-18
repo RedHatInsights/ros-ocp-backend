@@ -57,7 +57,7 @@ func sourcesListener(msg *k.Message, _ *k.Consumer) {
 				}
 
 				for _, workload := range workloads {
-					kruize.Delete_experiment_from_kruize(workload.ExperimentName)
+					kruize.DeleteExperimentFromKruize(workload.ExperimentName)
 				}
 
 				if err := cluster.DeleteCluster(); err != nil {

@@ -14,6 +14,7 @@ import (
 
 	"gorm.io/datatypes"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
@@ -182,6 +183,121 @@ func parseQueryParams(param string, values []string) (string, []string) {
 		}
 		return paramMap[param], valuesSlice
 	}
+}
+
+func ParseUnitParams(c echo.Context, defaultCPU, defaultMemory string) (map[string]string, bool, error) {
+	unitChoices := make(map[string]string)
+
+	cpuUnitParam := c.QueryParam("cpu-unit")
+	cpuUnitOptions := map[string]bool{
+		"millicores": true,
+		"cores":      true,
+	}
+
+	if cpuUnitParam != "" {
+		if !cpuUnitOptions[cpuUnitParam] {
+			return nil, false, fmt.Errorf("invalid cpu unit")
+		}
+		unitChoices["cpu"] = cpuUnitParam
+	} else {
+		unitChoices["cpu"] = defaultCPU
+	}
+
+	memoryUnitParam := c.QueryParam("memory-unit")
+	memoryUnitOptions := map[string]bool{
+		"bytes": true,
+		"MiB":   true,
+		"GiB":   true,
+	}
+
+	if memoryUnitParam != "" {
+		if !memoryUnitOptions[memoryUnitParam] {
+			return nil, false, fmt.Errorf("invalid memory unit")
+		}
+		unitChoices["memory"] = memoryUnitParam
+	} else {
+		unitChoices["memory"] = defaultMemory
+	}
+
+	trueUnitsStr := c.QueryParam("true-units")
+	var trueUnits bool
+	if trueUnitsStr != "" {
+		var err error
+		trueUnits, err = strconv.ParseBool(trueUnitsStr)
+		if err != nil {
+			return nil, false, fmt.Errorf("invalid value for true-units")
+		}
+	}
+
+	return unitChoices, !trueUnits, nil
+}
+
+func parseClusterParams(values []string) (string, []string) {
+	/*
+	   If value is valid UUID, exact match on cluster_uuid.
+	   Else ILIKE on cluster_alias for includes/substring matching.
+	*/
+	parts := []string{}
+	valuesSlice := []string{}
+	for _, value := range values {
+		if _, err := uuid.Parse(value); err == nil {
+			parts = append(parts, "clusters.cluster_uuid = ?")
+			valuesSlice = append(valuesSlice, value)
+		} else {
+			parts = append(parts, "clusters.cluster_alias ILIKE ?")
+			valuesSlice = append(valuesSlice, "%"+value+"%")
+		}
+	}
+	return strings.Join(parts, " OR "), valuesSlice
+}
+
+func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
+	log := logging.GetLogger()
+	queryParams := make(map[string]any)
+	var startTimestamp, endTimestamp time.Time
+
+	now := time.Now().UTC().Truncate(time.Second)
+	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	startDateStr := c.QueryParam("start_date")
+	if startDateStr == "" {
+		startTimestamp = firstOfMonth
+	} else {
+		var err error
+		startTimestamp, err = time.Parse(timeLayout, startDateStr)
+		if err != nil {
+			log.Error("error parsing start_date:", err)
+			return queryParams, err
+		}
+	}
+	queryParams["namespace_recommendation_sets.monitoring_end_time >= ?"] = startTimestamp
+
+	endDateStr := c.QueryParam("end_date")
+	if endDateStr == "" {
+		endTimestamp = now
+	} else {
+		var err error
+		endTimestamp, err = time.Parse(timeLayout, endDateStr)
+		if err != nil {
+			log.Error("error parsing end_date:", err)
+			return queryParams, err
+		}
+		endTimestamp = endTimestamp.Add(24 * time.Hour)
+	}
+	queryParams["namespace_recommendation_sets.monitoring_end_time < ?"] = endTimestamp
+
+	clusters := c.QueryParams()["cluster"]
+	if len(clusters) > 0 {
+		paramString, values := parseClusterParams(clusters)
+		queryParams[paramString] = values
+	}
+
+	project := c.QueryParam("project")
+	if project != "" {
+		queryParams["namespace_recommendation_sets.namespace_name ILIKE ?"] = "%" + project + "%"
+	}
+
+	return queryParams, nil
 }
 
 func get_user_permissions(c echo.Context) map[string][]string {
@@ -612,14 +728,17 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 		return nil
 	}
 
-	// box-plots data is not required on the list endpoint
-	if handlerName == "recommendationset-list" {
+	// box-plots data is not required from list endpoints
+	if handlerName == "recommendationset-list" || handlerName == "namespace-recommendationset-list" {
 		data = dropBoxPlotsObject(data)
 	}
 
 	data = transformComponentUnits(unitsToTransform, updateUnitsk8s, data) // cpu: core values require truncation
 	data = filterNotifications(recommendationID, clusterUUID, data)
 	data = convertVariationToPercentage(data)
+	if handlerName == "namespace-recommendationset-list" {
+		data = flattenCurrentRequests(data)
+	}
 	return data
 }
 
@@ -765,31 +884,12 @@ func GenerateAndStreamCSV(w io.Writer, recommendationSets []model.Recommendation
 	return nil
 }
 
-func resolveResponseFormat(acceptHeaderVal string, formatQueryParamVal string) (string, error) {
-	if acceptHeaderVal == "" && formatQueryParamVal == "" {
-		return "json", nil // default format
-	}
-
-	responseFormat := ""
-	switch acceptHeaderVal {
-	case "text/csv":
-		responseFormat = "csv"
-	case "application/json":
-		responseFormat = "json"
-	}
-
-	if responseFormat != "" {
-		return responseFormat, nil // preferring header value
-	} else {
-		switch formatQueryParamVal {
-		case "", "json":
-			responseFormat = "json"
-		case "csv":
-			responseFormat = "csv"
-		default:
-			return "", fmt.Errorf("invalid value for format: %q", formatQueryParamVal)
+func flattenCurrentRequests(recommendationJSON map[string]interface{}) map[string]interface{} {
+	if current, ok := recommendationJSON["current"].(map[string]interface{}); ok {
+		if requests, ok := current["requests"].(map[string]interface{}); ok {
+			recommendationJSON["cpu_request_current"] = requests["cpu"]
+			recommendationJSON["memory_request_current"] = requests["memory"]
 		}
 	}
-
-	return responseFormat, nil
+	return recommendationJSON
 }
