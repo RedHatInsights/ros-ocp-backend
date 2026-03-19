@@ -16,7 +16,7 @@ type KafkaMsg struct {
 		Account       string
 		Org_id        string `validate:"required"`
 		Source_id     string `validate:"required"`
-		Cluster_uuid  string `validate:"required"`
+		Cluster_uuid  string `validate:"required,uuid"`
 		Cluster_alias string `validate:"required"`
 	} `validate:"required"`
 	Files []string `validate:"required"`

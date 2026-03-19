@@ -322,7 +322,25 @@
           {
             "name": "cluster",
             "in": "query",
-            "description": "Cluster alias or UUID",
+            "description": "Partial match on cluster alias, exact match on cluster UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude[cluster]",
+            "in": "query",
+            "description": "Exclude cluster by alias or UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:cluster]",
+            "in": "query",
+            "description": "Exact match on cluster alias or UUID",
             "required": false,
             "schema": {
               "type": "string"
@@ -331,7 +349,25 @@
           {
             "name": "project",
             "in": "query",
-            "description": "Project name",
+            "description": "Partial match on project by name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude[project]",
+            "in": "query",
+            "description": "Exclude project by name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:project]",
+            "in": "query",
+            "description": "Exact match on project by name",
             "required": false,
             "schema": {
               "type": "string"

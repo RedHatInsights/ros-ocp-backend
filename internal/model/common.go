@@ -6,6 +6,13 @@ import (
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
 )
 
+const (
+	// NamespaceMaxLen is the max length for namespace/project names (K8s RFC 1123 DNS label).
+	NamespaceMaxLen = 63
+	// ClusterMaxLen is the max length for cluster alias (K8s DNS subdomain).
+	ClusterMaxLen = 253
+)
+
 func getRecommendationQuery(orgID string) *gorm.DB {
 	db := database.GetDB()
 	query := db.Table("recommendation_sets").

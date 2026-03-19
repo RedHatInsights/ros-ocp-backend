@@ -3,11 +3,14 @@ package api
 import (
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -232,23 +235,225 @@ func ParseUnitParams(c echo.Context, defaultCPU, defaultMemory string) (map[stri
 	return unitChoices, !trueUnits, nil
 }
 
-func parseClusterParams(values []string) (string, []string) {
-	/*
-	   If value is valid UUID, exact match on cluster_uuid.
-	   Else ILIKE on cluster_alias for includes/substring matching.
-	*/
-	parts := []string{}
-	valuesSlice := []string{}
-	for _, value := range values {
-		if _, err := uuid.Parse(value); err == nil {
-			parts = append(parts, "clusters.cluster_uuid = ?")
-			valuesSlice = append(valuesSlice, value)
-		} else {
-			parts = append(parts, "clusters.cluster_alias ILIKE ?")
-			valuesSlice = append(valuesSlice, "%"+value+"%")
+// isCharSafeRFC1123 returns true for chars valid in RFC 1123 DNS labels/subdomains, plus underscore.
+// allowDot: true for subdomains (cluster alias), false for single labels (namespace).
+// Additionally, isCharSafeRFC1123 aims to provide necessary defense from SQL injection attacks.
+// Ref - https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
+func isCharSafeRFC1123(c rune, allowDot bool) bool {
+	switch {
+	case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z':
+		return true
+	case c >= '0' && c <= '9':
+		return true
+	case c == '-', c == '_':
+		return true
+	case allowDot && c == '.':
+		return true
+	default:
+		return false
+	}
+}
+
+func sanitizeParamValue(paramName, s string, paramMaxLen int, allowDot bool) (string, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", namespaceAPIErrf(true, "empty value for %s", paramName)
+	}
+	if len(s) > paramMaxLen {
+		return "", namespaceAPIErrf(true, "%s exceeds max length %d", paramName, paramMaxLen)
+	}
+	for _, c := range s {
+		if !isCharSafeRFC1123(c, allowDot) {
+			return "", namespaceAPIErrf(true, "invalid character in %s value", paramName)
 		}
 	}
-	return strings.Join(parts, " OR "), valuesSlice
+	return s, nil
+}
+
+func parseClusterParams(value string, mode string) ([]string, []string, error) {
+	if value == "" {
+		return nil, nil, nil
+	}
+	modeClause := FilterModeClause[mode]
+	if modeClause.Suffix == "" {
+		return nil, nil, namespaceAPIErrf(false, "unknown cluster filter mode: %s", mode)
+	}
+	if _, err := uuid.Parse(value); err == nil {
+		suffix := modeClause.Suffix
+		// for cluster_uuid exact is set for includes
+		if mode == FilterModeInclude {
+			suffix = FilterModeClause[FilterModeExact].Suffix
+		}
+		return []string{"clusters.cluster_uuid" + suffix}, []string{value}, nil
+	}
+	s, err := sanitizeParamValue("cluster", value, model.ClusterMaxLen, true)
+	if err != nil {
+		return nil, nil, err
+	}
+	if modeClause.Wrap {
+		s = "%" + s + "%"
+	}
+	return []string{"clusters.cluster_alias" + modeClause.Suffix}, []string{s}, nil
+}
+
+func buildModeClause(param, column, mode string, vals []string, maxLen int, allowDot bool) (map[string]any, error) {
+	if len(vals) == 0 {
+		return nil, nil
+	}
+	modeClause := FilterModeClause[mode]
+	if modeClause.Suffix == "" {
+		return nil, namespaceAPIErrf(false, "unknown filter mode: %s", mode)
+	}
+
+	allSQLClauses := make([]string, 0, len(vals))
+	allParamVals := make([]string, 0, len(vals))
+	for _, val := range vals {
+		if val == "" {
+			continue
+		}
+		switch param {
+		case "cluster":
+			sqlClauses, paramVals, err := parseClusterParams(val, mode)
+			if err != nil {
+				return nil, err
+			}
+			allSQLClauses = append(allSQLClauses, sqlClauses...)
+			allParamVals = append(allParamVals, paramVals...)
+		default:
+			// handles all other string based query params
+			s, err := sanitizeParamValue(param, val, maxLen, allowDot)
+			if err != nil {
+				return nil, err
+			}
+			if modeClause.Wrap {
+				s = "%" + s + "%"
+			}
+			allParamVals = append(allParamVals, s)
+			allSQLClauses = append(allSQLClauses, column+modeClause.Suffix)
+		}
+	}
+	if len(allSQLClauses) == 0 {
+		return nil, nil
+	}
+	joinedSQLClause := strings.Join(allSQLClauses, modeClause.Join)
+	return map[string]any{joinedSQLClause: allParamVals}, nil
+}
+
+// parsing of string params based on mode -> include, exclude, exact.
+func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeVals []string, column string, maxLen int, allowDot bool) (map[string]any, error) {
+	hasExclude, hasExact, hasInclude := len(excludeVals) > 0, len(exactVals) > 0, len(includeVals) > 0
+
+	if !hasExclude && !hasExact {
+		if !hasInclude {
+			return nil, nil
+		}
+		// early exit as default is includes i.e. param=value
+		return buildModeClause(param, column, FilterModeInclude, includeVals, maxLen, allowDot)
+	}
+
+	if hasExclude {
+		for _, ev := range excludeVals {
+			if slices.Contains(exactVals, ev) {
+				return nil, namespaceAPIErrf(true, "exclude and exact cannot share values for %s", param)
+			}
+			if slices.Contains(includeVals, ev) {
+				return nil, namespaceAPIErrf(true, "exclude and include cannot share values for %s", param)
+			}
+		}
+	}
+
+	clauseMap := make(map[string]any)
+	if len(excludeVals) > 0 {
+		clause, err := buildModeClause(param, column, FilterModeExclude, excludeVals, maxLen, allowDot)
+		if err != nil {
+			return nil, err
+		}
+		if clause != nil {
+			maps.Copy(clauseMap, clause)
+		}
+	}
+	if len(exactVals) > 0 {
+		clause, err := buildModeClause(param, column, FilterModeExact, exactVals, maxLen, allowDot)
+		if err != nil {
+			return nil, err
+		}
+		if clause != nil {
+			maps.Copy(clauseMap, clause)
+		}
+	}
+	// exact is priority when present with includes for the same value
+	var includeValsFiltered []string
+	if hasExact && hasInclude {
+		exactSet := make(map[string]bool)
+		for _, v := range exactVals {
+			exactSet[v] = true
+		}
+		for _, v := range includeVals {
+			if !exactSet[v] {
+				includeValsFiltered = append(includeValsFiltered, v)
+			}
+		}
+	} else {
+		includeValsFiltered = includeVals
+	}
+	if len(includeValsFiltered) > 0 {
+		clause, err := buildModeClause(param, column, FilterModeInclude, includeValsFiltered, maxLen, allowDot)
+		if err != nil {
+			return nil, err
+		}
+		if clause != nil {
+			maps.Copy(clauseMap, clause)
+		}
+	}
+	return clauseMap, nil
+}
+
+func applyParamFilter(c echo.Context, queryParams map[string]any, param, column string, maxLen int, allowDot bool) error {
+	cfg := config.GetConfig()
+	excludeKey := "exclude[" + param + "]"
+	exactKey := "filter[exact:" + param + "]"
+	var includeVals, excludeVals, exactVals []string
+	for _, v := range c.QueryParams()[param] {
+		if v != "" {
+			includeVals = append(includeVals, v)
+		}
+	}
+
+	if len(includeVals) > cfg.MaxCountPerQueryParam {
+		return namespaceAPIErrf(true, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
+	}
+
+	for _, v := range c.QueryParams()[excludeKey] {
+		if v != "" {
+			excludeVals = append(excludeVals, v)
+		}
+	}
+
+	if len(excludeVals) > cfg.MaxCountPerQueryParam {
+		return namespaceAPIErrf(true, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
+	}
+
+	for _, v := range c.QueryParams()[exactKey] {
+		if v != "" {
+			exactVals = append(exactVals, v)
+		}
+	}
+
+	if len(exactVals) > cfg.MaxCountPerQueryParam {
+		return namespaceAPIErrf(true, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
+	}
+
+	if len(includeVals) == 0 && len(excludeVals) == 0 && len(exactVals) == 0 {
+		return nil
+	}
+	clauseMap, err := buildSQLClauseWithFilterType(param, includeVals, exactVals, excludeVals, column, maxLen, allowDot)
+	if err != nil {
+		return err
+	}
+	if clauseMap != nil {
+		maps.Copy(queryParams, clauseMap)
+	}
+	return nil
 }
 
 func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
@@ -267,7 +472,7 @@ func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
 		startTimestamp, err = time.Parse(timeLayout, startDateStr)
 		if err != nil {
 			log.Error("error parsing start_date:", err)
-			return queryParams, err
+			return queryParams, namespaceAPIErrf(true, "invalid start_date format, use YYYY-MM-DD")
 		}
 	}
 	queryParams["namespace_recommendation_sets.monitoring_end_time >= ?"] = startTimestamp
@@ -280,21 +485,21 @@ func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
 		endTimestamp, err = time.Parse(timeLayout, endDateStr)
 		if err != nil {
 			log.Error("error parsing end_date:", err)
-			return queryParams, err
+			return queryParams, namespaceAPIErrf(true, "invalid end_date format, use YYYY-MM-DD")
 		}
 		endTimestamp = endTimestamp.Add(24 * time.Hour)
 	}
 	queryParams["namespace_recommendation_sets.monitoring_end_time < ?"] = endTimestamp
 
-	clusters := c.QueryParams()["cluster"]
-	if len(clusters) > 0 {
-		paramString, values := parseClusterParams(clusters)
-		queryParams[paramString] = values
+	var errs []error
+	if err := applyParamFilter(c, queryParams, "cluster", "", model.ClusterMaxLen, true); err != nil {
+		errs = append(errs, err)
 	}
-
-	project := c.QueryParam("project")
-	if project != "" {
-		queryParams["namespace_recommendation_sets.namespace_name ILIKE ?"] = "%" + project + "%"
+	if err := applyParamFilter(c, queryParams, "project", "namespace_recommendation_sets.namespace_name", model.NamespaceMaxLen, false); err != nil {
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		return queryParams, errors.Join(errs...)
 	}
 
 	return queryParams, nil
@@ -736,9 +941,6 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 	data = transformComponentUnits(unitsToTransform, updateUnitsk8s, data) // cpu: core values require truncation
 	data = filterNotifications(recommendationID, clusterUUID, data)
 	data = convertVariationToPercentage(data)
-	if handlerName == "namespace-recommendationset-list" {
-		data = flattenCurrentRequests(data)
-	}
 	return data
 }
 
@@ -882,14 +1084,4 @@ func GenerateAndStreamCSV(w io.Writer, recommendationSets []model.Recommendation
 		return fmt.Errorf("flush error: %w", err)
 	}
 	return nil
-}
-
-func flattenCurrentRequests(recommendationJSON map[string]interface{}) map[string]interface{} {
-	if current, ok := recommendationJSON["current"].(map[string]interface{}); ok {
-		if requests, ok := current["requests"].(map[string]interface{}); ok {
-			recommendationJSON["cpu_request_current"] = requests["cpu"]
-			recommendationJSON["memory_request_current"] = requests["memory"]
-		}
-	}
-	return recommendationJSON
 }

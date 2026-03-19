@@ -1,6 +1,7 @@
 package api
 
 import (
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -121,4 +123,360 @@ func TestFlattenedCSVHeader(t *testing.T) {
 	header := FlattenedCSVHeader
 	assert.Len(t, header, len(FlattenedCSVHeaderFixture), "header length mismatch")
 	assert.Equal(t, FlattenedCSVHeaderFixture, header, "header content or order is incorrect")
+}
+
+func buildClauseForParam(param string, includeVals, exactVals, excludeVals []string, column string) (map[string]any, error) {
+	maxLen, allowDot := model.NamespaceMaxLen, false
+	if param == "cluster" {
+		maxLen, allowDot = model.ClusterMaxLen, true
+	}
+	return buildSQLClauseWithFilterType(param, includeVals, exactVals, excludeVals, column, maxLen, allowDot)
+}
+
+func TestBuildSQLClauseWithFilterType(t *testing.T) {
+	projectCol := "namespace_recommendation_sets.namespace_name"
+
+	tests := []struct {
+		name        string
+		param       string
+		includeVals []string
+		exactVals   []string
+		excludeVals []string
+		column      string
+		wantErr     bool
+		errContains string
+		checkClause func(t *testing.T, clause map[string]any)
+	}{
+		{
+			name:        "include only, project",
+			param:       "project",
+			includeVals: []string{"foo"},
+			column:      projectCol,
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 1)
+				key := projectCol + " ILIKE ?"
+				assert.Contains(t, clause, key)
+				assert.Equal(t, []string{"%foo%"}, clause[key])
+			},
+		},
+		{
+			name:      "exact only, project",
+			param:     "project",
+			exactVals: []string{"foo"},
+			column:    projectCol,
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 1)
+				key := projectCol + " = ?"
+				assert.Contains(t, clause, key)
+				assert.Equal(t, []string{"foo"}, clause[key])
+			},
+		},
+		{
+			name:        "exclude only, project",
+			param:       "project",
+			excludeVals: []string{"foo"},
+			column:      projectCol,
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 1)
+				key := projectCol + " != ?"
+				assert.Contains(t, clause, key)
+				assert.Equal(t, []string{"foo"}, clause[key])
+			},
+		},
+		{
+			name:      "cluster with UUID, exact",
+			param:     "cluster",
+			exactVals: []string{"1b36b20f-7fa0-4454-a6d2-008294e06378"},
+			column:    "",
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 1)
+				assert.Contains(t, clause, "clusters.cluster_uuid = ?")
+				assert.Equal(t, []string{"1b36b20f-7fa0-4454-a6d2-008294e06378"}, clause["clusters.cluster_uuid = ?"])
+			},
+		},
+		{
+			name:        "cluster with alias, include",
+			param:       "cluster",
+			includeVals: []string{"foo-cluster"},
+			column:      "",
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 1)
+				assert.Contains(t, clause, "clusters.cluster_alias ILIKE ?")
+				assert.Equal(t, []string{"%foo-cluster%"}, clause["clusters.cluster_alias ILIKE ?"])
+			},
+		},
+		{
+			name:        "cluster with alias, exclude",
+			param:       "cluster",
+			excludeVals: []string{"foo-cluster"},
+			column:      "",
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 1)
+				assert.Contains(t, clause, "clusters.cluster_alias != ?")
+				assert.Equal(t, []string{"foo-cluster"}, clause["clusters.cluster_alias != ?"])
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			clause, err := buildClauseForParam(tt.param, tt.includeVals, tt.exactVals, tt.excludeVals, tt.column)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+				return
+			}
+			assert.NoError(t, err)
+			if tt.checkClause != nil {
+				tt.checkClause(t, clause)
+			}
+		})
+	}
+}
+
+func TestBuildSQLClauseWithFilterTypeConflict(t *testing.T) {
+	projectCol := "namespace_recommendation_sets.namespace_name"
+
+	tests := []struct {
+		name        string
+		param       string
+		includeVals []string
+		exactVals   []string
+		excludeVals []string
+		column      string
+		errContains string
+	}{
+		{
+			name:        "exclude and include same value - error",
+			param:       "project",
+			includeVals: []string{"foo"},
+			excludeVals: []string{"foo"},
+			column:      projectCol,
+			errContains: "exclude and include cannot share values",
+		},
+		{
+			name:        "exclude and exact same value - error",
+			param:       "cluster",
+			exactVals:   []string{"prod-cluster"},
+			excludeVals: []string{"prod-cluster"},
+			column:      "",
+			errContains: "exclude and exact cannot share values",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := buildClauseForParam(tt.param, tt.includeVals, tt.exactVals, tt.excludeVals, tt.column)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.errContains)
+		})
+	}
+}
+
+func TestBuildSQLClauseWithFilterTypeMultipleParams(t *testing.T) {
+	projectCol := "namespace_recommendation_sets.namespace_name"
+
+	tests := []struct {
+		name        string
+		param       string
+		includeVals []string
+		exactVals   []string
+		excludeVals []string
+		column      string
+		checkClause func(t *testing.T, clause map[string]any)
+	}{
+		{
+			name:        "project exact and include same value - exact priority",
+			param:       "project",
+			includeVals: []string{"foo"},
+			exactVals:   []string{"foo"},
+			column:      projectCol,
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 1)
+				assert.Equal(t, []string{"foo"}, clause[projectCol+" = ?"])
+			},
+		},
+		{
+			name:        "project exact and include different values - both",
+			param:       "project",
+			includeVals: []string{"foo"},
+			exactVals:   []string{"bar"},
+			column:      projectCol,
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 2)
+				assert.Equal(t, []string{"bar"}, clause[projectCol+" = ?"])
+				assert.Equal(t, []string{"%foo%"}, clause[projectCol+" ILIKE ?"])
+			},
+		},
+		{
+			name:        "project include multiple values",
+			param:       "project",
+			includeVals: []string{"foo", "bar"},
+			column:      projectCol,
+			checkClause: func(t *testing.T, clause map[string]any) {
+				key := projectCol + " ILIKE ? OR " + projectCol + " ILIKE ?"
+				assert.Contains(t, clause, key)
+				assert.Equal(t, []string{"%foo%", "%bar%"}, clause[key])
+			},
+		},
+		{
+			name:        "project exclude and include different values",
+			param:       "project",
+			includeVals: []string{"foo"},
+			excludeVals: []string{"bar"},
+			column:      projectCol,
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 2)
+				assert.Equal(t, []string{"bar"}, clause[projectCol+" != ?"])
+				assert.Equal(t, []string{"%foo%"}, clause[projectCol+" ILIKE ?"])
+			},
+		},
+		{
+			name:        "cluster include and exact different values - both",
+			param:       "cluster",
+			includeVals: []string{"prod"},
+			exactVals:   []string{"dev"},
+			column:      "",
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 2)
+				assert.Equal(t, []string{"%prod%"}, clause["clusters.cluster_alias ILIKE ?"])
+				assert.Equal(t, []string{"dev"}, clause["clusters.cluster_alias = ?"])
+			},
+		},
+		{
+			name:        "cluster include, exact, exclude - all different values",
+			param:       "cluster",
+			includeVals: []string{"prod"},
+			exactVals:   []string{"dev"},
+			excludeVals: []string{"staging"},
+			column:      "",
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 3)
+				assert.Equal(t, []string{"staging"}, clause["clusters.cluster_alias != ?"])
+				assert.Equal(t, []string{"dev"}, clause["clusters.cluster_alias = ?"])
+				assert.Equal(t, []string{"%prod%"}, clause["clusters.cluster_alias ILIKE ?"])
+			},
+		},
+		{
+			name:        "project include, exact, exclude - all different values",
+			param:       "project",
+			includeVals: []string{"foo"},
+			exactVals:   []string{"bar"},
+			excludeVals: []string{"baz"},
+			column:      projectCol,
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 3)
+				assert.Equal(t, []string{"baz"}, clause[projectCol+" != ?"])
+				assert.Equal(t, []string{"bar"}, clause[projectCol+" = ?"])
+				assert.Equal(t, []string{"%foo%"}, clause[projectCol+" ILIKE ?"])
+			},
+		},
+		{
+			name:        "cluster UUID exact takes precedence over include when same value",
+			param:       "cluster",
+			includeVals: []string{"1b36b20f-7fa0-4454-a6d2-008294e06378"},
+			exactVals:   []string{"1b36b20f-7fa0-4454-a6d2-008294e06378"},
+			column:      "",
+			checkClause: func(t *testing.T, clause map[string]any) {
+				assert.Len(t, clause, 1)
+				assert.Contains(t, clause, "clusters.cluster_uuid = ?")
+				assert.Equal(t, []string{"1b36b20f-7fa0-4454-a6d2-008294e06378"}, clause["clusters.cluster_uuid = ?"])
+			},
+		},
+		{
+			name:        "cluster include multiple values",
+			param:       "cluster",
+			includeVals: []string{"prod", "dev"},
+			column:      "",
+			checkClause: func(t *testing.T, clause map[string]any) {
+				key := "clusters.cluster_alias ILIKE ? OR clusters.cluster_alias ILIKE ?"
+				assert.Contains(t, clause, key)
+				assert.Equal(t, []string{"%prod%", "%dev%"}, clause[key])
+			},
+		},
+		{
+			name:        "cluster include multiple UUIDs",
+			param:       "cluster",
+			includeVals: []string{"1b36b20f-7fa0-4454-a6d2-008294e06378", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"},
+			column:      "",
+			checkClause: func(t *testing.T, clause map[string]any) {
+				key := "clusters.cluster_uuid = ? OR clusters.cluster_uuid = ?"
+				assert.Contains(t, clause, key)
+				assert.Equal(t, []string{"1b36b20f-7fa0-4454-a6d2-008294e06378", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"}, clause[key])
+			},
+		},
+		{
+			name:      "cluster exact multiple values",
+			param:     "cluster",
+			exactVals: []string{"prod", "dev"},
+			column:    "",
+			checkClause: func(t *testing.T, clause map[string]any) {
+				key := "clusters.cluster_alias = ? OR clusters.cluster_alias = ?"
+				assert.Contains(t, clause, key)
+				assert.Equal(t, []string{"prod", "dev"}, clause[key])
+			},
+		},
+		{
+			name:      "project exact multiple values",
+			param:     "project",
+			exactVals: []string{"foo", "bar"},
+			column:    projectCol,
+			checkClause: func(t *testing.T, clause map[string]any) {
+				key := projectCol + " = ? OR " + projectCol + " = ?"
+				assert.Contains(t, clause, key)
+				assert.Equal(t, []string{"foo", "bar"}, clause[key])
+			},
+		},
+		{
+			name:        "project exclude multiple values",
+			param:       "project",
+			excludeVals: []string{"foo", "bar"},
+			column:      projectCol,
+			checkClause: func(t *testing.T, clause map[string]any) {
+				key := projectCol + " != ? AND " + projectCol + " != ?"
+				assert.Contains(t, clause, key)
+				assert.Equal(t, []string{"foo", "bar"}, clause[key])
+			},
+		},
+		{
+			name:        "cluster exclude multiple values",
+			param:       "cluster",
+			excludeVals: []string{"prod", "dev"},
+			column:      "",
+			checkClause: func(t *testing.T, clause map[string]any) {
+				key := "clusters.cluster_alias != ? AND clusters.cluster_alias != ?"
+				assert.Contains(t, clause, key)
+				assert.Equal(t, []string{"prod", "dev"}, clause[key])
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			clause, err := buildClauseForParam(tt.param, tt.includeVals, tt.exactVals, tt.excludeVals, tt.column)
+			assert.NoError(t, err)
+			if tt.checkClause != nil {
+				tt.checkClause(t, clause)
+			}
+		})
+	}
+
+	t.Run("cluster exact UUID and project exclude - both in single request", func(t *testing.T) {
+		clusterClause, err := buildClauseForParam("cluster", nil, []string{"1b36b20f-7fa0-4454-a6d2-008294e06378"}, nil, "")
+		assert.NoError(t, err)
+		projectClause, err := buildClauseForParam("project", nil, nil, []string{"baz"}, projectCol)
+		assert.NoError(t, err)
+
+		queryParams := make(map[string]any)
+		maps.Copy(queryParams, clusterClause)
+		maps.Copy(queryParams, projectClause)
+
+		assert.Contains(t, queryParams, "clusters.cluster_uuid = ?")
+		assert.Contains(t, queryParams, projectCol+" != ?")
+		assert.Equal(t, []string{"1b36b20f-7fa0-4454-a6d2-008294e06378"}, queryParams["clusters.cluster_uuid = ?"])
+		assert.Equal(t, []string{"baz"}, queryParams[projectCol+" != ?"])
+	})
 }
