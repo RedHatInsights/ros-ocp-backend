@@ -55,7 +55,7 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 	}
 	// Create experiment in kruize
 	url := cfg.KruizeUrl + KruizeCreateExperiment
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
+	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return nil, fmt.Errorf("error Occured while creating experiment: %v", err)
@@ -112,7 +112,7 @@ func CreateNamespaceExperiment(experiment_name string, cluster_identifier string
 	log.Debugf("creating namespace experiment with payload: %s", string(postBody))
 
 	url := cfg.KruizeUrl + KruizeCreateExperiment
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
+	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return fmt.Errorf("error occured while creating namespace experiment: %v", err)
@@ -162,7 +162,7 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 	// Update metrics to kruize experiment
 	url := cfg.KruizeUrl + KruizeUpdateResults
 	log.Debugf("\n Sending /updateResult request to kruize with payload - %s \n", string(postBody))
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
+	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeUpdateResults).Inc()
 		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
@@ -214,7 +214,7 @@ func UpdateNamespaceResults(experiment_name string, payload_data []namespacePayl
 	// Update metrics to kruize experiment
 	url := cfg.KruizeUrl + KruizeUpdateResults
 	log.Debugf("\n Sending /updateResult request to kruize with namespace payload - %s \n", string(postBody))
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
+	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeUpdateResults).Inc()
 		return nil, fmt.Errorf("an Error Occured while sending namespace metrics: %v", err)
@@ -261,7 +261,6 @@ func UpdateNamespaceResults(experiment_name string, payload_data []namespacePayl
 
 func Update_recommendations(experiment_name string, interval_end_time time.Time, experimentType types.PayloadType) (any, error) {
 	url := cfg.KruizeUrl + KruizeUpdateRecommendations
-	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("an Error Occured %v", err)
@@ -271,7 +270,7 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time,
 	q.Add("interval_end_time", utils.ConvertDateToISO8601(interval_end_time.String()))
 	req.URL.RawQuery = q.Encode()
 	log.Debugf("\n Sending /updateRecommendations request to kruize - %s \n", q)
-	res, err := client.Do(req)
+	res, err := utils.HTTPClient.Do(req)
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeUpdateRecommendations).Inc()
 		return nil, fmt.Errorf("error Occured while calling /updateRecommendations API %v", err)
@@ -343,13 +342,12 @@ func DeleteExperimentFromKruize(experiment_name string) {
 	}
 	payload, _ := json.Marshal(data)
 
-	client := &http.Client{}
 	req, err := http.NewRequest("DELETE", url, bytes.NewBuffer(payload))
 	if err != nil {
 		deletion_err_log(err)
 		return
 	}
-	res, err := client.Do(req)
+	res, err := utils.HTTPClient.Do(req)
 	if err != nil {
 		deletion_err_log(err)
 		return

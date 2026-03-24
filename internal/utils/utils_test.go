@@ -10,6 +10,52 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func TestHTTPClientHasTimeout(t *testing.T) {
+	if HTTPClient.Timeout == 0 {
+		t.Fatal("HTTPClient.Timeout must be non-zero to prevent indefinite hangs (FLPATH-3407)")
+	}
+	if HTTPClient.Timeout > 60*time.Second {
+		t.Errorf("HTTPClient.Timeout=%v is too high; expected <= 60s", HTTPClient.Timeout)
+	}
+}
+
+func TestHTTPClientTimesOutOnSlowServer(t *testing.T) {
+	origClient := HTTPClient
+	defer func() { HTTPClient = origClient }()
+
+	// Use a very short timeout so the test runs fast
+	HTTPClient = &http.Client{Timeout: 100 * time.Millisecond}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(1 * time.Second)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	resp, err := HTTPClient.Get(server.URL) //nolint:bodyclose // response is nil on expected timeout
+	if err == nil {
+		_ = resp.Body.Close()
+		t.Fatal("expected timeout error from slow server, got nil")
+	}
+}
+
+func TestHTTPClientSucceedsOnFastServer(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "ok")
+	}))
+	defer server.Close()
+
+	resp, err := HTTPClient.Get(server.URL)
+	if err != nil {
+		t.Fatalf("expected success from fast server, got error: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
 func TestConvertDateToISO8601(t *testing.T) {
 	date := "2022-11-01 18:25:43 +0000 UTC"
 	expected_result := "2022-11-01T18:25:43.000Z"
