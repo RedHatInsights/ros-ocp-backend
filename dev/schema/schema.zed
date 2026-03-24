@@ -1,0 +1,68 @@
+/**
+ * Cost Management ZED schema for ros-ocp-backend Kessel/SpiceDB.
+ *
+ * Supports both tenant-level Check (via rbac/tenant permissions) and
+ * resource-level LookupResources (via cost_management/* resource types).
+ *
+ * Hierarchy: principal -> role -> role_binding -> workspace -> tenant -> resource
+ *
+ * Deploy with: relations-api loads this via SPICEDB_SCHEMA_FILE env var.
+ */
+
+definition rbac/principal {}
+
+definition rbac/group {
+    relation t_member: rbac/principal | rbac/group#member
+    permission member = t_member
+}
+
+definition rbac/role {
+    relation t_cost_management_openshift_cluster_read: rbac/principal | rbac/group#member
+    relation t_cost_management_openshift_node_read: rbac/principal | rbac/group#member
+    relation t_cost_management_openshift_project_read: rbac/principal | rbac/group#member
+
+    permission cost_management_openshift_cluster_read = t_cost_management_openshift_cluster_read
+    permission cost_management_openshift_node_read = t_cost_management_openshift_node_read
+    permission cost_management_openshift_project_read = t_cost_management_openshift_project_read
+}
+
+definition rbac/role_binding {
+    relation t_subject: rbac/principal | rbac/group#member
+    relation t_granted: rbac/role
+
+    permission cost_management_openshift_cluster_read = t_granted->cost_management_openshift_cluster_read & t_subject
+    permission cost_management_openshift_node_read = t_granted->cost_management_openshift_node_read & t_subject
+    permission cost_management_openshift_project_read = t_granted->cost_management_openshift_project_read & t_subject
+}
+
+definition rbac/workspace {
+    relation t_parent: rbac/workspace | rbac/tenant
+    relation t_binding: rbac/role_binding
+
+    permission cost_management_openshift_cluster_read = t_binding->cost_management_openshift_cluster_read + t_parent->cost_management_openshift_cluster_read
+    permission cost_management_openshift_node_read = t_binding->cost_management_openshift_node_read + t_parent->cost_management_openshift_node_read
+    permission cost_management_openshift_project_read = t_binding->cost_management_openshift_project_read + t_parent->cost_management_openshift_project_read
+}
+
+definition rbac/tenant {
+    relation t_default_binding: rbac/role_binding
+
+    permission cost_management_openshift_cluster_read = t_default_binding->cost_management_openshift_cluster_read
+    permission cost_management_openshift_node_read = t_default_binding->cost_management_openshift_node_read
+    permission cost_management_openshift_project_read = t_default_binding->cost_management_openshift_project_read
+}
+
+definition cost_management/openshift_cluster {
+    relation t_workspace: rbac/workspace
+    permission read = t_workspace->cost_management_openshift_cluster_read
+}
+
+definition cost_management/openshift_node {
+    relation t_workspace: rbac/workspace
+    permission read = t_workspace->cost_management_openshift_node_read
+}
+
+definition cost_management/openshift_project {
+    relation t_workspace: rbac/workspace
+    permission read = t_workspace->cost_management_openshift_project_read
+}

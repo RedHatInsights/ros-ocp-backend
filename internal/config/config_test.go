@@ -107,7 +107,7 @@ func TestEnvironmentVariableConfiguration(t *testing.T) {
 	}
 }
 
-// TestNonClowderConfigurationLoads verifies that configuration loads correctly
+// TestNonClowderConfigurationLoads verifies that configuration loads correctly.
 // when CLOWDER_ENABLED is false and environment variables are used.
 func TestNonClowderConfigurationLoads(t *testing.T) {
 	// Set CLOWDER_ENABLED to false
