@@ -53,7 +53,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
-	github.com/launchdarkly/eventsource v1.10.0 // indirect
+	github.com/launchdarkly/eventsource v1.11.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
