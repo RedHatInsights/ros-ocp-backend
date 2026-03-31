@@ -224,54 +224,38 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 						log.Errorf("unable to list recommendation for: %v", err)
 						continue
 					}
+
+					extractedNamespaceRecommVals := model.ExtractRecommendationColumnValues(v)
+
 					recommendationSet := model.NamespaceRecommendationSet{
-						OrgID:                kafkaMsg.Metadata.Org_id,
-						WorkloadID:           kafkaMsg.Metadata.Workload_id,
-						NamespaceName:        typedNamespaceRecommendation.Namespace,
-						CPURequestCurrent:    v.Current.Requests.Cpu.Amount,
-						MemoryRequestCurrent: v.Current.Requests.Memory.Amount,
-						/* TODO
-						 	* Add and populate columns for each term and recommendation type,
-								cpu_variation_short_cost
-								cpu_variation_short_performance
-								cpu_variation_medium_cost
-								cpu_variation_medium_performance
-								cpu_variation_long_cost
-								cpu_variation_long_performance
-								memory_variation_short_cost
-								memory_variation_short_performance
-								memory_variation_medium_cost
-								memory_variation_medium_performance
-								memory_variation_long_cost
-								memory_variation_long_performance
-						*/
-						MonitoringStartTime: v.RecommendationTerms.Short_term.MonitoringStartTime,
-						MonitoringEndTime:   v.MonitoringEndTime,
-						Recommendations:     marshalData,
+						OrgID:                            kafkaMsg.Metadata.Org_id,
+						WorkloadID:                       kafkaMsg.Metadata.Workload_id,
+						NamespaceName:                    typedNamespaceRecommendation.Namespace,
+						CPURequestCurrent:                extractedNamespaceRecommVals.CPURequestCurrent,
+						MemoryRequestCurrent:             extractedNamespaceRecommVals.MemoryRequestCurrent,
+						CPUVariationShortCost:            extractedNamespaceRecommVals.CPUVariationShortCost,
+						CPUVariationShortPerformance:     extractedNamespaceRecommVals.CPUVariationShortPerformance,
+						CPUVariationMediumCost:           extractedNamespaceRecommVals.CPUVariationMediumCost,
+						CPUVariationMediumPerformance:    extractedNamespaceRecommVals.CPUVariationMediumPerformance,
+						CPUVariationLongCost:             extractedNamespaceRecommVals.CPUVariationLongCost,
+						CPUVariationLongPerformance:      extractedNamespaceRecommVals.CPUVariationLongPerformance,
+						MemoryVariationShortCost:         extractedNamespaceRecommVals.MemoryVariationShortCost,
+						MemoryVariationShortPerformance:  extractedNamespaceRecommVals.MemoryVariationShortPerformance,
+						MemoryVariationMediumCost:        extractedNamespaceRecommVals.MemoryVariationMediumCost,
+						MemoryVariationMediumPerformance: extractedNamespaceRecommVals.MemoryVariationMediumPerformance,
+						MemoryVariationLongCost:          extractedNamespaceRecommVals.MemoryVariationLongCost,
+						MemoryVariationLongPerformance:   extractedNamespaceRecommVals.MemoryVariationLongPerformance,
+						MonitoringStartTime:              v.RecommendationTerms.Short_term.MonitoringStartTime,
+						MonitoringEndTime:                v.MonitoringEndTime,
+						Recommendations:                  marshalData,
+						UpdatedAt:                        time.Now(),
 					}
 					namespaceRecommendationSetList = append(namespaceRecommendationSetList, recommendationSet)
 
 					historicalRecommendationSet := model.HistoricalNamespaceRecommendationSet{
-						OrgID:                kafkaMsg.Metadata.Org_id,
-						WorkloadID:           kafkaMsg.Metadata.Workload_id,
-						NamespaceName:        typedNamespaceRecommendation.Namespace,
-						CPURequestCurrent:    v.Current.Requests.Cpu.Amount,
-						MemoryRequestCurrent: v.Current.Requests.Memory.Amount,
-						/* TODO
-						 	* Add and populate variation columns for each term and recommendation type,
-								cpu_variation_short_cost
-								cpu_variation_short_performance
-								cpu_variation_medium_cost
-								cpu_variation_medium_performance
-								cpu_variation_long_cost
-								cpu_variation_long_performance
-								memory_variation_short_cost
-								memory_variation_short_performance
-								memory_variation_medium_cost
-								memory_variation_medium_performance
-								memory_variation_long_cost
-								memory_variation_long_performance
-						*/
+						OrgID:               kafkaMsg.Metadata.Org_id,
+						WorkloadID:          kafkaMsg.Metadata.Workload_id,
+						NamespaceName:       typedNamespaceRecommendation.Namespace,
 						MonitoringStartTime: v.RecommendationTerms.Short_term.MonitoringStartTime,
 						MonitoringEndTime:   v.MonitoringEndTime,
 						Recommendations:     marshalData,

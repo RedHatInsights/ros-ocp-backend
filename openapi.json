@@ -435,16 +435,28 @@
           {
             "name": "order_by",
             "in": "query",
-            "description": "Field to order results by",
+            "description": "Field to order results by. Options: cluster, project, last_reported, cpu_request_current, memory_request_current, and per-term variation fields (e.g. cpu_variation_short_cost, memory_variation_long_performance).",
             "required": false,
             "schema": {
               "type": "string",
               "enum": [
                 "cluster",
                 "project",
+                "last_reported",
                 "cpu_request_current",
                 "memory_request_current",
-                "last_reported"
+                "cpu_variation_short_cost",
+                "cpu_variation_short_performance",
+                "cpu_variation_medium_cost",
+                "cpu_variation_medium_performance",
+                "cpu_variation_long_cost",
+                "cpu_variation_long_performance",
+                "memory_variation_short_cost",
+                "memory_variation_short_performance",
+                "memory_variation_medium_cost",
+                "memory_variation_medium_performance",
+                "memory_variation_long_cost",
+                "memory_variation_long_performance"
               ],
               "example": "last_reported"
             }
@@ -1713,6 +1725,16 @@
             "type": "string",
             "format": "date-time",
             "example": "2023-04-18T15:48:54.000Z"
+          },
+          "cpu_request_current": {
+            "type": "number",
+            "format": "float",
+            "description": "Current CPU request (e.g. cores)"
+          },
+          "memory_request_current": {
+            "type": "number",
+            "format": "float",
+            "description": "Current memory request (e.g. bytes)"
           },
           "recommendations": {
             "type": "object",
