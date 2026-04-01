@@ -38,17 +38,16 @@ var cfg *config.Config = config.GetConfig()
 //	    Help:    "Latency of outbound Kruize API calls in seconds",
 //	    Buckets: []float64{0.5, 1, 5, 10, 30, 60, 120, 300},
 //	}, []string{"path"})
-var HTTPClient = newHTTPClient()
+var HTTPClient = newHTTPClient(cfg.GlobalHTTPClientTimeoutSecs)
 
 const minHTTPTimeoutSecs = 1
 
-func newHTTPClient() *http.Client {
-	secs := cfg.GlobalHTTPClientTimeoutSecs
-	if secs < minHTTPTimeoutSecs {
-		log.Warnf("GLOBAL_HTTP_CLIENT_TIMEOUT_SECS=%d is below minimum; using %ds", secs, minHTTPTimeoutSecs)
-		secs = minHTTPTimeoutSecs
+func newHTTPClient(timeoutSecs int) *http.Client {
+	if timeoutSecs < minHTTPTimeoutSecs {
+		log.Warnf("GLOBAL_HTTP_CLIENT_TIMEOUT_SECS=%d is below minimum; using %ds", timeoutSecs, minHTTPTimeoutSecs)
+		timeoutSecs = minHTTPTimeoutSecs
 	}
-	return &http.Client{Timeout: time.Duration(secs) * time.Second}
+	return &http.Client{Timeout: time.Duration(timeoutSecs) * time.Second}
 }
 
 func Setup_kruize_performance_profile() {
