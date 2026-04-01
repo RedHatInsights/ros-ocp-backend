@@ -13,6 +13,7 @@ const (
 	// ClusterMaxLen is the max length for cluster alias (K8s DNS subdomain).
 	ClusterMaxLen = 253
 )
+
 // RecommendationColumnValues holds current request and per-term, per-engine variation
 // amounts extracted from recommendation data. Used to populate DB columns on
 // recommendation_sets and namespace_recommendation_sets for sorting/filtering.
