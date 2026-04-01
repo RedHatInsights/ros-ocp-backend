@@ -22,11 +22,23 @@ import (
 var log *logrus.Entry = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
 
-// HTTPClient is the shared HTTP client for all outbound requests.
-// It enforces a 30-second timeout to prevent indefinite hangs when
-// downstream services (Kruize, RBAC) are slow or unresponsive.
-// See: FLPATH-3407.
-var HTTPClient = &http.Client{Timeout: 30 * time.Second}
+// HTTPClient is the shared HTTP client for lightweight outbound requests
+// (health checks, RBAC, experiment creation). The timeout is driven by
+// GLOBAL_HTTP_CLIENT_TIMEOUT_SECS (default 30s) to prevent indefinite
+// hangs when downstream services are slow or unresponsive. See FLPATH-3407.
+//
+// Heavy Kruize calls (/updateResults, /updateRecommendations) and large
+// downloads (ReadCSVFromUrl) intentionally use the default http client
+// until we have Prometheus latency data to set informed timeouts.
+// TODO(FLPATH-3407): add per-endpoint Prometheus histogram to measure
+// Kruize API latency, then set per-call timeouts:
+//
+//	kruizeAPIDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+//	    Name:    "rosocp_kruize_api_duration_seconds",
+//	    Help:    "Latency of outbound Kruize API calls in seconds",
+//	    Buckets: []float64{0.5, 1, 5, 10, 30, 60, 120, 300},
+//	}, []string{"path"})
+var HTTPClient = &http.Client{Timeout: time.Duration(cfg.GlobalHTTPClientTimeoutSecs) * time.Second}
 
 func Setup_kruize_performance_profile() {
 	// This func needs to be revisited once kruize implements this API
@@ -76,7 +88,8 @@ func Setup_kruize_performance_profile() {
 }
 
 func ReadCSVFromUrl(url string) ([][]string, error) {
-	resp, err := HTTPClient.Get(url)
+	// TODO(FLPATH-3407): use a bounded client once we have latency data for CSV downloads
+	resp, err := http.Get(url) //nolint:gosec // timeout deferred until Prometheus data available
 	if err != nil {
 		return nil, err
 	}

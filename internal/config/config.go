@@ -36,6 +36,9 @@ type Config struct {
 	KafkaSecurityProtocol string
 	KafkaCA               string
 
+	// HTTP client config
+	GlobalHTTPClientTimeoutSecs int `mapstructure:"GLOBAL_HTTP_CLIENT_TIMEOUT_SECS"`
+
 	// Kruize config
 	KruizeUrl                       string `mapstructure:"KRUIZE_URL"`
 	KruizeWaitTime                  string `mapstructure:"KRUIZE_WAIT_TIME"`
@@ -219,6 +222,7 @@ func initConfig() {
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
 	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", true)
 	viper.SetDefault("MAXIMUM_COUNT_PER_QUERY_PARAM", 5)
+	viper.SetDefault("GLOBAL_HTTP_CLIENT_TIMEOUT_SECS", 30)
 
 	// Unleash config
 	viper.SetDefault("UnleashClientAccessToken", "rosocp:dev.token")
