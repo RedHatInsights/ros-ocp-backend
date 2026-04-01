@@ -11,12 +11,22 @@ import (
 )
 
 func TestHTTPClientTimeoutMatchesConfig(t *testing.T) {
-	expected := time.Duration(cfg.GlobalHTTPClientTimeoutSecs) * time.Second
+	secs := cfg.GlobalHTTPClientTimeoutSecs
+	if secs < minHTTPTimeoutSecs {
+		secs = minHTTPTimeoutSecs
+	}
+	expected := time.Duration(secs) * time.Second
 	if HTTPClient.Timeout != expected {
 		t.Errorf("HTTPClient.Timeout=%v; want %v (from GLOBAL_HTTP_CLIENT_TIMEOUT_SECS)", HTTPClient.Timeout, expected)
 	}
 	if HTTPClient.Timeout == 0 {
 		t.Fatal("HTTPClient.Timeout must be non-zero to prevent indefinite hangs (FLPATH-3407)")
+	}
+}
+
+func TestHTTPClientMinTimeoutFloor(t *testing.T) {
+	if HTTPClient.Timeout < time.Duration(minHTTPTimeoutSecs)*time.Second {
+		t.Errorf("HTTPClient.Timeout=%v is below minimum floor of %ds", HTTPClient.Timeout, minHTTPTimeoutSecs)
 	}
 }
 

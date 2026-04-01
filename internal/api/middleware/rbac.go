@@ -88,11 +88,13 @@ func request_user_access(url, encodedIdentity string) []types.RbacData {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Errorf("an Error Occured %v", err)
+		return access
 	}
 	req.Header.Set("x-rh-identity", encodedIdentity)
 	res, err := utils.HTTPClient.Do(req)
 	if err != nil {
 		log.Errorf("error Occured while calling RBAC API %v", err)
+		return access
 	}
 	defer func() {
 		_ = res.Body.Close()

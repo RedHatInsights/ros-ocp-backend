@@ -38,7 +38,18 @@ var cfg *config.Config = config.GetConfig()
 //	    Help:    "Latency of outbound Kruize API calls in seconds",
 //	    Buckets: []float64{0.5, 1, 5, 10, 30, 60, 120, 300},
 //	}, []string{"path"})
-var HTTPClient = &http.Client{Timeout: time.Duration(cfg.GlobalHTTPClientTimeoutSecs) * time.Second}
+var HTTPClient = newHTTPClient()
+
+const minHTTPTimeoutSecs = 1
+
+func newHTTPClient() *http.Client {
+	secs := cfg.GlobalHTTPClientTimeoutSecs
+	if secs < minHTTPTimeoutSecs {
+		log.Warnf("GLOBAL_HTTP_CLIENT_TIMEOUT_SECS=%d is below minimum; using %ds", secs, minHTTPTimeoutSecs)
+		secs = minHTTPTimeoutSecs
+	}
+	return &http.Client{Timeout: time.Duration(secs) * time.Second}
+}
 
 func Setup_kruize_performance_profile() {
 	// This func needs to be revisited once kruize implements this API
@@ -89,7 +100,7 @@ func Setup_kruize_performance_profile() {
 
 func ReadCSVFromUrl(url string) ([][]string, error) {
 	// TODO(FLPATH-3407): use a bounded client once we have latency data for CSV downloads
-	resp, err := http.Get(url) //nolint:gosec // timeout deferred until Prometheus data available
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}

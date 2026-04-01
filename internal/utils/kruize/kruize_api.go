@@ -163,7 +163,7 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 	// TODO(FLPATH-3407): use a bounded client once we have Prometheus latency data for /updateResults
 	url := cfg.KruizeUrl + KruizeUpdateResults
 	log.Debugf("\n Sending /updateResult request to kruize with payload - %s \n", string(postBody))
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody)) //nolint:gosec
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeUpdateResults).Inc()
 		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
@@ -215,7 +215,7 @@ func UpdateNamespaceResults(experiment_name string, payload_data []namespacePayl
 	// TODO(FLPATH-3407): use a bounded client once we have Prometheus latency data for /updateResults
 	url := cfg.KruizeUrl + KruizeUpdateResults
 	log.Debugf("\n Sending /updateResult request to kruize with namespace payload - %s \n", string(postBody))
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody)) //nolint:gosec
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeUpdateResults).Inc()
 		return nil, fmt.Errorf("an Error Occured while sending namespace metrics: %v", err)
