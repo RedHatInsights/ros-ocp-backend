@@ -22,13 +22,41 @@ import (
 var log *logrus.Entry = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
 
+// HTTPClient is the shared HTTP client for lightweight outbound requests
+// (health checks, RBAC, experiment creation). The timeout is driven by
+// GLOBAL_HTTP_CLIENT_TIMEOUT_SECS (default 30s) to prevent indefinite
+// hangs when downstream services are slow or unresponsive. See FLPATH-3407.
+//
+// Heavy Kruize calls (/updateResults, /updateRecommendations) and large
+// downloads (ReadCSVFromUrl) intentionally use the default http client
+// until we have Prometheus latency data to set informed timeouts.
+// TODO(FLPATH-3407): add per-endpoint Prometheus histogram to measure
+// Kruize API latency, then set per-call timeouts:
+//
+//	kruizeAPIDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+//	    Name:    "rosocp_kruize_api_duration_seconds",
+//	    Help:    "Latency of outbound Kruize API calls in seconds",
+//	    Buckets: []float64{0.5, 1, 5, 10, 30, 60, 120, 300},
+//	}, []string{"path"})
+var HTTPClient = newHTTPClient(cfg.GlobalHTTPClientTimeoutSecs)
+
+const minHTTPTimeoutSecs = 1
+
+func newHTTPClient(timeoutSecs int) *http.Client {
+	if timeoutSecs < minHTTPTimeoutSecs {
+		log.Warnf("GLOBAL_HTTP_CLIENT_TIMEOUT_SECS=%d is below minimum; using %ds", timeoutSecs, minHTTPTimeoutSecs)
+		timeoutSecs = minHTTPTimeoutSecs
+	}
+	return &http.Client{Timeout: time.Duration(timeoutSecs) * time.Second}
+}
+
 func Setup_kruize_performance_profile() {
 	// This func needs to be revisited once kruize implements this API
 	// Refer - https://github.com/kruize/autotune/blob/mvp_demo/src/main/java/com/autotune/analyzer/Analyzer.java#L50
 	list_performance_profile_url := cfg.KruizeUrl + "/listPerformanceProfiles"
 	for i := 0; i < 5; i++ {
 		log.Infof("Fetching performance profile list")
-		response, err := http.Get(list_performance_profile_url)
+		response, err := HTTPClient.Get(list_performance_profile_url)
 		if err != nil {
 			log.Errorf("An Error Occured %v \n", err)
 		} else {
@@ -41,7 +69,7 @@ func Setup_kruize_performance_profile() {
 				log.Errorf("File reading error: %v \n", err)
 				os.Exit(1)
 			}
-			res, e := http.Post(create_performance_profile_url, "application/json", bytes.NewBuffer(postBody))
+			res, e := HTTPClient.Post(create_performance_profile_url, "application/json", bytes.NewBuffer(postBody))
 			if e != nil {
 				log.Errorf("unable to create performance profile in kruize: %v \n", e)
 			}
@@ -70,6 +98,7 @@ func Setup_kruize_performance_profile() {
 }
 
 func ReadCSVFromUrl(url string) ([][]string, error) {
+	// TODO(FLPATH-3407): use a bounded client once we have latency data for CSV downloads
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err

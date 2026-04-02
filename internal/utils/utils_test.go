@@ -10,6 +10,50 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func TestHTTPClientTimeoutMatchesConfig(t *testing.T) {
+	secs := cfg.GlobalHTTPClientTimeoutSecs
+	if secs < minHTTPTimeoutSecs {
+		secs = minHTTPTimeoutSecs
+	}
+	expected := time.Duration(secs) * time.Second
+	if HTTPClient.Timeout != expected {
+		t.Errorf("HTTPClient.Timeout=%v; want %v (from GLOBAL_HTTP_CLIENT_TIMEOUT_SECS with floor %ds)",
+			HTTPClient.Timeout, expected, minHTTPTimeoutSecs)
+	}
+}
+
+func TestNewHTTPClientClampsZeroToFloor(t *testing.T) {
+	client := newHTTPClient(0)
+	floor := time.Duration(minHTTPTimeoutSecs) * time.Second
+	if client.Timeout != floor {
+		t.Errorf("newHTTPClient(0).Timeout=%v; want floor %v", client.Timeout, floor)
+	}
+}
+
+func TestNewHTTPClientClampsNegativeToFloor(t *testing.T) {
+	client := newHTTPClient(-5)
+	floor := time.Duration(minHTTPTimeoutSecs) * time.Second
+	if client.Timeout != floor {
+		t.Errorf("newHTTPClient(-5).Timeout=%v; want floor %v", client.Timeout, floor)
+	}
+}
+
+func TestNewHTTPClientRespectsValidValue(t *testing.T) {
+	client := newHTTPClient(45)
+	expected := 45 * time.Second
+	if client.Timeout != expected {
+		t.Errorf("newHTTPClient(45).Timeout=%v; want %v", client.Timeout, expected)
+	}
+}
+
+func TestNewHTTPClientAtFloorBoundary(t *testing.T) {
+	client := newHTTPClient(minHTTPTimeoutSecs)
+	expected := time.Duration(minHTTPTimeoutSecs) * time.Second
+	if client.Timeout != expected {
+		t.Errorf("newHTTPClient(%d).Timeout=%v; want %v", minHTTPTimeoutSecs, client.Timeout, expected)
+	}
+}
+
 func TestConvertDateToISO8601(t *testing.T) {
 	date := "2022-11-01 18:25:43 +0000 UTC"
 	expected_result := "2022-11-01T18:25:43.000Z"
