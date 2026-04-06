@@ -31,16 +31,21 @@ func Rbac(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// aggregate_permissions loop over all the permissions/roles/alcs of the user returned
-// from rbac and creates and return the map of permissions where key is
-// resourceType (openshift.cluster, openshift.node, openshift.project) and the values are the
+// aggregate_permissions loop over all the permissions/roles/alcs of the user returned.
+// from rbac and creates and return the map of permissions where key is.
+// resourceType (openshift.cluster, openshift.node, openshift.project) and the values are the.
 // slice of resources (cluster names, node names, project names).
 //
-// Sample output from the rbac - https://github.com/RedHatInsights/ros-ocp-backend/pull/24#issuecomment-1482708944
+// Sample output from the rbac - https://github.com/RedHatInsights/ros-ocp-backend/pull/24#issuecomment-1482708944.
 func aggregate_permissions(acls []types.RbacData) map[string][]string {
 	permissions := map[string][]string{}
 	for _, acl := range acls {
-		resourceType := strings.Split(acl.Permission, ":")[1]
+		parts := strings.Split(acl.Permission, ":")
+		if len(parts) < 2 {
+			log.Warnf("skipping malformed RBAC permission string (no colon): %q", acl.Permission)
+			continue
+		}
+		resourceType := parts[1]
 		if strings.Contains(resourceType, "openshift") {
 			if _, ok := permissions[resourceType]; !ok {
 				permissions[resourceType] = []string{}

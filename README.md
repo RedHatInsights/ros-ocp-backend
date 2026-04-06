@@ -10,6 +10,7 @@ Backend for Resource Optimization for Openshift service
 * [Deploying service in ephemeral environment](https://github.com/RedHatInsights/ros-ocp-backend/wiki/Deploying-in-ephemeral-environment)
 * **Developing & Contributing**
     - [Dev environment setup](https://github.com/RedHatInsights/ros-ocp-backend/wiki/Dev-environment-setup-(local))
+    - [Kessel development guide](docs/architecture/kessel-development-guide.md) -- local Kessel stack setup, seeding, testing, and troubleshooting
 
 ## Blogs
 * [Red Hat Insights Brings Resource Optimization to Red Hat OpenShift](https://www.redhat.com/en/blog/red-hat-insights-brings-resource-optimization-red-hat-openshift)
