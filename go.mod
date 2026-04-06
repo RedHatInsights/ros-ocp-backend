@@ -1,6 +1,6 @@
 module github.com/redhatinsights/ros-ocp-backend
 
-go 1.24.6
+go 1.25.0
 
 require (
 	github.com/Unleash/unleash-go-sdk/v5 v5.1.0
@@ -12,7 +12,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/labstack/echo-contrib v0.17.4
-	github.com/labstack/echo/v4 v4.15.1
+	github.com/labstack/echo/v5 v5.1.0
 	github.com/lib/pq v1.10.9
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/prometheus/client_golang v1.23.2
@@ -52,6 +52,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
+	github.com/labstack/echo/v4 v4.13.3 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/launchdarkly/eventsource v1.10.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
