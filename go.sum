@@ -269,8 +269,8 @@ github.com/labstack/echo/v4 v4.15.1 h1:S9keusg26gZpjMmPqB5hOEvNKnmd1lNmcHrbbH2ln
 github.com/labstack/echo/v4 v4.15.1/go.mod h1:xmw1clThob0BSVRX1CRQkGQ/vjwcpOMjQZSZa9fKA/c=
 github.com/labstack/gommon v0.4.2 h1:F8qTUNXgG1+6WQmqoUWnz8WiEU60mXVVw0P4ht1WRA0=
 github.com/labstack/gommon v0.4.2/go.mod h1:QlUFxVM+SNXhDL/Z7YhocGIBYOiwB0mXm1+1bAPHPyU=
-github.com/launchdarkly/eventsource v1.10.0 h1:H9Tp6AfGu/G2qzBJC26iperrvwhzdbiA/gx7qE2nDFI=
-github.com/launchdarkly/eventsource v1.10.0/go.mod h1:J3oa50bPvJesZqNAJtb5btSIo5N6roDWhiAS3IpsKck=
+github.com/launchdarkly/eventsource v1.11.0 h1:aAdvh2XmtXA17QsRFL0XKHURMqhxg7J+CceQmhSzBas=
+github.com/launchdarkly/eventsource v1.11.0/go.mod h1:dU+rZxkPOlGPsyJPpiDqiepAcFwIITDUClY9+A6RrMw=
 github.com/launchdarkly/go-test-helpers/v3 v3.1.0 h1:E3bxJMzMoA+cJSF3xxtk2/chr1zshl1ZWa0/oR+8bvg=
 github.com/launchdarkly/go-test-helpers/v3 v3.1.0/go.mod h1:Ake5+hZFS/DmIGKx/cizhn5W9pGA7pplcR7xCxWiLIo=
 github.com/leodido/go-urn v1.4.0 h1:WT9HwE9SGECu3lg4d/dIA+jxlljEa1/ffXKmRjqdmIQ=
