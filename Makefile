@@ -81,7 +81,7 @@ lint: golangci-lint
 
 .PHONY: test
 test:
-	go test -v ./...
+	go test -v -race -count=1 ./...
 
 MCCILINT := $(LOCALBIN)/mc
 .PHONY: archive-to-minio
