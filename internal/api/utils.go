@@ -964,25 +964,34 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 		return nil, fmt.Errorf("unable to unmarshall recommendation %s: %w", recommendationSet.ID, err)
 	}
 
-	recommendationTermMap := map[string]kruizePayload.RecommendationTerm{
-		"short_term":  recommendationObj.RecommendationTerms.Short_term,
-		"medium_term": recommendationObj.RecommendationTerms.Medium_term,
-		"long_term":   recommendationObj.RecommendationTerms.Long_term,
+	type namedTerm struct {
+		name string
+		term kruizePayload.RecommendationTerm
+	}
+	orderedTerms := []namedTerm{
+		{"short_term", recommendationObj.RecommendationTerms.Short_term},
+		{"medium_term", recommendationObj.RecommendationTerms.Medium_term},
+		{"long_term", recommendationObj.RecommendationTerms.Long_term},
 	}
 
-	for termName, recommendationTerm := range recommendationTermMap {
+	type namedEngine struct {
+		name   string
+		engine kruizePayload.RecommendationEngineObject
+	}
+
+	for _, nt := range orderedTerms {
+		termName := nt.name
+		recommendationTerm := nt.term
 		if recommendationTerm.RecommendationEngines == nil {
 			continue
 		}
-		recommendationEngineMap := map[string]kruizePayload.RecommendationEngineObject{
-			"cost":        recommendationTerm.RecommendationEngines.Cost,
-			"performance": recommendationTerm.RecommendationEngines.Performance,
+		orderedEngines := []namedEngine{
+			{"cost", recommendationTerm.RecommendationEngines.Cost},
+			{"performance", recommendationTerm.RecommendationEngines.Performance},
 		}
-		for recommendationType, recommendationEngine := range recommendationEngineMap {
-
-			if _, objExists := recommendationEngineMap[recommendationType]; !objExists {
-				continue
-			}
+		for _, ne := range orderedEngines {
+			recommendationType := ne.name
+			recommendationEngine := ne.engine
 
 			variationCPULimitPercentage := truncateToThreeDecimalPlaces(
 				calculatePercentage(

@@ -55,12 +55,55 @@ func TestNewHTTPClientAtFloorBoundary(t *testing.T) {
 }
 
 func TestConvertDateToISO8601(t *testing.T) {
-	date := "2022-11-01 18:25:43 +0000 UTC"
-	expected_result := "2022-11-01T18:25:43.000Z"
-	result := ConvertDateToISO8601(date)
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "valid UTC date",
+			input:   "2022-11-01 18:25:43 +0000 UTC",
+			want:    "2022-11-01T18:25:43.000Z",
+			wantErr: false,
+		},
+		{
+			name:    "valid non-UTC date",
+			input:   "2023-06-15 09:30:00 +0530 IST",
+			want:    "2023-06-15T09:30:00.000Z",
+			wantErr: false,
+		},
+		{
+			name:    "empty string returns error",
+			input:   "",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "garbage input returns error",
+			input:   "not-a-date",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "wrong format returns error",
+			input:   "2022-11-01",
+			want:    "",
+			wantErr: true,
+		},
+	}
 
-	if diff := cmp.Diff(result, expected_result); diff != "" {
-		t.Error(diff)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ConvertDateToISO8601(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertDateToISO8601(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ConvertDateToISO8601(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
 	}
 }
 

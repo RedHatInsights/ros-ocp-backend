@@ -4,17 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"strconv"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
 
 var cfg *config.Config = config.GetConfig()
 
 func GetCostApplicationID() (int, error) {
 	url := cfg.SourceApiBaseUrl + cfg.SourceApiPrefix + "/application_types?filter[name][eq]=/insights/platform/cost-management"
-	res, err := http.Get(url)
+	res, err := utils.HTTPClient.Get(url)
 	if err != nil {
 		return 0, fmt.Errorf("error while calling sources API: %v", err)
 	}

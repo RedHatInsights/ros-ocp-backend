@@ -98,15 +98,18 @@ func Setup_kruize_performance_profile() {
 }
 
 func ReadCSVFromUrl(url string) ([][]string, error) {
-	// TODO(FLPATH-3407): use a bounded client once we have latency data for CSV downloads
-	resp, err := http.Get(url)
+	resp, err := HTTPClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
-
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("unexpected status code %d when fetching CSV from %s", resp.StatusCode, url)
+	}
+
 	reader := csv.NewReader(resp.Body)
 	data, err := reader.ReadAll()
 	if err != nil {
@@ -148,10 +151,13 @@ func Convert2DarrayToMap(arr [][]string) []map[string]interface{} {
 	return data
 }
 
-func ConvertDateToISO8601(date string) string {
+func ConvertDateToISO8601(date string) (string, error) {
 	const date_format = "2006-01-02 15:04:05 -0700 MST"
-	t, _ := time.Parse(date_format, date)
-	return t.Format("2006-01-02T15:04:05.000Z")
+	t, err := time.Parse(date_format, date)
+	if err != nil {
+		return "", fmt.Errorf("ConvertDateToISO8601: unable to parse %q: %w", date, err)
+	}
+	return t.Format("2006-01-02T15:04:05.000Z"), nil
 }
 
 func ConvertStringToTime(data string) (time.Time, error) {
