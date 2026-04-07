@@ -40,7 +40,12 @@ func Rbac(next echo.HandlerFunc) echo.HandlerFunc {
 func aggregate_permissions(acls []types.RbacData) map[string][]string {
 	permissions := map[string][]string{}
 	for _, acl := range acls {
-		resourceType := strings.Split(acl.Permission, ":")[1]
+		parts := strings.SplitN(acl.Permission, ":", 3)
+		if len(parts) < 2 {
+			log.Warnf("skipping malformed RBAC permission (no colon): %q", acl.Permission)
+			continue
+		}
+		resourceType := parts[1]
 		if strings.Contains(resourceType, "openshift") {
 			if _, ok := permissions[resourceType]; !ok {
 				permissions[resourceType] = []string{}
@@ -87,22 +92,33 @@ func request_user_access(url, encodedIdentity string) []types.RbacData {
 	access := []types.RbacData{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Errorf("an Error Occured %v", err)
+		log.Errorf("unable to create RBAC request: %v", err)
 		return access
 	}
 	req.Header.Set("x-rh-identity", encodedIdentity)
 	res, err := utils.HTTPClient.Do(req)
 	if err != nil {
-		log.Errorf("error Occured while calling RBAC API %v", err)
+		log.Errorf("error calling RBAC API: %v", err)
 		return access
 	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
-	body, _ := io.ReadAll(res.Body)
+	if res.Body != nil {
+		defer func() {
+			_ = res.Body.Close()
+		}()
+	}
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		log.Errorf("RBAC API returned non-2xx status: %d", res.StatusCode)
+		return access
+	}
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Errorf("unable to read RBAC API response body: %v", err)
+		return access
+	}
 	response := types.RbacResponse{}
 	if err := json.Unmarshal(body, &response); err != nil {
 		log.Errorf("unable to unmarshal response of RBAC API %v", err)
+		return access
 	}
 	access = append(access, response.Data...)
 	if response.Links.Next != "" {

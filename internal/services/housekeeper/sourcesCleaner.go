@@ -2,10 +2,12 @@ package housekeeper
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"strconv"
 
 	k "github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"gorm.io/gorm"
 
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
@@ -49,7 +51,14 @@ func sourcesListener(msg *k.Message, _ *k.Consumer) {
 			}
 			if data.Application_type_id == cost_app_id {
 				var cluster model.Cluster
-				db.Where("source_id = ?", strconv.Itoa(data.Source_id)).First(&cluster)
+				if err := db.Where("source_id = ?", strconv.Itoa(data.Source_id)).First(&cluster).Error; err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						log.Infof("no cluster found for source_id=%d; nothing to clean up", data.Source_id)
+					} else {
+						log.Errorf("unable to look up cluster for source_id=%d: %v", data.Source_id, err)
+					}
+					return
+				}
 				workloads, err := model.GetWorkloadsByClusterID(cluster.ID)
 				if err != nil {
 					log.Errorf("unable to get workloads for cluster: %v. Error: %v", cluster, err)
