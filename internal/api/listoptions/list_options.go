@@ -50,19 +50,19 @@ var NsAllowedOrderBy = OrderByMap{
 	// Backward-compatible: keep current columns for order-by
 	"cpu_request_current":    "namespace_recommendation_sets.cpu_request_current",
 	"memory_request_current": "namespace_recommendation_sets.memory_request_current",
-	// Per-term, per-engine variation columns (fine-grained ordering)
-	"cpu_variation_short_cost":            "namespace_recommendation_sets.cpu_variation_short_cost",
-	"cpu_variation_short_performance":     "namespace_recommendation_sets.cpu_variation_short_performance",
-	"cpu_variation_medium_cost":           "namespace_recommendation_sets.cpu_variation_medium_cost",
-	"cpu_variation_medium_performance":    "namespace_recommendation_sets.cpu_variation_medium_performance",
-	"cpu_variation_long_cost":             "namespace_recommendation_sets.cpu_variation_long_cost",
-	"cpu_variation_long_performance":      "namespace_recommendation_sets.cpu_variation_long_performance",
-	"memory_variation_short_cost":         "namespace_recommendation_sets.memory_variation_short_cost",
-	"memory_variation_short_performance":  "namespace_recommendation_sets.memory_variation_short_performance",
-	"memory_variation_medium_cost":        "namespace_recommendation_sets.memory_variation_medium_cost",
-	"memory_variation_medium_performance": "namespace_recommendation_sets.memory_variation_medium_performance",
-	"memory_variation_long_cost":          "namespace_recommendation_sets.memory_variation_long_cost",
-	"memory_variation_long_performance":   "namespace_recommendation_sets.memory_variation_long_performance",
+	// Per-term, per-engine variation columns (percent of current request; DB column names use _pct suffix)
+	"cpu_variation_short_cost_pct":            "namespace_recommendation_sets.cpu_variation_short_cost_pct",
+	"cpu_variation_short_performance_pct":     "namespace_recommendation_sets.cpu_variation_short_performance_pct",
+	"cpu_variation_medium_cost_pct":           "namespace_recommendation_sets.cpu_variation_medium_cost_pct",
+	"cpu_variation_medium_performance_pct":    "namespace_recommendation_sets.cpu_variation_medium_performance_pct",
+	"cpu_variation_long_cost_pct":             "namespace_recommendation_sets.cpu_variation_long_cost_pct",
+	"cpu_variation_long_performance_pct":      "namespace_recommendation_sets.cpu_variation_long_performance_pct",
+	"memory_variation_short_cost_pct":         "namespace_recommendation_sets.memory_variation_short_cost_pct",
+	"memory_variation_short_performance_pct":  "namespace_recommendation_sets.memory_variation_short_performance_pct",
+	"memory_variation_medium_cost_pct":        "namespace_recommendation_sets.memory_variation_medium_cost_pct",
+	"memory_variation_medium_performance_pct": "namespace_recommendation_sets.memory_variation_medium_performance_pct",
+	"memory_variation_long_cost_pct":          "namespace_recommendation_sets.memory_variation_long_cost_pct",
+	"memory_variation_long_performance_pct":   "namespace_recommendation_sets.memory_variation_long_performance_pct",
 }
 
 func parseInt(val string, def int) int {

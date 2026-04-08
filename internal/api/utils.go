@@ -22,6 +22,7 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
 )
 
@@ -809,18 +810,6 @@ func dropBoxPlotsObject(recommendationJSON map[string]interface{}) map[string]in
 	return recommendationJSON
 }
 
-func calculatePercentage(numerator float64, denominator float64) float64 {
-	if numerator == 0.0 || denominator == 0.0 {
-		// This block avoids below conditions and returns 0.0 instead,
-		// When numerator is 0.0 the Go returns 0.0, valid number however division can be skipped
-		// When denominator is 0.0 the Go returns Infinity(+Inf)
-		// When both numerator and denominator are 0.0 the Go returns Not A Number(NaN)
-		return 0.0
-	}
-	result := (numerator / denominator) * 100
-	return result
-}
-
 func convertVariationToPercentage(recommendationJSON map[string]interface{}) map[string]interface{} {
 	var currentCpuLimits, currentMemoryLimits, currentCpuRequests, currentMemoryRequests float64
 	// Current section of recommendation
@@ -892,10 +881,10 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 								if memoryValue, ok := memoryObject["amount"].(float64); ok {
 									switch section {
 									case "limits":
-										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryLimits)
+										percentageMemoryValue := utils.CalculatePercentage(memoryValue, currentMemoryLimits)
 										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
 									case "requests":
-										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryRequests)
+										percentageMemoryValue := utils.CalculatePercentage(memoryValue, currentMemoryRequests)
 										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
 									}
 									memoryObject["format"] = "percent"
@@ -907,10 +896,10 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 								if cpuValue, ok := cpuObject["amount"].(float64); ok {
 									switch section {
 									case "limits":
-										percentageCpuValue := calculatePercentage(cpuValue, currentCpuLimits)
+										percentageCpuValue := utils.CalculatePercentage(cpuValue, currentCpuLimits)
 										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
 									case "requests":
-										percentageCpuValue := calculatePercentage(cpuValue, currentCpuRequests)
+										percentageCpuValue := utils.CalculatePercentage(cpuValue, currentCpuRequests)
 										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
 									}
 									cpuObject["format"] = "percent"
@@ -985,25 +974,25 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 			}
 
 			variationCPULimitPercentage := truncateToThreeDecimalPlaces(
-				calculatePercentage(
+				utils.CalculatePercentage(
 					truncateToThreeDecimalPlaces(recommendationEngine.Variation.Limits.Cpu.Amount),
 					truncateToThreeDecimalPlaces(recommendationObj.Current.Limits.Cpu.Amount),
 				))
 
 			variationMemoryLimitPercentage := truncateToThreeDecimalPlaces(
-				calculatePercentage(
+				utils.CalculatePercentage(
 					recommendationEngine.Variation.Limits.Memory.Amount,
 					recommendationObj.Current.Limits.Memory.Amount,
 				))
 
 			variationCPURequestPercentage := truncateToThreeDecimalPlaces(
-				calculatePercentage(
+				utils.CalculatePercentage(
 					truncateToThreeDecimalPlaces(recommendationEngine.Variation.Requests.Cpu.Amount),
 					truncateToThreeDecimalPlaces(recommendationObj.Current.Requests.Cpu.Amount),
 				))
 
 			variationMemoryRequestPercentage := truncateToThreeDecimalPlaces(
-				calculatePercentage(
+				utils.CalculatePercentage(
 					recommendationEngine.Variation.Requests.Memory.Amount,
 					recommendationObj.Current.Requests.Memory.Amount,
 				))
