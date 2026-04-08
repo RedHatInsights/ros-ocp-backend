@@ -65,6 +65,29 @@ var NsAllowedOrderBy = OrderByMap{
 	"memory_variation_long_performance_pct":   "namespace_recommendation_sets.memory_variation_long_performance_pct",
 }
 
+// allowedNamespaceOrderBySQL is the set of SQL ORDER BY expressions permitted for namespace recommendation lists only.
+var allowedNamespaceOrderBySQL map[string]struct{}
+
+func init() {
+	allowedNamespaceOrderBySQL = make(map[string]struct{}, len(NsAllowedOrderBy)+1)
+	allowedNamespaceOrderBySQL[DefaultNsRecsDBColumn] = struct{}{}
+	for _, col := range NsAllowedOrderBy {
+		allowedNamespaceOrderBySQL[col] = struct{}{}
+	}
+}
+
+// ValidNamespaceListOrderColumn reports whether columnSQL is an allowed ORDER BY expression for namespace lists.
+// Use before building GORM Order() for namespace recommendations (defense in depth vs untrusted ListOptions).
+func ValidNamespaceListOrderColumn(columnSQL string) bool {
+	_, ok := allowedNamespaceOrderBySQL[columnSQL]
+	return ok
+}
+
+// ValidListOrderHow reports whether how is asc or desc only.
+func ValidListOrderHow(how string) bool {
+	return how == OrderAsc || how == OrderDesc
+}
+
 func parseInt(val string, def int) int {
 	if val == "" {
 		return def
