@@ -89,8 +89,15 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 		}
 	}
 
+	if !listoptions.ValidNamespaceListOrderColumn(opts.OrderBy) {
+		return recommendationSets, int(count), errors.New("invalid namespace list order_by column")
+	}
+	if !listoptions.ValidListOrderHow(opts.OrderHow) {
+		return recommendationSets, int(count), errors.New("invalid namespace list order_how")
+	}
+
 	query.Count(&count)
-	// Secondary sort by primary key for stable ordering when the primary sort column ties.
+	// OrderBy/OrderHow are allowlisted in listoptions; secondary sort for stable ordering.
 	query = query.Order(opts.OrderBy + " " + opts.OrderHow).Order("namespace_recommendation_sets.id ASC")
 
 	limit := opts.Limit
