@@ -23,18 +23,19 @@ type NamespaceRecommendationSet struct {
 	CPURequestCurrent    float64
 	MemoryRequestCurrent float64
 
-	CPUVariationShortCost            float64 `gorm:"column:cpu_variation_short_cost"`
-	CPUVariationShortPerformance     float64 `gorm:"column:cpu_variation_short_performance"`
-	CPUVariationMediumCost           float64 `gorm:"column:cpu_variation_medium_cost"`
-	CPUVariationMediumPerformance    float64 `gorm:"column:cpu_variation_medium_performance"`
-	CPUVariationLongCost             float64 `gorm:"column:cpu_variation_long_cost"`
-	CPUVariationLongPerformance      float64 `gorm:"column:cpu_variation_long_performance"`
-	MemoryVariationShortCost         float64 `gorm:"column:memory_variation_short_cost"`
-	MemoryVariationShortPerformance  float64 `gorm:"column:memory_variation_short_performance"`
-	MemoryVariationMediumCost        float64 `gorm:"column:memory_variation_medium_cost"`
-	MemoryVariationMediumPerformance float64 `gorm:"column:memory_variation_medium_performance"`
-	MemoryVariationLongCost          float64 `gorm:"column:memory_variation_long_cost"`
-	MemoryVariationLongPerformance   float64 `gorm:"column:memory_variation_long_performance"`
+	// Variation fields: percent of current CPU/memory request (aligned with API response).
+	CPUVariationShortCostPct            float64 `gorm:"column:cpu_variation_short_cost_pct"`
+	CPUVariationShortPerformancePct     float64 `gorm:"column:cpu_variation_short_performance_pct"`
+	CPUVariationMediumCostPct           float64 `gorm:"column:cpu_variation_medium_cost_pct"`
+	CPUVariationMediumPerformancePct    float64 `gorm:"column:cpu_variation_medium_performance_pct"`
+	CPUVariationLongCostPct             float64 `gorm:"column:cpu_variation_long_cost_pct"`
+	CPUVariationLongPerformancePct      float64 `gorm:"column:cpu_variation_long_performance_pct"`
+	MemoryVariationShortCostPct         float64 `gorm:"column:memory_variation_short_cost_pct"`
+	MemoryVariationShortPerformancePct  float64 `gorm:"column:memory_variation_short_performance_pct"`
+	MemoryVariationMediumCostPct        float64 `gorm:"column:memory_variation_medium_cost_pct"`
+	MemoryVariationMediumPerformancePct float64 `gorm:"column:memory_variation_medium_performance_pct"`
+	MemoryVariationLongCostPct          float64 `gorm:"column:memory_variation_long_cost_pct"`
+	MemoryVariationLongPerformancePct   float64 `gorm:"column:memory_variation_long_performance_pct"`
 
 	MonitoringStartTime    time.Time `gorm:"type:timestamp"`
 	MonitoringEndTime      time.Time `gorm:"type:timestamp"`
@@ -89,7 +90,8 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 	}
 
 	query.Count(&count)
-	query = query.Order(opts.OrderBy + " " + opts.OrderHow)
+	// Secondary sort by primary key for stable ordering when the primary sort column ties.
+	query = query.Order(opts.OrderBy + " " + opts.OrderHow).Order("namespace_recommendation_sets.id ASC")
 
 	limit := opts.Limit
 	if opts.Format == "csv" {
@@ -129,18 +131,18 @@ func (r *NamespaceRecommendationSet) CreateNamespaceRecommendationSet(tx *gorm.D
 			"updated_at",
 			"cpu_request_current",
 			"memory_request_current",
-			"cpu_variation_short_cost",
-			"cpu_variation_short_performance",
-			"cpu_variation_medium_cost",
-			"cpu_variation_medium_performance",
-			"cpu_variation_long_cost",
-			"cpu_variation_long_performance",
-			"memory_variation_short_cost",
-			"memory_variation_short_performance",
-			"memory_variation_medium_cost",
-			"memory_variation_medium_performance",
-			"memory_variation_long_cost",
-			"memory_variation_long_performance",
+			"cpu_variation_short_cost_pct",
+			"cpu_variation_short_performance_pct",
+			"cpu_variation_medium_cost_pct",
+			"cpu_variation_medium_performance_pct",
+			"cpu_variation_long_cost_pct",
+			"cpu_variation_long_performance_pct",
+			"memory_variation_short_cost_pct",
+			"memory_variation_short_performance_pct",
+			"memory_variation_medium_cost_pct",
+			"memory_variation_medium_performance_pct",
+			"memory_variation_long_cost_pct",
+			"memory_variation_long_performance_pct",
 		}),
 	}).Create(r)
 
