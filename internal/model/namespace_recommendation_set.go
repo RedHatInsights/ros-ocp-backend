@@ -24,18 +24,18 @@ type NamespaceRecommendationSet struct {
 	MemoryRequestCurrent float64
 
 	// Variation fields: percent of current CPU/memory request (aligned with API response).
-	CPUVariationShortCostPct            float64 `gorm:"column:cpu_variation_short_cost_pct"`
-	CPUVariationShortPerformancePct     float64 `gorm:"column:cpu_variation_short_performance_pct"`
-	CPUVariationMediumCostPct           float64 `gorm:"column:cpu_variation_medium_cost_pct"`
-	CPUVariationMediumPerformancePct    float64 `gorm:"column:cpu_variation_medium_performance_pct"`
-	CPUVariationLongCostPct             float64 `gorm:"column:cpu_variation_long_cost_pct"`
-	CPUVariationLongPerformancePct      float64 `gorm:"column:cpu_variation_long_performance_pct"`
-	MemoryVariationShortCostPct         float64 `gorm:"column:memory_variation_short_cost_pct"`
-	MemoryVariationShortPerformancePct  float64 `gorm:"column:memory_variation_short_performance_pct"`
-	MemoryVariationMediumCostPct        float64 `gorm:"column:memory_variation_medium_cost_pct"`
-	MemoryVariationMediumPerformancePct float64 `gorm:"column:memory_variation_medium_performance_pct"`
-	MemoryVariationLongCostPct          float64 `gorm:"column:memory_variation_long_cost_pct"`
-	MemoryVariationLongPerformancePct   float64 `gorm:"column:memory_variation_long_performance_pct"`
+	CPUVariationShortCostPct            float64 `gorm:"column:cpu_variation_short_cost_pct;type:numeric(10,4)"`
+	CPUVariationShortPerformancePct     float64 `gorm:"column:cpu_variation_short_performance_pct;type:numeric(10,4)"`
+	CPUVariationMediumCostPct           float64 `gorm:"column:cpu_variation_medium_cost_pct;type:numeric(10,4)"`
+	CPUVariationMediumPerformancePct    float64 `gorm:"column:cpu_variation_medium_performance_pct;type:numeric(10,4)"`
+	CPUVariationLongCostPct             float64 `gorm:"column:cpu_variation_long_cost_pct;type:numeric(10,4)"`
+	CPUVariationLongPerformancePct      float64 `gorm:"column:cpu_variation_long_performance_pct;type:numeric(10,4)"`
+	MemoryVariationShortCostPct         float64 `gorm:"column:memory_variation_short_cost_pct;type:numeric(10,4)"`
+	MemoryVariationShortPerformancePct  float64 `gorm:"column:memory_variation_short_performance_pct;type:numeric(10,4)"`
+	MemoryVariationMediumCostPct        float64 `gorm:"column:memory_variation_medium_cost_pct;type:numeric(10,4)"`
+	MemoryVariationMediumPerformancePct float64 `gorm:"column:memory_variation_medium_performance_pct;type:numeric(10,4)"`
+	MemoryVariationLongCostPct          float64 `gorm:"column:memory_variation_long_cost_pct;type:numeric(10,4)"`
+	MemoryVariationLongPerformancePct   float64 `gorm:"column:memory_variation_long_performance_pct;type:numeric(10,4)"`
 
 	MonitoringStartTime    time.Time `gorm:"type:timestamp"`
 	MonitoringEndTime      time.Time `gorm:"type:timestamp"`
@@ -89,15 +89,8 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 		}
 	}
 
-	if !listoptions.ValidNamespaceListOrderColumn(opts.OrderBy) {
-		return recommendationSets, int(count), errors.New("invalid namespace list order_by column")
-	}
-	if !listoptions.ValidListOrderHow(opts.OrderHow) {
-		return recommendationSets, int(count), errors.New("invalid namespace list order_how")
-	}
-
 	query.Count(&count)
-	// OrderBy/OrderHow are allowlisted in listoptions; secondary sort for stable ordering.
+	// OrderBy/OrderHow come from ListAPIOptions (allowlisted); secondary sort for stable ordering.
 	query = query.Order(opts.OrderBy + " " + opts.OrderHow).Order("namespace_recommendation_sets.id ASC")
 
 	limit := opts.Limit

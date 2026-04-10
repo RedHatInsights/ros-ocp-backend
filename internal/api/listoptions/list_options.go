@@ -50,7 +50,20 @@ var NsAllowedOrderBy = OrderByMap{
 	// Backward-compatible: keep current columns for order-by
 	"cpu_request_current":    "namespace_recommendation_sets.cpu_request_current",
 	"memory_request_current": "namespace_recommendation_sets.memory_request_current",
-	// Per-term, per-engine variation columns (percent of current request; DB column names use _pct suffix)
+	// Per-term, per-engine variation (values are percent of current request; DB columns use _pct suffix)
+	"cpu_variation_short_cost":            "namespace_recommendation_sets.cpu_variation_short_cost_pct",
+	"cpu_variation_short_performance":     "namespace_recommendation_sets.cpu_variation_short_performance_pct",
+	"cpu_variation_medium_cost":           "namespace_recommendation_sets.cpu_variation_medium_cost_pct",
+	"cpu_variation_medium_performance":    "namespace_recommendation_sets.cpu_variation_medium_performance_pct",
+	"cpu_variation_long_cost":             "namespace_recommendation_sets.cpu_variation_long_cost_pct",
+	"cpu_variation_long_performance":      "namespace_recommendation_sets.cpu_variation_long_performance_pct",
+	"memory_variation_short_cost":         "namespace_recommendation_sets.memory_variation_short_cost_pct",
+	"memory_variation_short_performance":  "namespace_recommendation_sets.memory_variation_short_performance_pct",
+	"memory_variation_medium_cost":        "namespace_recommendation_sets.memory_variation_medium_cost_pct",
+	"memory_variation_medium_performance": "namespace_recommendation_sets.memory_variation_medium_performance_pct",
+	"memory_variation_long_cost":          "namespace_recommendation_sets.memory_variation_long_cost_pct",
+	"memory_variation_long_performance":   "namespace_recommendation_sets.memory_variation_long_performance_pct",
+	// Legacy order_by keys (same columns as above)
 	"cpu_variation_short_cost_pct":            "namespace_recommendation_sets.cpu_variation_short_cost_pct",
 	"cpu_variation_short_performance_pct":     "namespace_recommendation_sets.cpu_variation_short_performance_pct",
 	"cpu_variation_medium_cost_pct":           "namespace_recommendation_sets.cpu_variation_medium_cost_pct",
@@ -63,29 +76,6 @@ var NsAllowedOrderBy = OrderByMap{
 	"memory_variation_medium_performance_pct": "namespace_recommendation_sets.memory_variation_medium_performance_pct",
 	"memory_variation_long_cost_pct":          "namespace_recommendation_sets.memory_variation_long_cost_pct",
 	"memory_variation_long_performance_pct":   "namespace_recommendation_sets.memory_variation_long_performance_pct",
-}
-
-// allowedNamespaceOrderBySQL is the set of SQL ORDER BY expressions permitted for namespace recommendation lists only.
-var allowedNamespaceOrderBySQL map[string]struct{}
-
-func init() {
-	allowedNamespaceOrderBySQL = make(map[string]struct{}, len(NsAllowedOrderBy)+1)
-	allowedNamespaceOrderBySQL[DefaultNsRecsDBColumn] = struct{}{}
-	for _, col := range NsAllowedOrderBy {
-		allowedNamespaceOrderBySQL[col] = struct{}{}
-	}
-}
-
-// ValidNamespaceListOrderColumn reports whether columnSQL is an allowed ORDER BY expression for namespace lists.
-// Use before building GORM Order() for namespace recommendations (defense in depth vs untrusted ListOptions).
-func ValidNamespaceListOrderColumn(columnSQL string) bool {
-	_, ok := allowedNamespaceOrderBySQL[columnSQL]
-	return ok
-}
-
-// ValidListOrderHow reports whether how is asc or desc only.
-func ValidListOrderHow(how string) bool {
-	return how == OrderAsc || how == OrderDesc
 }
 
 func parseInt(val string, def int) int {

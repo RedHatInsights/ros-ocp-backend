@@ -26,15 +26,15 @@ ALTER TABLE namespace_recommendation_sets
     DROP COLUMN IF EXISTS memory_variation_long_performance_pct;
 
 ALTER TABLE namespace_recommendation_sets
-    ADD COLUMN cpu_variation_short_cost_pct FLOAT,
-    ADD COLUMN cpu_variation_short_performance_pct FLOAT,
-    ADD COLUMN cpu_variation_medium_cost_pct FLOAT,
-    ADD COLUMN cpu_variation_medium_performance_pct FLOAT,
-    ADD COLUMN cpu_variation_long_cost_pct FLOAT,
-    ADD COLUMN cpu_variation_long_performance_pct FLOAT,
-    ADD COLUMN memory_variation_short_cost_pct FLOAT,
-    ADD COLUMN memory_variation_short_performance_pct FLOAT,
-    ADD COLUMN memory_variation_medium_cost_pct FLOAT,
-    ADD COLUMN memory_variation_medium_performance_pct FLOAT,
-    ADD COLUMN memory_variation_long_cost_pct FLOAT,
-    ADD COLUMN memory_variation_long_performance_pct FLOAT;
+    ADD COLUMN cpu_variation_short_cost_pct NUMERIC(10, 4),
+    ADD COLUMN cpu_variation_short_performance_pct NUMERIC(10, 4),
+    ADD COLUMN cpu_variation_medium_cost_pct NUMERIC(10, 4),
+    ADD COLUMN cpu_variation_medium_performance_pct NUMERIC(10, 4),
+    ADD COLUMN cpu_variation_long_cost_pct NUMERIC(10, 4),
+    ADD COLUMN cpu_variation_long_performance_pct NUMERIC(10, 4),
+    ADD COLUMN memory_variation_short_cost_pct NUMERIC(10, 4),
+    ADD COLUMN memory_variation_short_performance_pct NUMERIC(10, 4),
+    ADD COLUMN memory_variation_medium_cost_pct NUMERIC(10, 4),
+    ADD COLUMN memory_variation_medium_performance_pct NUMERIC(10, 4),
+    ADD COLUMN memory_variation_long_cost_pct NUMERIC(10, 4),
+    ADD COLUMN memory_variation_long_performance_pct NUMERIC(10, 4);
