@@ -37,7 +37,25 @@
           {
             "name": "cluster",
             "in": "query",
-            "description": "Cluster alias or UUID",
+            "description": "Partial match on cluster alias, exact match on cluster UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude[cluster]",
+            "in": "query",
+            "description": "Exclude cluster by alias or UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:cluster]",
+            "in": "query",
+            "description": "Exact match on cluster alias or UUID",
             "required": false,
             "schema": {
               "type": "string"
@@ -53,9 +71,45 @@
             }
           },
           {
+            "name": "exclude[workload_type]",
+            "in": "query",
+            "description": "Exclude by workload type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:workload_type]",
+            "in": "query",
+            "description": "Exact match on workload type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "workload",
             "in": "query",
-            "description": "Workload name",
+            "description": "Partial match on workload name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude[workload]",
+            "in": "query",
+            "description": "Exclude by workload name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:workload]",
+            "in": "query",
+            "description": "Exact match on workload name",
             "required": false,
             "schema": {
               "type": "string"
@@ -64,7 +118,25 @@
           {
             "name": "container",
             "in": "query",
-            "description": "Container name",
+            "description": "Partial match on container name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude[container]",
+            "in": "query",
+            "description": "Exclude by container name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:container]",
+            "in": "query",
+            "description": "Exact match on container name",
             "required": false,
             "schema": {
               "type": "string"
@@ -73,7 +145,25 @@
           {
             "name": "project",
             "in": "query",
-            "description": "Project name",
+            "description": "Partial match on project name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude[project]",
+            "in": "query",
+            "description": "Exclude by project name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:project]",
+            "in": "query",
+            "description": "Exact match on project name",
             "required": false,
             "schema": {
               "type": "string"
