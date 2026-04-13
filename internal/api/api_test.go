@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -170,6 +171,59 @@ func TestMapQueryParametersFilterClauses(t *testing.T) {
 			queryParams: map[string][]string{"exclude[container]": {"web"}, "filter[exact:container]": {"web"}},
 			wantErr:     true,
 			errContains: "exclude and exact cannot share values",
+		},
+		{
+			name:        "container partial match multiple values",
+			queryParams: map[string][]string{"container": {"web-server", "api-server"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				key := containerCol + " ILIKE ? OR " + containerCol + " ILIKE ?"
+				assert.Equal(t, []string{"%web-server%", "%api-server%"}, result[key])
+			},
+		},
+		{
+			name:        "container exact match multiple values",
+			queryParams: map[string][]string{"filter[exact:container]": {"web-server", "api-server"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				key := containerCol + " = ? OR " + containerCol + " = ?"
+				assert.Equal(t, []string{"web-server", "api-server"}, result[key])
+			},
+		},
+		{
+			name:        "workload partial match multiple values",
+			queryParams: map[string][]string{"workload": {"cart-svc", "pay-svc"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				key := workloadCol + " ILIKE ? OR " + workloadCol + " ILIKE ?"
+				assert.Equal(t, []string{"%cart-svc%", "%pay-svc%"}, result[key])
+			},
+		},
+		{
+			name:        "project partial match multiple values",
+			queryParams: map[string][]string{"project": {"ns-alpha", "ns-beta"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				key := projectContainerCol + " ILIKE ? OR " + projectContainerCol + " ILIKE ?"
+				assert.Equal(t, []string{"%ns-alpha%", "%ns-beta%"}, result[key])
+			},
+		},
+		{
+			name:        "container exceeds max length",
+			queryParams: map[string][]string{"container": {strings.Repeat("a", model.NamespaceMaxLen+1)}},
+			wantErr:     true,
+			errContains: "exceeds max length",
+		},
+		{
+			name:        "project exceeds max length",
+			queryParams: map[string][]string{"project": {strings.Repeat("a", model.NamespaceMaxLen+1)}},
+			wantErr:     true,
+			errContains: "exceeds max length",
+		},
+		{
+			name: "multiple filters exceed max length - joined errors",
+			queryParams: map[string][]string{
+				"container": {strings.Repeat("a", model.NamespaceMaxLen+1)},
+				"project":   {strings.Repeat("b", model.NamespaceMaxLen+1)},
+			},
+			wantErr:     true,
+			errContains: "exceeds max length",
 		},
 	}
 
