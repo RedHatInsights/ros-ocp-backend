@@ -55,17 +55,8 @@ func Setup_kruize_performance_profile() {
 	// This func needs to be revisited once kruize implements this API
 	// Refer - https://github.com/kruize/autotune/blob/mvp_demo/src/main/java/com/autotune/analyzer/Analyzer.java#L50
 	list_performance_profile_url := cfg.KruizeUrl + "/listPerformanceProfiles"
-	// Read the incoming JSON file once to get the version
-	profileData, err := os.ReadFile("./resource_optimization_openshift.json")
-	if err != nil {
-		log.Fatalf("Error reading JSON file: %v", err)
-	}
-
-	var profile map[string]interface{}
-	if err := json.Unmarshal(profileData, &profile); err != nil {
-		log.Fatalf("Error unmarshalling new profile JSON: %v", err)
-	}
-	newVersion := profile["profile_version"]
+	// Use the target version from config
+	targetVersion := cfg.KruizePerformanceProfileVersion
 
 	for i := 0; i < 5; i++ {
 		log.Infof("Fetching performance profile list")
@@ -88,23 +79,20 @@ func Setup_kruize_performance_profile() {
 				if err := json.Unmarshal(body, &profiles); err != nil {
 					log.Errorf("Error unmarshalling listPerformanceProfiles response: %v", err)
 				} else if len(profiles) > 0 {
+					var fetchedVersion interface{}
 					for _, profile := range profiles {
 						log.Infof("Current Performance Profile version : %v", profile["profile_version"])
-						versionStr := profile["profile_version"]
-						if versionStr == newVersion {
-							log.Infof("Performance profile already up to date (version: %v)", versionStr)
+						fetchedVersion = profile["profile_version"]
+						if fetchedVersion == targetVersion {
+							log.Infof("Performance profile already up to date (version: %v)", fetchedVersion)
 							return
 						}
 					}
 
 					// Version mismatch -> Update the profile if update flag is enabled
-					if cfg.UpdateKruizePerfProfile {
-						log.Infof("Updating performance profile to supported version: %v", newVersion)
-						// ✅ Ensure Kruize PUT endpoint is ready before attempting update
-						if !waitForKruizePutReady(cfg.KruizeUrl, 5, 30*time.Second) {
-							log.Error("❌ Kruize PUT endpoint did not become ready — skipping update attempt.")
-							return
-						}
+					// and the fetched version matches the target version from config
+					if cfg.UpdateKruizePerfProfile && fetchedVersion == targetVersion {
+						log.Infof("Updating performance profile to supported version: %v", targetVersion)
 						postBody, err := os.ReadFile("./resource_optimization_openshift.json")
 						if err != nil {
 							log.Fatalf("File reading error: %v (path=%s)", err, postBody)
@@ -122,7 +110,7 @@ func Setup_kruize_performance_profile() {
 
 						// call the updatePerformanceProfile API using PUT request
 						log.Infof("Sending PUT request to: %s (len=%d bytes)", update_performance_profile_url, req.ContentLength)
-						res, err := http.DefaultClient.Do(req)
+						res, err := HTTPClient.Do(req)
 						if err != nil {
 							log.Errorf("PUT request failed: %v", err)
 							return
@@ -180,47 +168,6 @@ func Setup_kruize_performance_profile() {
 		time.Sleep(10 * time.Second)
 	}
 
-}
-
-// waitForKruizePutReady ensures the /updatePerformanceProfile endpoint is ready to accept PUTs.
-// It polls the endpoint using an OPTIONS request and checks if the Allow header includes PUT.
-func waitForKruizePutReady(kruizeURL string, retries int, delay time.Duration) bool {
-	target := kruizeURL + "/updatePerformanceProfile"
-	log.Infof("Checking Kruize PUT endpoint readiness at: %s", target)
-
-	for i := 1; i <= retries; i++ {
-		req, _ := http.NewRequest(http.MethodOptions, target, nil)
-		client := &http.Client{
-			Transport: &http.Transport{
-				DisableKeepAlives:  true,
-				DisableCompression: true,
-				DialContext: (&net.Dialer{
-					Timeout:   5 * time.Second,
-					KeepAlive: 0,
-				}).DialContext,
-			},
-			Timeout: 10 * time.Second,
-		}
-
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Warnf("Attempt %d/%d: OPTIONS check failed: %v", i, retries, err)
-		} else {
-			err := resp.Body.Close()
-			if err != nil {
-				return false
-			}
-			allow := resp.Header.Get("Allow")
-			if strings.Contains(allow, "PUT") {
-				log.Info("✅ Kruize PUT endpoint is ready!")
-				return true
-			}
-		}
-		log.Infof("Waiting %v before retry...", delay)
-		time.Sleep(delay)
-	}
-	log.Error("❌ Kruize PUT endpoint not ready after multiple attempts.")
-	return false
 }
 
 func ReadCSVFromUrl(url string) ([][]string, error) {
