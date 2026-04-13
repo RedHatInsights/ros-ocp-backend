@@ -1,6 +1,6 @@
 module github.com/redhatinsights/ros-ocp-backend
 
-go 1.24.6
+go 1.25.0
 
 require (
 	github.com/Unleash/unleash-go-sdk/v5 v5.1.0
@@ -11,7 +11,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
-	github.com/labstack/echo-contrib v0.17.4
+	github.com/labstack/echo-contrib v0.50.1
 	github.com/labstack/echo/v4 v4.15.1
 	github.com/lib/pq v1.10.9
 	github.com/mitchellh/mapstructure v1.5.0
