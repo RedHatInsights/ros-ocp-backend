@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -73,6 +74,181 @@ func TestMapQueryParameters(t *testing.T) {
 			result, _ := MapQueryParameters(c)
 			if reflect.DeepEqual(result, tt.qoutputs) != true {
 				t.Errorf("%s", tt.errmsg)
+			}
+		})
+	}
+}
+
+func TestMapQueryParametersFilterClauses(t *testing.T) {
+	containerCol := "recommendation_sets.container_name"
+	workloadCol := "workloads.workload_name"
+	workloadTypeCol := "workloads.workload_type"
+	projectContainerCol := "workloads.namespace"
+
+	tests := []struct {
+		name        string
+		queryParams map[string][]string
+		wantErr     bool
+		errContains string
+		checkResult func(t *testing.T, result map[string]interface{})
+	}{
+		{
+			name:        "container include (partial match)",
+			queryParams: map[string][]string{"container": {"web-server"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"%web-server%"}, result[containerCol+" ILIKE ?"])
+			},
+		},
+		{
+			name:        "container exact match",
+			queryParams: map[string][]string{"filter[exact:container]": {"web-server"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"web-server"}, result[containerCol+" = ?"])
+			},
+		},
+		{
+			name:        "container exclude",
+			queryParams: map[string][]string{"exclude[container]": {"web-server"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"web-server"}, result[containerCol+" != ?"])
+			},
+		},
+		{
+			name: "container exclude and exact together",
+			queryParams: map[string][]string{
+				"filter[exact:container]": {"api-server"},
+				"exclude[container]":      {"web-server"},
+			},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"api-server"}, result[containerCol+" = ?"])
+				assert.Equal(t, []string{"web-server"}, result[containerCol+" != ?"])
+			},
+		},
+		{
+			name:        "workload exact match",
+			queryParams: map[string][]string{"filter[exact:workload]": {"my-deploy"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"my-deploy"}, result[workloadCol+" = ?"])
+			},
+		},
+		{
+			name:        "workload exclude",
+			queryParams: map[string][]string{"exclude[workload]": {"my-deploy"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"my-deploy"}, result[workloadCol+" != ?"])
+			},
+		},
+		{
+			name:        "workload_type exact match",
+			queryParams: map[string][]string{"filter[exact:workload_type]": {"Deployment"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"Deployment"}, result[workloadTypeCol+" = ?"])
+			},
+		},
+		{
+			name:        "workload_type exclude",
+			queryParams: map[string][]string{"exclude[workload_type]": {"DaemonSet"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"DaemonSet"}, result[workloadTypeCol+" != ?"])
+			},
+		},
+		{
+			name:        "project exact match",
+			queryParams: map[string][]string{"filter[exact:project]": {"default"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"default"}, result[projectContainerCol+" = ?"])
+			},
+		},
+		{
+			name:        "project exclude",
+			queryParams: map[string][]string{"exclude[project]": {"kube-system"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"kube-system"}, result[projectContainerCol+" != ?"])
+			},
+		},
+		{
+			name:        "exclude and exact same container value - error",
+			queryParams: map[string][]string{"exclude[container]": {"web"}, "filter[exact:container]": {"web"}},
+			wantErr:     true,
+			errContains: "exclude and exact cannot share values",
+		},
+		{
+			name:        "container partial match multiple values",
+			queryParams: map[string][]string{"container": {"web-server", "api-server"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				key := containerCol + " ILIKE ? OR " + containerCol + " ILIKE ?"
+				assert.Equal(t, []string{"%web-server%", "%api-server%"}, result[key])
+			},
+		},
+		{
+			name:        "container exact match multiple values",
+			queryParams: map[string][]string{"filter[exact:container]": {"web-server", "api-server"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				key := containerCol + " = ? OR " + containerCol + " = ?"
+				assert.Equal(t, []string{"web-server", "api-server"}, result[key])
+			},
+		},
+		{
+			name:        "workload partial match multiple values",
+			queryParams: map[string][]string{"workload": {"cart-svc", "pay-svc"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				key := workloadCol + " ILIKE ? OR " + workloadCol + " ILIKE ?"
+				assert.Equal(t, []string{"%cart-svc%", "%pay-svc%"}, result[key])
+			},
+		},
+		{
+			name:        "project partial match multiple values",
+			queryParams: map[string][]string{"project": {"ns-alpha", "ns-beta"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				key := projectContainerCol + " ILIKE ? OR " + projectContainerCol + " ILIKE ?"
+				assert.Equal(t, []string{"%ns-alpha%", "%ns-beta%"}, result[key])
+			},
+		},
+		{
+			name:        "container exceeds max length",
+			queryParams: map[string][]string{"container": {strings.Repeat("a", model.NamespaceMaxLen+1)}},
+			wantErr:     true,
+			errContains: "exceeds max length",
+		},
+		{
+			name:        "project exceeds max length",
+			queryParams: map[string][]string{"project": {strings.Repeat("a", model.NamespaceMaxLen+1)}},
+			wantErr:     true,
+			errContains: "exceeds max length",
+		},
+		{
+			name: "multiple filters exceed max length - joined errors",
+			queryParams: map[string][]string{
+				"container": {strings.Repeat("a", model.NamespaceMaxLen+1)},
+				"project":   {strings.Repeat("b", model.NamespaceMaxLen+1)},
+			},
+			wantErr:     true,
+			errContains: "exceeds max length",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			e := echo.New()
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			for k, vals := range tt.queryParams {
+				for _, v := range vals {
+					c.QueryParams().Add(k, v)
+				}
+			}
+			result, err := MapQueryParameters(c)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+				return
+			}
+			assert.NoError(t, err)
+			if tt.checkResult != nil {
+				tt.checkResult(t, result)
 			}
 		})
 	}
