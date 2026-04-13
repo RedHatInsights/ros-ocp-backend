@@ -77,7 +77,6 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	log := logging.GetLogger()
 	queryParams := make(map[string]interface{})
 	var startTimestamp, endTimestamp time.Time
-	var clusters, projects, workloadNames, workloadTypes, containers []string
 
 	now := time.Now().UTC().Truncate(time.Second)
 	firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
@@ -111,81 +110,27 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	}
 	queryParams["recommendation_sets.monitoring_end_time < ?"] = endTimestamp
 
-	clusters = c.QueryParams()["cluster"]
-	if len(clusters) > 0 {
-		paramString, values := parseQueryParams("cluster", clusters)
-		queryParams[paramString] = values
+	var errs []error
+	if err := applyParamFilter(c, queryParams, "cluster", "", model.ClusterMaxLen, true); err != nil {
+		errs = append(errs, err)
 	}
-
-	projects = c.QueryParams()["project"]
-	if len(projects) > 0 {
-		paramString, values := parseQueryParams("project", projects)
-		queryParams[paramString] = values
+	if err := applyParamFilter(c, queryParams, "project", "workloads.namespace", model.NamespaceMaxLen, false); err != nil {
+		errs = append(errs, err)
 	}
-
-	workloadNames = c.QueryParams()["workload"]
-	if len(workloadNames) > 0 {
-		paramString, values := parseQueryParams("workload", workloadNames)
-		queryParams[paramString] = values
+	if err := applyParamFilter(c, queryParams, "workload", "workloads.workload_name", model.ClusterMaxLen, false); err != nil {
+		errs = append(errs, err)
 	}
-
-	workloadTypes = c.QueryParams()["workload_type"]
-	if len(workloadTypes) > 0 {
-		paramString, values := parseQueryParams("workload_type", workloadTypes)
-		queryParams[paramString] = values
+	if err := applyParamFilter(c, queryParams, "workload_type", "workloads.workload_type", model.NamespaceMaxLen, false); err != nil {
+		errs = append(errs, err)
 	}
-
-	containers = c.QueryParams()["container"]
-	if len(containers) > 0 {
-		paramString, values := parseQueryParams("container", containers)
-		queryParams[paramString] = values
+	if err := applyParamFilter(c, queryParams, "container", "recommendation_sets.container_name", model.NamespaceMaxLen, false); err != nil {
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		return queryParams, errors.Join(errs...)
 	}
 
 	return queryParams, nil
-}
-
-func parseQueryParams(param string, values []string) (string, []string) {
-	parsedKeyMultipleVal := ""
-	valuesSlice := []string{}
-
-	paramMap := map[string]string{
-		"cluster":       "clusters.cluster_alias ILIKE ?",
-		"workload_type": "workloads.workload_type = ?",
-		"workload":      "workloads.workload_name ILIKE ?",
-		"project":       "workloads.namespace ILIKE ?",
-		"container":     "recommendation_sets.container_name ILIKE ?",
-	}
-
-	if len(values) > 1 {
-		for _, value := range values {
-			if param == "cluster" {
-				parsedKeyMultipleVal = parsedKeyMultipleVal + paramMap[param] + " OR " + "clusters.cluster_uuid ILIKE ?" + " OR "
-				valuesSlice = append(valuesSlice, "%"+value+"%")
-				valuesSlice = append(valuesSlice, "%"+value+"%")
-			} else {
-				parsedKeyMultipleVal = parsedKeyMultipleVal + paramMap[param] + " OR "
-				if param == "workload_type" {
-					valuesSlice = append(valuesSlice, value)
-				} else {
-					valuesSlice = append(valuesSlice, "%"+value+"%")
-				}
-			}
-		}
-		parsedKeyMultipleVal = strings.TrimSuffix(parsedKeyMultipleVal, " OR ")
-		return parsedKeyMultipleVal, valuesSlice
-	} else {
-		switch param {
-		case "cluster":
-			paramMap[param] = paramMap[param] + " OR " + "clusters.cluster_uuid ILIKE ?"
-			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
-			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
-		case "workload_type":
-			valuesSlice = append(valuesSlice, values[0])
-		default:
-			valuesSlice = append(valuesSlice, "%"+values[0]+"%")
-		}
-		return paramMap[param], valuesSlice
-	}
 }
 
 func ParseUnitParams(c echo.Context, defaultCPU, defaultMemory string) (map[string]string, bool, error) {
