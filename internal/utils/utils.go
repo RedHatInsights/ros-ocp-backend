@@ -50,25 +50,25 @@ func newHTTPClient(timeoutSecs int) *http.Client {
 	return &http.Client{Timeout: time.Duration(timeoutSecs) * time.Second}
 }
 
-func Setup_kruize_performance_profile() {
+func SetupKruizePerformanceProfile() {
 	// This func needs to be revisited once kruize implements this API
 	// Refer - https://github.com/kruize/autotune/blob/mvp_demo/src/main/java/com/autotune/analyzer/Analyzer.java#L50
-	list_performance_profile_url := cfg.KruizeUrl + "/listPerformanceProfiles"
+	listPerformanceProfileUrl := cfg.KruizeUrl + "/listPerformanceProfiles"
 	// Use the target version from config
 	targetVersion := cfg.KruizePerformanceProfileVersion
 
 	for i := 0; i < 5; i++ {
-		log.Infof("Fetching performance profile list")
-		response, err := HTTPClient.Get(list_performance_profile_url)
+		log.Infof("fetching performance profile list")
+		response, err := HTTPClient.Get(listPerformanceProfileUrl)
 		if err != nil {
-			log.Errorf("An Error Occured %v \n", err)
+			log.Errorf("an error occurred %v \n", err)
 		} else {
 			body, err := io.ReadAll(response.Body)
 			if respBodyErr := response.Body.Close(); respBodyErr != nil {
-				log.Errorf("Error closing response body: %v", respBodyErr)
+				log.Errorf("error closing response body: %v", respBodyErr)
 			}
 			if err != nil {
-				log.Errorf("Error reading listPerformanceProfiles response: %v", err)
+				log.Errorf("error reading listPerformanceProfiles response: %v", err)
 				time.Sleep(10 * time.Second)
 				continue
 			}
@@ -76,39 +76,49 @@ func Setup_kruize_performance_profile() {
 			if len(body) > 0 {
 				var profiles []map[string]interface{}
 				if err := json.Unmarshal(body, &profiles); err != nil {
-					log.Errorf("Error unmarshalling listPerformanceProfiles response: %v", err)
+					log.Errorf("error unmarshalling listPerformanceProfiles response: %v", err)
 				} else if len(profiles) > 0 {
-					var fetchedVersion interface{}
+					var fetchedVersion string
 					for _, profile := range profiles {
-						log.Infof("Current Performance Profile version : %v", profile["profile_version"])
-						fetchedVersion = profile["profile_version"]
-						if fetchedVersion == targetVersion {
-							log.Infof("Performance profile already up to date (version: %v)", fetchedVersion)
-							return
-						}
+						log.Debugf("current performance profile version : %v", profile["profile_version"])
+						fetchedVersion = fmt.Sprintf("%v", profile["profile_version"])
+					}
+
+					// Convert versions to float64 for comparison
+					fetchedVersionFloat, fetchedErr := strconv.ParseFloat(fetchedVersion, 64)
+					targetVersionFloat, targetErr := strconv.ParseFloat(targetVersion, 64)
+
+					if fetchedErr != nil || targetErr != nil {
+						log.Errorf("failed to parse version numbers for comparison (fetched: %v, target: %v)", fetchedVersion, targetVersion)
+						return
+					}
+
+					// Check if already up to date
+					if fetchedVersionFloat == targetVersionFloat {
+						log.Infof("performance profile already up to date (version: %v)", fetchedVersion)
+						return
 					}
 
 					// Version mismatch -> Update the profile if update flag is enabled
-					// and the fetched version matches the target version from config
-					if cfg.UpdateKruizePerfProfile && fetchedVersion == targetVersion {
+					// and the fetched version is less than the target version (prevent downgrades)
+					if cfg.UpdateKruizePerfProfile && fetchedVersionFloat < targetVersionFloat {
 						log.Infof("Updating performance profile to supported version: %v", targetVersion)
 						postBody, err := os.ReadFile("./resource_optimization_openshift.json")
 						if err != nil {
-							log.Fatalf("File reading error: %v (path=%s)", err, postBody)
+							log.Errorf("file reading error: %v \n", err)
 						}
 
 						// create the PUT request
-						update_performance_profile_url := cfg.KruizeUrl + "/updatePerformanceProfile"
-						req, err := http.NewRequest(http.MethodPut, update_performance_profile_url, bytes.NewReader(postBody))
+						updatePerformanceProfileUrl := cfg.KruizeUrl + "/updatePerformanceProfile"
+						req, err := http.NewRequest(http.MethodPut, updatePerformanceProfileUrl, bytes.NewReader(postBody))
 						if err != nil {
-							log.Errorf("Failed to create PUT request: %v", err)
+							log.Errorf("failed to create PUT request: %v", err)
 							return
 						}
 						req.Header.Set("Content-Type", "application/json")
-						req.Header.Set("Accept", "*/*")
 
 						// call the updatePerformanceProfile API using PUT request
-						log.Infof("Sending PUT request to: %s (len=%d bytes)", update_performance_profile_url, req.ContentLength)
+						log.Debugf("sending PUT request to: %s (len=%d bytes)", updatePerformanceProfileUrl, req.ContentLength)
 						res, err := HTTPClient.Do(req)
 						if err != nil {
 							log.Errorf("PUT request failed: %v", err)
@@ -116,32 +126,32 @@ func Setup_kruize_performance_profile() {
 						}
 						defer func() {
 							if respBodyErr := res.Body.Close(); respBodyErr != nil {
-								log.Errorf("Error closing response body: %v", respBodyErr)
+								log.Errorf("error closing response body: %v", respBodyErr)
 							}
 						}()
 
 						bodyBytes, _ := io.ReadAll(res.Body)
-						log.Infof("Response status: %d", res.StatusCode)
-						log.Infof("Response body: %s", string(bodyBytes))
+						log.Debugf("response status: %d", res.StatusCode)
+						log.Debugf("response body: %s", string(bodyBytes))
 
 						if res.StatusCode == 201 {
-							log.Infof("Performance profile updated successfully.")
+							log.Infof("performance profile updated successfully from %v to %v", fetchedVersion, targetVersion)
 							return
 						}
-						log.Errorf("Failed to update performance profile (status=%d): %s", res.StatusCode, string(bodyBytes))
+						log.Errorf("failed to update performance profile (status=%d): %s", res.StatusCode, targetVersion)
 					}
 				}
 			}
 
 			// If profile list empty or not found -> create new profile
-			create_performance_profile_url := cfg.KruizeUrl + "/createPerformanceProfile"
-			log.Infof("Creating new performance profile...")
+			createPerformanceProfileUrl := cfg.KruizeUrl + "/createPerformanceProfile"
+			log.Infof("creating new performance profile...")
 			postBody, err := os.ReadFile("./resource_optimization_openshift.json")
 			if err != nil {
 				log.Errorf("File reading error: %v \n", err)
 				os.Exit(1)
 			}
-			res, e := HTTPClient.Post(create_performance_profile_url, "application/json", bytes.NewBuffer(postBody))
+			res, e := HTTPClient.Post(createPerformanceProfileUrl, "application/json", bytes.NewBuffer(postBody))
 			if e != nil {
 				log.Errorf("unable to create performance profile in kruize: %v \n", e)
 			}
@@ -149,11 +159,11 @@ func Setup_kruize_performance_profile() {
 				_ = res.Body.Close()
 			}()
 			if res.StatusCode == 201 {
-				log.Infof("Performance profile created successfully")
+				log.Infof("performance profile created successfully")
 				return
 			}
 			if res.StatusCode == 409 {
-				log.Infof("Performance Profile already exist")
+				log.Infof("performance profile already exist")
 				return
 			}
 			bodyBytes, _ := io.ReadAll(res.Body)

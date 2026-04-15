@@ -22,7 +22,7 @@ var processorCmd = &cobra.Command{
 		fmt.Println("starting ros-ocp processor")
 		cfg := config.GetConfig()
 		go utils.Start_prometheus_server()
-		utils.Setup_kruize_performance_profile()
+		utils.SetupKruizePerformanceProfile()
 		kafka.StartConsumer(cfg.UploadTopic, services.ProcessReport)
 	},
 }
