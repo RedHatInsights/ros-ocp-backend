@@ -64,7 +64,7 @@
           {
             "name": "workload_type",
             "in": "query",
-            "description": "Options are daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset",
+            "description": "Exact match on workload type. Options are daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset",
             "required": false,
             "schema": {
               "type": "string"

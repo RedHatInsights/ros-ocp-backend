@@ -139,6 +139,14 @@ func TestMapQueryParametersFilterClauses(t *testing.T) {
 			},
 		},
 		{
+			name:        "workload_type plain param uses exact match not partial",
+			queryParams: map[string][]string{"workload_type": {"deployment"}},
+			checkResult: func(t *testing.T, result map[string]interface{}) {
+				assert.Equal(t, []string{"deployment"}, result[workloadTypeCol+" = ?"])
+				assert.Nil(t, result[workloadTypeCol+" ILIKE ?"], "workload_type plain param must not use ILIKE")
+			},
+		},
+		{
 			name:        "workload_type exact match",
 			queryParams: map[string][]string{"filter[exact:workload_type]": {"Deployment"}},
 			checkResult: func(t *testing.T, result map[string]interface{}) {

@@ -117,10 +117,10 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	if err := applyParamFilter(c, queryParams, "project", "workloads.namespace", model.NamespaceMaxLen, false); err != nil {
 		errs = append(errs, err)
 	}
-	if err := applyParamFilter(c, queryParams, "workload", "workloads.workload_name", model.ClusterMaxLen, false); err != nil {
+	if err := applyParamFilter(c, queryParams, "workload", "workloads.workload_name", model.ClusterMaxLen, true); err != nil {
 		errs = append(errs, err)
 	}
-	if err := applyParamFilter(c, queryParams, "workload_type", "workloads.workload_type", model.NamespaceMaxLen, false); err != nil {
+	if err := applyParamFilter(c, queryParams, "workload_type", "workloads.workload_type", model.NamespaceMaxLen, false, true); err != nil {
 		errs = append(errs, err)
 	}
 	if err := applyParamFilter(c, queryParams, "container", "recommendation_sets.container_name", model.NamespaceMaxLen, false); err != nil {
@@ -353,14 +353,19 @@ func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeV
 	return clauseMap, nil
 }
 
-func applyParamFilter(c echo.Context, queryParams map[string]any, param, column string, maxLen int, allowDot bool) error {
+func applyParamFilter(c echo.Context, queryParams map[string]any, param, column string, maxLen int, allowDot bool, treatIncludeAsExact ...bool) error {
 	cfg := config.GetConfig()
 	excludeKey := "exclude[" + param + "]"
 	exactKey := "filter[exact:" + param + "]"
+	useExactForInclude := len(treatIncludeAsExact) > 0 && treatIncludeAsExact[0]
 	var includeVals, excludeVals, exactVals []string
 	for _, v := range c.QueryParams()[param] {
 		if v != "" {
-			includeVals = append(includeVals, v)
+			if useExactForInclude {
+				exactVals = append(exactVals, v)
+			} else {
+				includeVals = append(includeVals, v)
+			}
 		}
 	}
 
