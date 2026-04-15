@@ -73,7 +73,7 @@
           {
             "name": "exclude[workload_type]",
             "in": "query",
-            "description": "Exclude by workload type",
+            "description": "Exclude by workload type. Must be one of: daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset",
             "required": false,
             "schema": {
               "type": "string"
@@ -82,7 +82,7 @@
           {
             "name": "filter[exact:workload_type]",
             "in": "query",
-            "description": "Exact match on workload type",
+            "description": "Exact match on workload type. Must be one of: daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset",
             "required": false,
             "schema": {
               "type": "string"
@@ -276,6 +276,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RecommendationList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request, e.g. invalid query parameter value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "invalid workload_type \"not-a-real-type\", must be one of: daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset"
+                    }
+                  }
                 }
               }
             }

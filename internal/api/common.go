@@ -25,6 +25,25 @@ const (
 	FilterModeExclude = "exclude"
 )
 
+// validWorkloadTypes is the fixed set of allowed workload_type values (mirrors the sorted_workloadtype DB enum).
+var validWorkloadTypes = map[string]bool{
+	"daemonset":             true,
+	"deployment":            true,
+	"deploymentconfig":      true,
+	"replicaset":            true,
+	"replicationcontroller": true,
+	"statefulset":           true,
+}
+
+func validateWorkloadTypeValues(vals []string) error {
+	for _, v := range vals {
+		if !validWorkloadTypes[v] {
+			return namespaceAPIErrf(true, "invalid workload_type %q, must be one of: daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset", v)
+		}
+	}
+	return nil
+}
+
 // FilterModeClause maps mode to SQL clause suffix, wrap for include, and join for multi-value params.
 var FilterModeClause = map[string]struct {
 	Suffix string

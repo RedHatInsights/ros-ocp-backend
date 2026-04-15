@@ -120,7 +120,13 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	if err := applyParamFilter(c, queryParams, "workload", "workloads.workload_name", model.ClusterMaxLen, true); err != nil {
 		errs = append(errs, err)
 	}
-	if err := applyParamFilter(c, queryParams, "workload_type", "workloads.workload_type", model.NamespaceMaxLen, false, true); err != nil {
+	workloadTypeVals := append(
+		c.QueryParams()["workload_type"],
+		append(c.QueryParams()["filter[exact:workload_type]"], c.QueryParams()["exclude[workload_type]"]...)...,
+	)
+	if err := validateWorkloadTypeValues(workloadTypeVals); err != nil {
+		errs = append(errs, err)
+	} else if err := applyParamFilter(c, queryParams, "workload_type", "workloads.workload_type", model.NamespaceMaxLen, false, true); err != nil {
 		errs = append(errs, err)
 	}
 	if err := applyParamFilter(c, queryParams, "container", "recommendation_sets.container_name", model.NamespaceMaxLen, false); err != nil {

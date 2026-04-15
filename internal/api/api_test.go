@@ -148,17 +148,23 @@ func TestMapQueryParametersFilterClauses(t *testing.T) {
 		},
 		{
 			name:        "workload_type exact match",
-			queryParams: map[string][]string{"filter[exact:workload_type]": {"Deployment"}},
+			queryParams: map[string][]string{"filter[exact:workload_type]": {"deployment"}},
 			checkResult: func(t *testing.T, result map[string]interface{}) {
-				assert.Equal(t, []string{"Deployment"}, result[workloadTypeCol+" = ?"])
+				assert.Equal(t, []string{"deployment"}, result[workloadTypeCol+" = ?"])
 			},
 		},
 		{
 			name:        "workload_type exclude",
-			queryParams: map[string][]string{"exclude[workload_type]": {"DaemonSet"}},
+			queryParams: map[string][]string{"exclude[workload_type]": {"daemonset"}},
 			checkResult: func(t *testing.T, result map[string]interface{}) {
-				assert.Equal(t, []string{"DaemonSet"}, result[workloadTypeCol+" != ?"])
+				assert.Equal(t, []string{"daemonset"}, result[workloadTypeCol+" != ?"])
 			},
+		},
+		{
+			name:        "workload_type invalid value returns error",
+			queryParams: map[string][]string{"workload_type": {"not-a-real-type"}},
+			wantErr:     true,
+			errContains: "invalid workload_type",
 		},
 		{
 			name:        "project exact match",
