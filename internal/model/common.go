@@ -5,6 +5,7 @@ import (
 
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
 
 const (
@@ -15,29 +16,29 @@ const (
 )
 
 // RecommendationColumnValues holds current request and per-term, per-engine variation
-// amounts extracted from recommendation data. Used to populate DB columns on
-// recommendation_sets and namespace_recommendation_sets for sorting/filtering.
+// as percent of current request. Values match transformComponentUnits + convertVariationToPercentage
+// (CPU cores truncated to 3dp, memory bytes as MiB to 2dp, then percent to 3dp).
+// Used to populate namespace_recommendation_sets columns for sorting aligned with API display.
 type RecommendationColumnValues struct {
 	CPURequestCurrent    float64
 	MemoryRequestCurrent float64
 
-	CPUVariationShortCost            float64
-	CPUVariationShortPerformance     float64
-	CPUVariationMediumCost           float64
-	CPUVariationMediumPerformance    float64
-	CPUVariationLongCost             float64
-	CPUVariationLongPerformance      float64
-	MemoryVariationShortCost         float64
-	MemoryVariationShortPerformance  float64
-	MemoryVariationMediumCost        float64
-	MemoryVariationMediumPerformance float64
-	MemoryVariationLongCost          float64
-	MemoryVariationLongPerformance   float64
+	CPUVariationShortCostPct            float64
+	CPUVariationShortPerformancePct     float64
+	CPUVariationMediumCostPct           float64
+	CPUVariationMediumPerformancePct    float64
+	CPUVariationLongCostPct             float64
+	CPUVariationLongPerformancePct      float64
+	MemoryVariationShortCostPct         float64
+	MemoryVariationShortPerformancePct  float64
+	MemoryVariationMediumCostPct        float64
+	MemoryVariationMediumPerformancePct float64
+	MemoryVariationLongCostPct          float64
+	MemoryVariationLongPerformancePct   float64
 }
 
 // ExtractRecommendationColumnValues extracts current requests and per-term, per-engine
-// variation amounts from RecommendationData. Reusable for both namespace and container
-// recommendation flows.
+// variation as percent-of-request for namespace_recommendation_sets columns (namespace poller).
 func ExtractRecommendationColumnValues(data kruizePayload.RecommendationData) RecommendationColumnValues {
 	recommVals := RecommendationColumnValues{
 		CPURequestCurrent:    data.Current.Requests.Cpu.Amount,
@@ -48,23 +49,26 @@ func ExtractRecommendationColumnValues(data kruizePayload.RecommendationData) Re
 }
 
 func extractTermVariations(recommVals *RecommendationColumnValues, terms kruizePayload.Term) {
+	cpuReq := recommVals.CPURequestCurrent
+	memReq := recommVals.MemoryRequestCurrent
+
 	if e := terms.Short_term.RecommendationEngines; e != nil {
-		recommVals.CPUVariationShortCost = e.Cost.Variation.Requests.Cpu.Amount
-		recommVals.MemoryVariationShortCost = e.Cost.Variation.Requests.Memory.Amount
-		recommVals.CPUVariationShortPerformance = e.Performance.Variation.Requests.Cpu.Amount
-		recommVals.MemoryVariationShortPerformance = e.Performance.Variation.Requests.Memory.Amount
+		recommVals.CPUVariationShortCostPct = utils.VariationPercentOfRequestCPU(e.Cost.Variation.Requests.Cpu.Amount, cpuReq)
+		recommVals.MemoryVariationShortCostPct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Cost.Variation.Requests.Memory.Amount, memReq)
+		recommVals.CPUVariationShortPerformancePct = utils.VariationPercentOfRequestCPU(e.Performance.Variation.Requests.Cpu.Amount, cpuReq)
+		recommVals.MemoryVariationShortPerformancePct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Performance.Variation.Requests.Memory.Amount, memReq)
 	}
 	if e := terms.Medium_term.RecommendationEngines; e != nil {
-		recommVals.CPUVariationMediumCost = e.Cost.Variation.Requests.Cpu.Amount
-		recommVals.MemoryVariationMediumCost = e.Cost.Variation.Requests.Memory.Amount
-		recommVals.CPUVariationMediumPerformance = e.Performance.Variation.Requests.Cpu.Amount
-		recommVals.MemoryVariationMediumPerformance = e.Performance.Variation.Requests.Memory.Amount
+		recommVals.CPUVariationMediumCostPct = utils.VariationPercentOfRequestCPU(e.Cost.Variation.Requests.Cpu.Amount, cpuReq)
+		recommVals.MemoryVariationMediumCostPct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Cost.Variation.Requests.Memory.Amount, memReq)
+		recommVals.CPUVariationMediumPerformancePct = utils.VariationPercentOfRequestCPU(e.Performance.Variation.Requests.Cpu.Amount, cpuReq)
+		recommVals.MemoryVariationMediumPerformancePct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Performance.Variation.Requests.Memory.Amount, memReq)
 	}
 	if e := terms.Long_term.RecommendationEngines; e != nil {
-		recommVals.CPUVariationLongCost = e.Cost.Variation.Requests.Cpu.Amount
-		recommVals.MemoryVariationLongCost = e.Cost.Variation.Requests.Memory.Amount
-		recommVals.CPUVariationLongPerformance = e.Performance.Variation.Requests.Cpu.Amount
-		recommVals.MemoryVariationLongPerformance = e.Performance.Variation.Requests.Memory.Amount
+		recommVals.CPUVariationLongCostPct = utils.VariationPercentOfRequestCPU(e.Cost.Variation.Requests.Cpu.Amount, cpuReq)
+		recommVals.MemoryVariationLongCostPct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Cost.Variation.Requests.Memory.Amount, memReq)
+		recommVals.CPUVariationLongPerformancePct = utils.VariationPercentOfRequestCPU(e.Performance.Variation.Requests.Cpu.Amount, cpuReq)
+		recommVals.MemoryVariationLongPerformancePct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Performance.Variation.Requests.Memory.Amount, memReq)
 	}
 }
 

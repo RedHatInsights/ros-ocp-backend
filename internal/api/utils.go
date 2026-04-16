@@ -23,6 +23,7 @@ import (
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
+	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
 
 func CollectionResponse(collection []interface{}, req *http.Request, count, limit, offset int) *Collection {
@@ -473,21 +474,6 @@ func get_user_permissions(c echo.Context) map[string][]string {
 	return user_permissions
 }
 
-func hasMoreThanThreeDecimals(value float64) bool {
-	const decimalPrecision int = 3
-	str := strconv.FormatFloat(value, 'f', -1, 64)
-	decimalPart := strings.Split(str, ".")
-	return (len(decimalPart) > 1) && (len(decimalPart[1]) > decimalPrecision)
-}
-
-func truncateToThreeDecimalPlaces(value float64) float64 {
-	if hasMoreThanThreeDecimals(value) {
-		truncated := math.Trunc(value * 1000) // Pushes decimal by 3 places and then truncates
-		return truncated / 1000
-	}
-	return value
-}
-
 func convertCPUUnit(cpuUnit string, cpuValue float64) float64 {
 	var convertedValueCPU float64
 
@@ -495,7 +481,7 @@ func convertCPUUnit(cpuUnit string, cpuValue float64) float64 {
 	case "millicores":
 		convertedValueCPU = math.Round(cpuValue * 1000) // millicore values don't require decimal precision
 	case "cores":
-		convertedValueCPU = truncateToThreeDecimalPlaces(cpuValue)
+		convertedValueCPU = utils.TruncateToThreeDecimalPlaces(cpuValue)
 	default:
 		convertedValueCPU = cpuValue
 	}
@@ -508,11 +494,9 @@ func convertMemoryUnit(memoryUnit string, memoryValue float64) float64 {
 
 	switch memoryUnit {
 	case "MiB":
-		memoryInMiB := memoryValue / 1024 / 1024
-		convertedValueMemory = math.Trunc(memoryInMiB*100) / 100
+		convertedValueMemory = utils.TruncateMemoryBytesToMiBTwoDecimals(memoryValue)
 	case "GiB":
-		memoryInGiB := memoryValue / 1024 / 1024 / 1024
-		convertedValueMemory = math.Trunc(memoryInGiB*100) / 100
+		convertedValueMemory = utils.TruncateMemoryBytesToGiBTwoDecimals(memoryValue)
 	case "bytes":
 		convertedValueMemory = memoryValue
 	}
@@ -766,18 +750,6 @@ func dropBoxPlotsObject(recommendationJSON map[string]interface{}) map[string]in
 	return recommendationJSON
 }
 
-func calculatePercentage(numerator float64, denominator float64) float64 {
-	if numerator == 0.0 || denominator == 0.0 {
-		// This block avoids below conditions and returns 0.0 instead,
-		// When numerator is 0.0 the Go returns 0.0, valid number however division can be skipped
-		// When denominator is 0.0 the Go returns Infinity(+Inf)
-		// When both numerator and denominator are 0.0 the Go returns Not A Number(NaN)
-		return 0.0
-	}
-	result := (numerator / denominator) * 100
-	return result
-}
-
 func convertVariationToPercentage(recommendationJSON map[string]interface{}) map[string]interface{} {
 	var currentCpuLimits, currentMemoryLimits, currentCpuRequests, currentMemoryRequests float64
 	// Current section of recommendation
@@ -849,11 +821,11 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 								if memoryValue, ok := memoryObject["amount"].(float64); ok {
 									switch section {
 									case "limits":
-										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryLimits)
-										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
+										percentageMemoryValue := utils.CalculatePercentage(memoryValue, currentMemoryLimits)
+										memoryObject["amount"] = utils.TruncateToThreeDecimalPlaces(percentageMemoryValue)
 									case "requests":
-										percentageMemoryValue := calculatePercentage(memoryValue, currentMemoryRequests)
-										memoryObject["amount"] = truncateToThreeDecimalPlaces(percentageMemoryValue)
+										percentageMemoryValue := utils.CalculatePercentage(memoryValue, currentMemoryRequests)
+										memoryObject["amount"] = utils.TruncateToThreeDecimalPlaces(percentageMemoryValue)
 									}
 									memoryObject["format"] = "percent"
 								}
@@ -864,11 +836,11 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 								if cpuValue, ok := cpuObject["amount"].(float64); ok {
 									switch section {
 									case "limits":
-										percentageCpuValue := calculatePercentage(cpuValue, currentCpuLimits)
-										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
+										percentageCpuValue := utils.CalculatePercentage(cpuValue, currentCpuLimits)
+										cpuObject["amount"] = utils.TruncateToThreeDecimalPlaces(percentageCpuValue)
 									case "requests":
-										percentageCpuValue := calculatePercentage(cpuValue, currentCpuRequests)
-										cpuObject["amount"] = truncateToThreeDecimalPlaces(percentageCpuValue)
+										percentageCpuValue := utils.CalculatePercentage(cpuValue, currentCpuRequests)
+										cpuObject["amount"] = utils.TruncateToThreeDecimalPlaces(percentageCpuValue)
 									}
 									cpuObject["format"] = "percent"
 								}
@@ -941,29 +913,25 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 				continue
 			}
 
-			variationCPULimitPercentage := truncateToThreeDecimalPlaces(
-				calculatePercentage(
-					truncateToThreeDecimalPlaces(recommendationEngine.Variation.Limits.Cpu.Amount),
-					truncateToThreeDecimalPlaces(recommendationObj.Current.Limits.Cpu.Amount),
-				))
+			variationCPULimitPercentage := utils.VariationPercentOfRequestCPU(
+				recommendationEngine.Variation.Limits.Cpu.Amount,
+				recommendationObj.Current.Limits.Cpu.Amount,
+			)
 
-			variationMemoryLimitPercentage := truncateToThreeDecimalPlaces(
-				calculatePercentage(
-					recommendationEngine.Variation.Limits.Memory.Amount,
-					recommendationObj.Current.Limits.Memory.Amount,
-				))
+			variationMemoryLimitPercentage := utils.VariationPercentOfRequestMemoryBytesMiB(
+				recommendationEngine.Variation.Limits.Memory.Amount,
+				recommendationObj.Current.Limits.Memory.Amount,
+			)
 
-			variationCPURequestPercentage := truncateToThreeDecimalPlaces(
-				calculatePercentage(
-					truncateToThreeDecimalPlaces(recommendationEngine.Variation.Requests.Cpu.Amount),
-					truncateToThreeDecimalPlaces(recommendationObj.Current.Requests.Cpu.Amount),
-				))
+			variationCPURequestPercentage := utils.VariationPercentOfRequestCPU(
+				recommendationEngine.Variation.Requests.Cpu.Amount,
+				recommendationObj.Current.Requests.Cpu.Amount,
+			)
 
-			variationMemoryRequestPercentage := truncateToThreeDecimalPlaces(
-				calculatePercentage(
-					recommendationEngine.Variation.Requests.Memory.Amount,
-					recommendationObj.Current.Requests.Memory.Amount,
-				))
+			variationMemoryRequestPercentage := utils.VariationPercentOfRequestMemoryBytesMiB(
+				recommendationEngine.Variation.Requests.Memory.Amount,
+				recommendationObj.Current.Requests.Memory.Amount,
+			)
 			rows = append(rows, []string{
 				recommendationSet.ID,
 				recommendationSet.ClusterUUID,
