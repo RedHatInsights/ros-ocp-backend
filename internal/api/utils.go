@@ -120,9 +120,10 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	if err := applyParamFilter(c, queryParams, "workload", "workloads.workload_name", model.ClusterMaxLen, true); err != nil {
 		errs = append(errs, err)
 	}
-	workloadTypeVals := append(
+	workloadTypeVals := slices.Concat(
 		c.QueryParams()["workload_type"],
-		append(c.QueryParams()["filter[exact:workload_type]"], c.QueryParams()["exclude[workload_type]"]...)...,
+		c.QueryParams()["filter[exact:workload_type]"],
+		c.QueryParams()["exclude[workload_type]"],
 	)
 	if err := validateWorkloadTypeValues(workloadTypeVals); err != nil {
 		errs = append(errs, err)
