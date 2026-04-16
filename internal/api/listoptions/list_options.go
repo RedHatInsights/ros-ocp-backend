@@ -33,6 +33,20 @@ type ListOptions struct {
 // OrderByMap maps allowed JSON keys to DB columns.
 type OrderByMap map[string]string
 
+// SQLOrderByFragment returns the ORDER BY expression for list queries. For DESC it appends
+// NULLS LAST so rows with NULL in nullable sort columns (e.g. variation *_pct) appear last.
+func SQLOrderByFragment(orderByColumnSQL, orderHow string) string {
+	how := strings.ToLower(strings.TrimSpace(orderHow))
+	if how == "" {
+		how = OrderDesc
+	}
+	s := strings.TrimSpace(orderByColumnSQL) + " " + how
+	if how == OrderDesc {
+		s += " NULLS LAST"
+	}
+	return s
+}
+
 // API-specific maps and defaults.
 var ContainerAllowedOrderBy = OrderByMap{
 	"cluster":       "clusters.cluster_alias",

@@ -90,7 +90,7 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, opts listoptions
 	}
 
 	query.Count(&count)
-	query = query.Order(opts.OrderBy + " " + opts.OrderHow)
+	query = query.Order(listoptions.SQLOrderByFragment(opts.OrderBy, opts.OrderHow))
 
 	limit := opts.Limit
 	if opts.Format == "csv" {
