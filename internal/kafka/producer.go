@@ -13,7 +13,11 @@ import (
 var p *kafka.Producer = nil
 var log *logrus.Entry = nil
 
-func startProducer() {
+var initProducer = defaultStartProducer
+
+func startProducer() { initProducer() }
+
+func defaultStartProducer() {
 	cfg := config.GetConfig()
 	var configMap kafka.ConfigMap
 
