@@ -53,6 +53,7 @@ func GetRecommendationSetList(c echo.Context) error {
 			unitChoices,
 			setk8sUnits,
 			recommendationSets[i].Recommendations,
+			&recommendationSets[i].StoredVariationPcts,
 		)
 	}
 
@@ -122,7 +123,9 @@ func GetRecommendationSet(c echo.Context) error {
 			recommendationSet.ClusterUUID,
 			unitChoices,
 			setk8sUnits,
-			recommendationSet.Recommendations)
+			recommendationSet.Recommendations,
+			nil, // single-item fetch: recompute variation percentages from JSON
+		)
 		return c.JSON(http.StatusOK, recommendationSet)
 	} else {
 		return c.JSON(http.StatusNotFound, echo.Map{"status": "not_found", "message": "recommendation not found"})
@@ -175,6 +178,7 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 			unitChoices,
 			setk8sUnits,
 			namespaceRecommendationSets[i].Recommendations,
+			&namespaceRecommendationSets[i].StoredVariationPcts,
 		)
 	}
 
@@ -232,7 +236,9 @@ func GetNamespaceRecommendationSet(c echo.Context) error {
 			nsRecommendationSet.ClusterUUID,
 			unitChoices,
 			setk8sUnits,
-			nsRecommendationSet.Recommendations)
+			nsRecommendationSet.Recommendations,
+			nil, // single-item fetch: recompute variation percentages from JSON
+		)
 		return c.JSON(http.StatusOK, nsRecommendationSet)
 	} else {
 		return c.JSON(http.StatusNotFound, echo.Map{"status": "not_found", "message": "project recommendation not found"})
