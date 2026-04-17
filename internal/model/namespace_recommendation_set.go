@@ -56,6 +56,8 @@ type NamespaceRecommendationSetResult struct {
 	Recommendations     datatypes.JSON `json:"-"`
 	RecommendationsJSON map[string]any `gorm:"-" json:"recommendations"`
 	SourceID            string         `json:"source_id"`
+	// Embedded stored variation percentages (scanned from SELECT, excluded from JSON output).
+	StoredVariationPcts `gorm:"embedded"`
 }
 
 func (r *NamespaceRecommendationSet) AfterFind(tx *gorm.DB) error {
