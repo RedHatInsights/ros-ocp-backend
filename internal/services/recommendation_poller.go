@@ -163,36 +163,36 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 
 			containers := recommendation[0].Kubernetes_objects[0].Containers
 			for _, container := range containers {
-			if kruize.IsValidRecommendation(container.Recommendations, experiment_name, maxEndTimeFromReport, types.PayloadTypeContainer) {
-				for _, v := range container.Recommendations.Data {
-					marshalData, err := json.Marshal(v)
-					if err != nil {
-						log.Errorf("unable to list recommendation for: %v", err)
-						continue
-					}
-					extractedRecommVals := model.ExtractRecommendationColumnValues(v)
-					// Create RecommendationSet entry into the table.
-					recommendationSet := model.RecommendationSet{
-						WorkloadID:                          kafkaMsg.Metadata.Workload_id,
-						ContainerName:                       container.Container_name,
-						CPURequestCurrent:                   extractedRecommVals.CPURequestCurrent,
-						MemoryRequestCurrent:                extractedRecommVals.MemoryRequestCurrent,
-						CPUVariationShortCostPct:            extractedRecommVals.CPUVariationShortCostPct,
-						CPUVariationShortPerformancePct:     extractedRecommVals.CPUVariationShortPerformancePct,
-						CPUVariationMediumCostPct:           extractedRecommVals.CPUVariationMediumCostPct,
-						CPUVariationMediumPerformancePct:    extractedRecommVals.CPUVariationMediumPerformancePct,
-						CPUVariationLongCostPct:             extractedRecommVals.CPUVariationLongCostPct,
-						CPUVariationLongPerformancePct:      extractedRecommVals.CPUVariationLongPerformancePct,
-						MemoryVariationShortCostPct:         extractedRecommVals.MemoryVariationShortCostPct,
-						MemoryVariationShortPerformancePct:  extractedRecommVals.MemoryVariationShortPerformancePct,
-						MemoryVariationMediumCostPct:        extractedRecommVals.MemoryVariationMediumCostPct,
-						MemoryVariationMediumPerformancePct: extractedRecommVals.MemoryVariationMediumPerformancePct,
-						MemoryVariationLongCostPct:          extractedRecommVals.MemoryVariationLongCostPct,
-						MemoryVariationLongPerformancePct:   extractedRecommVals.MemoryVariationLongPerformancePct,
-						MonitoringStartTime:                 v.RecommendationTerms.Short_term.MonitoringStartTime,
-						MonitoringEndTime:                   v.MonitoringEndTime,
-						Recommendations:                     marshalData,
-					}
+				if kruize.IsValidRecommendation(container.Recommendations, experiment_name, maxEndTimeFromReport, types.PayloadTypeContainer) {
+					for _, v := range container.Recommendations.Data {
+						marshalData, err := json.Marshal(v)
+						if err != nil {
+							log.Errorf("unable to list recommendation for: %v", err)
+							continue
+						}
+						extractedRecommVals := model.ExtractRecommendationColumnValues(v)
+						// Create RecommendationSet entry into the table.
+						recommendationSet := model.RecommendationSet{
+							WorkloadID:                          kafkaMsg.Metadata.Workload_id,
+							ContainerName:                       container.Container_name,
+							CPURequestCurrent:                   extractedRecommVals.CPURequestCurrent,
+							MemoryRequestCurrent:                extractedRecommVals.MemoryRequestCurrent,
+							CPUVariationShortCostPct:            extractedRecommVals.CPUVariationShortCostPct,
+							CPUVariationShortPerformancePct:     extractedRecommVals.CPUVariationShortPerformancePct,
+							CPUVariationMediumCostPct:           extractedRecommVals.CPUVariationMediumCostPct,
+							CPUVariationMediumPerformancePct:    extractedRecommVals.CPUVariationMediumPerformancePct,
+							CPUVariationLongCostPct:             extractedRecommVals.CPUVariationLongCostPct,
+							CPUVariationLongPerformancePct:      extractedRecommVals.CPUVariationLongPerformancePct,
+							MemoryVariationShortCostPct:         extractedRecommVals.MemoryVariationShortCostPct,
+							MemoryVariationShortPerformancePct:  extractedRecommVals.MemoryVariationShortPerformancePct,
+							MemoryVariationMediumCostPct:        extractedRecommVals.MemoryVariationMediumCostPct,
+							MemoryVariationMediumPerformancePct: extractedRecommVals.MemoryVariationMediumPerformancePct,
+							MemoryVariationLongCostPct:          extractedRecommVals.MemoryVariationLongCostPct,
+							MemoryVariationLongPerformancePct:   extractedRecommVals.MemoryVariationLongPerformancePct,
+							MonitoringStartTime:                 v.RecommendationTerms.Short_term.MonitoringStartTime,
+							MonitoringEndTime:                   v.MonitoringEndTime,
+							Recommendations:                     marshalData,
+						}
 						recommendationSetList = append(recommendationSetList, recommendationSet)
 
 						// Create entry into HistoricalRecommendationSet table.
