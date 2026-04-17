@@ -238,7 +238,7 @@ func initConfig() {
 			viper.GetString("UnleashHostname"),
 			viper.GetInt("UnleashPort")),
 	)
-	viper.SetDefault("UPDATE_KRUIZE_PERF_PROFILE", false)
+	viper.SetDefault("UPDATE_KRUIZE_PERF_PROFILE", true)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}
