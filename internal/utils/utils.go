@@ -98,7 +98,8 @@ func Setup_kruize_performance_profile() {
 }
 
 func ReadCSVFromUrl(url string) ([][]string, error) {
-	resp, err := HTTPClient.Get(url)
+	// TODO(FLPATH-3407): use a bounded client once we have latency data for CSV downloads
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}

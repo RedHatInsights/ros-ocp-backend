@@ -333,15 +333,13 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 	if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeContainer {
 		recommendation_stored_in_db, checkRecommExistsErr = model.GetFirstRecommendationSetsByWorkloadID(workloadID)
 		if checkRecommExistsErr != nil {
-			log.Errorf("error while checking for container recommendation_set record: %s; committing to avoid redelivery loop", checkRecommExistsErr.Error())
-			commitKafkaMsg(msg, consumer_object)
+			log.Errorf("error while checking for container recommendation_set record: %s", checkRecommExistsErr.Error())
 			return
 		}
 	} else if kafkaMsg.Metadata.ExperimentType == types.PayloadTypeNamespace && !cfg.DisableNamespaceRecommendation {
 		recommendation_stored_in_db, checkRecommExistsErr = model.GetFirstNamespaceRecommendationSetsByWorkloadID(workloadID)
 		if checkRecommExistsErr != nil {
-			log.Errorf("error while checking for namespace recommendation_set record: %s; committing to avoid redelivery loop", checkRecommExistsErr.Error())
-			commitKafkaMsg(msg, consumer_object)
+			log.Errorf("error while checking for namespace recommendation_set record: %s", checkRecommExistsErr.Error())
 			return
 		}
 	} else {
@@ -359,9 +357,6 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 		case false:
 			poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "New")
 			if poll_cycle_complete {
-				commitKafkaMsg(msg, consumer_object)
-			} else {
-				log.Warnf("recommendation save incomplete for experiment %s; committing to avoid infinite redelivery", kafkaMsg.Metadata.Experiment_name)
 				commitKafkaMsg(msg, consumer_object)
 			}
 			return
@@ -384,9 +379,6 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 				if int(duration.Hours()) >= cfg.RecommendationPollIntervalHours || utils.NeedRecommOnFirstOfMonth(lastRecommRecordDate, maxEndTimeFromReport) {
 					poll_cycle_complete := requestAndSaveRecommendation(kafkaMsg, "Update")
 					if poll_cycle_complete {
-						commitKafkaMsg(msg, consumer_object)
-					} else {
-						log.Warnf("recommendation update incomplete for experiment %s; committing to avoid infinite redelivery", kafkaMsg.Metadata.Experiment_name)
 						commitKafkaMsg(msg, consumer_object)
 					}
 				} else {
