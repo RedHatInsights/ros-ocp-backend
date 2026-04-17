@@ -15,10 +15,28 @@ import (
 )
 
 type RecommendationSet struct {
-	ID                     string `gorm:"primaryKey;not null;autoIncrement"`
-	WorkloadID             uint
-	Workload               Workload `gorm:"foreignKey:WorkloadID"`
-	ContainerName          string
+	ID            string `gorm:"primaryKey;not null;autoIncrement"`
+	WorkloadID    uint
+	Workload      Workload `gorm:"foreignKey:WorkloadID"`
+	ContainerName string
+
+	CPURequestCurrent    float64
+	MemoryRequestCurrent float64
+
+	// Variation fields: percent of current CPU/memory request (aligned with API response).
+	CPUVariationShortCostPct            float64 `gorm:"column:cpu_variation_short_cost_pct;type:numeric(10,4)"`
+	CPUVariationShortPerformancePct     float64 `gorm:"column:cpu_variation_short_performance_pct;type:numeric(10,4)"`
+	CPUVariationMediumCostPct           float64 `gorm:"column:cpu_variation_medium_cost_pct;type:numeric(10,4)"`
+	CPUVariationMediumPerformancePct    float64 `gorm:"column:cpu_variation_medium_performance_pct;type:numeric(10,4)"`
+	CPUVariationLongCostPct             float64 `gorm:"column:cpu_variation_long_cost_pct;type:numeric(10,4)"`
+	CPUVariationLongPerformancePct      float64 `gorm:"column:cpu_variation_long_performance_pct;type:numeric(10,4)"`
+	MemoryVariationShortCostPct         float64 `gorm:"column:memory_variation_short_cost_pct;type:numeric(10,4)"`
+	MemoryVariationShortPerformancePct  float64 `gorm:"column:memory_variation_short_performance_pct;type:numeric(10,4)"`
+	MemoryVariationMediumCostPct        float64 `gorm:"column:memory_variation_medium_cost_pct;type:numeric(10,4)"`
+	MemoryVariationMediumPerformancePct float64 `gorm:"column:memory_variation_medium_performance_pct;type:numeric(10,4)"`
+	MemoryVariationLongCostPct          float64 `gorm:"column:memory_variation_long_cost_pct;type:numeric(10,4)"`
+	MemoryVariationLongPerformancePct   float64 `gorm:"column:memory_variation_long_performance_pct;type:numeric(10,4)"`
+
 	MonitoringStartTime    time.Time `gorm:"type:timestamp"`
 	MonitoringEndTime      time.Time `gorm:"type:timestamp"`
 	Recommendations        datatypes.JSON
@@ -127,8 +145,27 @@ func (r *RecommendationSet) GetRecommendationSetByID(orgID string, recommendatio
 
 func (r *RecommendationSet) CreateRecommendationSet(tx *gorm.DB) error {
 	result := tx.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "workload_id"}, {Name: "container_name"}},
-		DoUpdates: clause.AssignmentColumns([]string{"monitoring_start_time", "monitoring_end_time", "recommendations", "updated_at"}),
+		Columns: []clause.Column{{Name: "workload_id"}, {Name: "container_name"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"monitoring_start_time",
+			"monitoring_end_time",
+			"recommendations",
+			"updated_at",
+			"cpu_request_current",
+			"memory_request_current",
+			"cpu_variation_short_cost_pct",
+			"cpu_variation_short_performance_pct",
+			"cpu_variation_medium_cost_pct",
+			"cpu_variation_medium_performance_pct",
+			"cpu_variation_long_cost_pct",
+			"cpu_variation_long_performance_pct",
+			"memory_variation_short_cost_pct",
+			"memory_variation_short_performance_pct",
+			"memory_variation_medium_cost_pct",
+			"memory_variation_medium_performance_pct",
+			"memory_variation_long_cost_pct",
+			"memory_variation_long_performance_pct",
+		}),
 	}).Create(r)
 
 	if result.Error != nil {
