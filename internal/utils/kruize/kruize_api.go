@@ -55,7 +55,7 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 	}
 	// Create experiment in kruize
 	url := cfg.KruizeUrl + KruizeCreateExperiment
-	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(payload))
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return nil, fmt.Errorf("error Occured while creating experiment: %v", err)
@@ -112,7 +112,7 @@ func CreateNamespaceExperiment(experiment_name string, cluster_identifier string
 	log.Debugf("creating namespace experiment with payload: %s", string(postBody))
 
 	url := cfg.KruizeUrl + KruizeCreateExperiment
-	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(postBody))
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return fmt.Errorf("error occured while creating namespace experiment: %v", err)
@@ -159,9 +159,10 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 		return nil, fmt.Errorf("unable to create payload: %v", err)
 	}
 
+	// TODO(FLPATH-3407): use a bounded client once we have Prometheus latency data for /updateResults
 	url := cfg.KruizeUrl + KruizeUpdateResults
 	log.Debugf("\n Sending /updateResult request to kruize with payload - %s \n", string(postBody))
-	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(postBody))
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeUpdateResults).Inc()
 		return nil, fmt.Errorf("an Error Occured while sending metrics: %v", err)
@@ -210,9 +211,10 @@ func UpdateNamespaceResults(experiment_name string, payload_data []namespacePayl
 		return nil, fmt.Errorf("unable to create payload: %v", err)
 	}
 
+	// TODO(FLPATH-3407): use a bounded client once we have Prometheus latency data for /updateResults
 	url := cfg.KruizeUrl + KruizeUpdateResults
 	log.Debugf("\n Sending /updateResult request to kruize with namespace payload - %s \n", string(postBody))
-	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(postBody))
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeUpdateResults).Inc()
 		return nil, fmt.Errorf("an Error Occured while sending namespace metrics: %v", err)
@@ -272,7 +274,9 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time,
 	q.Add("interval_end_time", endTimeISO)
 	req.URL.RawQuery = q.Encode()
 	log.Debugf("\n Sending /updateRecommendations request to kruize - %s \n", q)
-	res, err := utils.HTTPClient.Do(req)
+	// TODO(FLPATH-3407): use a bounded client once we have Prometheus latency data for /updateRecommendations
+	client := &http.Client{}
+	res, err := client.Do(req)
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeUpdateRecommendations).Inc()
 		return nil, fmt.Errorf("error Occured while calling /updateRecommendations API %v", err)
@@ -349,7 +353,9 @@ func DeleteExperimentFromKruize(experiment_name string) {
 		deletion_err_log(err)
 		return
 	}
-	res, err := utils.HTTPClient.Do(req)
+	// TODO(FLPATH-3407): use a bounded client once we have Prometheus latency data for /deleteExperiment
+	client := &http.Client{}
+	res, err := client.Do(req)
 	if err != nil {
 		deletion_err_log(err)
 		return
