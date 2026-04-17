@@ -38,7 +38,7 @@ type RecommendationColumnValues struct {
 }
 
 // ExtractRecommendationColumnValues extracts current requests and per-term, per-engine
-// variation as percent-of-request for namespace_recommendation_sets columns (namespace poller).
+// variation as percent-of-request for recommendation_sets and namespace_recommendation_sets columns.
 func ExtractRecommendationColumnValues(data kruizePayload.RecommendationData) RecommendationColumnValues {
 	recommVals := RecommendationColumnValues{
 		CPURequestCurrent:    data.Current.Requests.Cpu.Amount,
