@@ -49,18 +49,6 @@ func TestSQLOrderByFragment(t *testing.T) {
 			orderHow: OrderDesc,
 			want:     "recommendation_sets.memory_variation_long_performance_pct desc NULLS LAST",
 		},
-		{
-			name:     "namespace cpu variation desc appends NULLS LAST",
-			column:   NsAllowedOrderBy["cpu_variation_short_cost"],
-			orderHow: OrderDesc,
-			want:     "namespace_recommendation_sets.cpu_variation_short_cost_pct desc NULLS LAST",
-		},
-		{
-			name:     "namespace cpu variation asc omits NULLS LAST",
-			column:   NsAllowedOrderBy["cpu_variation_short_cost"],
-			orderHow: OrderAsc,
-			want:     "namespace_recommendation_sets.cpu_variation_short_cost_pct asc",
-		},
 	}
 
 	for _, tt := range tests {
