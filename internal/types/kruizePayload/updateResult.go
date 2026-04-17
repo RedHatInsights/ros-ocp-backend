@@ -2,6 +2,7 @@ package kruizePayload
 
 import (
 	"github.com/go-gota/gota/dataframe"
+	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
 )
@@ -41,14 +42,28 @@ func GetUpdateResultPayload(experiment_name string, containers []map[string]inte
 		containers,
 		dataframe.WithTypes(types.CSVColumnMapping),
 	)
+	log := logging.GetLogger()
 	for _, v := range df.GroupBy("interval_end").GetGroups() {
 		k8s_object := v.Maps()
+		ns := AssertAndConvertToString(k8s_object[0]["namespace"])
+		objType := k8s_object[0]["k8s_object_type"].(string)
+		objName := k8s_object[0]["k8s_object_name"].(string)
+		intervalStart, err := utils.ConvertDateToISO8601(k8s_object[0]["interval_start"].(string))
+		if err != nil {
+			log.Errorf("skipping group (namespace=%s, %s/%s): %v", ns, objType, objName, err)
+			continue
+		}
+		intervalEnd, err := utils.ConvertDateToISO8601(k8s_object[0]["interval_end"].(string))
+		if err != nil {
+			log.Errorf("skipping group (namespace=%s, %s/%s): %v", ns, objType, objName, err)
+			continue
+		}
 		data := map[string]string{
-			"namespace":       AssertAndConvertToString(k8s_object[0]["namespace"]),
-			"k8s_object_type": k8s_object[0]["k8s_object_type"].(string),
-			"k8s_object_name": k8s_object[0]["k8s_object_name"].(string),
-			"interval_start":  utils.ConvertDateToISO8601(k8s_object[0]["interval_start"].(string)),
-			"interval_end":    utils.ConvertDateToISO8601(k8s_object[0]["interval_end"].(string)),
+			"namespace":       ns,
+			"k8s_object_type": objType,
+			"k8s_object_name": objName,
+			"interval_start":  intervalStart,
+			"interval_end":    intervalEnd,
 		}
 		container_array := []container{}
 		for _, c := range k8s_object {
