@@ -76,7 +76,7 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 		if strings.Contains(resdata["message"].(string), "Performance Profile doesn't exist") && experimentCreateAttempt {
 			log.Error("Performance profile does not exist")
 			log.Info("Tring to create resource_optimization_openshift performance profile")
-			utils.Setup_kruize_performance_profile()
+			utils.SetupKruizePerformanceProfile()
 			experimentCreateAttempt = false // Attempting only once
 			container_names, err := Create_kruize_experiments(experiment_name, cluster_identifier, k8s_object)
 			experimentCreateAttempt = true
@@ -136,7 +136,7 @@ func CreateNamespaceExperiment(experiment_name string, cluster_identifier string
 		if strings.Contains(resdata["message"].(string), "Performance Profile doesn't exist") && experimentCreateAttempt {
 			log.Error("Performance profile does not exist")
 			log.Info("Trying to create resource_optimization_openshift performance profile")
-			utils.Setup_kruize_performance_profile()
+			utils.SetupKruizePerformanceProfile()
 			experimentCreateAttempt = false
 			err := CreateNamespaceExperiment(experiment_name, cluster_identifier, namespace)
 			experimentCreateAttempt = true
@@ -184,7 +184,7 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 		if strings.Contains(resdata.Message, "because \"performanceProfile\" is null") {
 			log.Error("Performance profile does not exist")
 			log.Info("Tring to create resource_optimization_openshift performance profile")
-			utils.Setup_kruize_performance_profile()
+			utils.SetupKruizePerformanceProfile()
 			if payload_data, err := Update_results(experiment_name, payload_data); err != nil {
 				return nil, err
 			} else {
@@ -236,7 +236,7 @@ func UpdateNamespaceResults(experiment_name string, payload_data []namespacePayl
 		if strings.Contains(resdata.Message, "because \"performanceProfile\" is null") {
 			log.Error("Performance profile does not exist")
 			log.Info("Trying to create resource_optimization_openshift performance profile")
-			utils.Setup_kruize_performance_profile()
+			utils.SetupKruizePerformanceProfile()
 			if payload_data, err := UpdateNamespaceResults(experiment_name, payload_data); err != nil {
 				return nil, err
 			} else {
