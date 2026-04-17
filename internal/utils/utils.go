@@ -54,10 +54,10 @@ func SetupKruizePerformanceProfile() {
 	// This func needs to be revisited once kruize implements this API
 	// Refer - https://github.com/kruize/autotune/blob/mvp_demo/src/main/java/com/autotune/analyzer/Analyzer.java#L50
 	listPerformanceProfileUrl := cfg.KruizeUrl + "/listPerformanceProfiles"
-	// Use the target version from config
-	targetVersion := cfg.KruizePerformanceProfileVersion
+	// Use the target version from config and strip 'v' prefix if present
+	targetVersion := strings.TrimPrefix(cfg.KruizePerformanceProfileVersion, "v")
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		log.Infof("fetching performance profile list")
 		response, err := HTTPClient.Get(listPerformanceProfileUrl)
 		if err != nil {
@@ -77,11 +77,12 @@ func SetupKruizePerformanceProfile() {
 				var profiles []map[string]interface{}
 				if err := json.Unmarshal(body, &profiles); err != nil {
 					log.Errorf("error unmarshalling listPerformanceProfiles response: %v", err)
+					continue
 				} else if len(profiles) > 0 {
 					var fetchedVersion string
 					for _, profile := range profiles {
 						log.Debugf("current performance profile version : %v", profile["profile_version"])
-						fetchedVersion = fmt.Sprintf("%v", profile["profile_version"])
+						fetchedVersion = fmt.Sprintf("%.1f", profile["profile_version"])
 					}
 
 					// Convert versions to float64 for comparison
@@ -102,10 +103,11 @@ func SetupKruizePerformanceProfile() {
 					// Version mismatch -> Update the profile if update flag is enabled
 					// and the fetched version is less than the target version (prevent downgrades)
 					if cfg.UpdateKruizePerfProfile && fetchedVersionFloat < targetVersionFloat {
-						log.Infof("Updating performance profile to supported version: %v", targetVersion)
+						log.Infof("updating performance profile to supported version: %v", targetVersion)
 						postBody, err := os.ReadFile("./resource_optimization_openshift.json")
 						if err != nil {
 							log.Errorf("file reading error: %v \n", err)
+							return
 						}
 
 						// create the PUT request
@@ -139,7 +141,10 @@ func SetupKruizePerformanceProfile() {
 							return
 						}
 						log.Errorf("failed to update performance profile (status=%d): %s", res.StatusCode, targetVersion)
+						return
 					}
+					log.Infof("performance profile version mismatch (fetched: %v, target: %v), update and create not applicable", fetchedVersion, targetVersion)
+					return
 				}
 			}
 
@@ -154,6 +159,7 @@ func SetupKruizePerformanceProfile() {
 			res, e := HTTPClient.Post(createPerformanceProfileUrl, "application/json", bytes.NewBuffer(postBody))
 			if e != nil {
 				log.Errorf("unable to create performance profile in kruize: %v \n", e)
+				continue
 			}
 			defer func() {
 				_ = res.Body.Close()
