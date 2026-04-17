@@ -36,12 +36,8 @@ type OrderByMap map[string]string
 // SQLOrderByFragment returns the ORDER BY expression for list queries. For DESC it appends
 // NULLS LAST so rows with NULL in nullable sort columns (e.g. variation *_pct) appear last.
 func SQLOrderByFragment(orderByColumnSQL, orderHow string) string {
-	how := strings.ToLower(strings.TrimSpace(orderHow))
-	if how == "" {
-		how = OrderDesc
-	}
-	s := strings.TrimSpace(orderByColumnSQL) + " " + how
-	if how == OrderDesc {
+	s := orderByColumnSQL + " " + orderHow
+	if orderHow == OrderDesc {
 		s += " NULLS LAST"
 	}
 	return s
