@@ -51,6 +51,22 @@ var ContainerAllowedOrderBy = OrderByMap{
 	"project":       "workloads.namespace",
 	"container":     "recommendation_sets.container_name",
 	"last_reported": "clusters.last_reported_at",
+	// Current request amounts
+	"cpu_request_current":    "recommendation_sets.cpu_request_current",
+	"memory_request_current": "recommendation_sets.memory_request_current",
+	// Per-term, per-engine variation (values are percent of current request; DB columns use _pct suffix)
+	"cpu_variation_short_cost":            "recommendation_sets.cpu_variation_short_cost_pct",
+	"cpu_variation_short_performance":     "recommendation_sets.cpu_variation_short_performance_pct",
+	"cpu_variation_medium_cost":           "recommendation_sets.cpu_variation_medium_cost_pct",
+	"cpu_variation_medium_performance":    "recommendation_sets.cpu_variation_medium_performance_pct",
+	"cpu_variation_long_cost":             "recommendation_sets.cpu_variation_long_cost_pct",
+	"cpu_variation_long_performance":      "recommendation_sets.cpu_variation_long_performance_pct",
+	"memory_variation_short_cost":         "recommendation_sets.memory_variation_short_cost_pct",
+	"memory_variation_short_performance":  "recommendation_sets.memory_variation_short_performance_pct",
+	"memory_variation_medium_cost":        "recommendation_sets.memory_variation_medium_cost_pct",
+	"memory_variation_medium_performance": "recommendation_sets.memory_variation_medium_performance_pct",
+	"memory_variation_long_cost":          "recommendation_sets.memory_variation_long_cost_pct",
+	"memory_variation_long_performance":   "recommendation_sets.memory_variation_long_performance_pct",
 }
 
 var NsAllowedOrderBy = OrderByMap{
