@@ -26,16 +26,28 @@ func TestSQLOrderByFragment(t *testing.T) {
 			want:     "recommendation_sets.container_name asc",
 		},
 		{
-			name:     "namespace cpu variation desc appends NULLS LAST",
-			column:   NsAllowedOrderBy["cpu_variation_short_cost"],
+			name:     "container cpu_request_current desc appends NULLS LAST",
+			column:   ContainerAllowedOrderBy["cpu_request_current"],
 			orderHow: OrderDesc,
-			want:     "namespace_recommendation_sets.cpu_variation_short_cost_pct desc NULLS LAST",
+			want:     "recommendation_sets.cpu_request_current desc NULLS LAST",
 		},
 		{
-			name:     "namespace cpu variation asc omits NULLS LAST",
-			column:   NsAllowedOrderBy["cpu_variation_short_cost"],
+			name:     "container cpu variation desc appends NULLS LAST",
+			column:   ContainerAllowedOrderBy["cpu_variation_short_cost"],
+			orderHow: OrderDesc,
+			want:     "recommendation_sets.cpu_variation_short_cost_pct desc NULLS LAST",
+		},
+		{
+			name:     "container cpu variation asc omits NULLS LAST",
+			column:   ContainerAllowedOrderBy["cpu_variation_short_cost"],
 			orderHow: OrderAsc,
-			want:     "namespace_recommendation_sets.cpu_variation_short_cost_pct asc",
+			want:     "recommendation_sets.cpu_variation_short_cost_pct asc",
+		},
+		{
+			name:     "container memory variation desc appends NULLS LAST",
+			column:   ContainerAllowedOrderBy["memory_variation_long_performance"],
+			orderHow: OrderDesc,
+			want:     "recommendation_sets.memory_variation_long_performance_pct desc NULLS LAST",
 		},
 	}
 
