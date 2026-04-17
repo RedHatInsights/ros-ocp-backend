@@ -24,21 +24,34 @@ import (
 
 var cfg *config.Config = config.GetConfig()
 
-func ProcessReport(msg *kafka.Message, _ *kafka.Consumer) {
+func ProcessReport(msg *kafka.Message, consumer *kafka.Consumer) {
 	log := logging.GetLogger()
 	cfg = config.GetConfig()
 	validate := validator.New()
+
+	commitOnPermanentFailure := func(reason string) {
+		log.Warnf("committing poison message (partition=%s, reason=%s)", msg.TopicPartition, reason)
+		if consumer != nil {
+			if _, err := consumer.CommitMessage(msg); err != nil {
+				log.Errorf("unable to commit poison message: %v", err)
+			}
+		}
+	}
+
 	var kafkaMsg types.KafkaMsg
 	if !json.Valid([]byte(msg.Value)) {
-		log.Errorf("Received message on kafka topic is not vaild JSON: %s", msg.Value)
+		log.Errorf("Received message on kafka topic is not valid JSON (len=%d, partition=%s)", len(msg.Value), msg.TopicPartition)
+		commitOnPermanentFailure("invalid JSON")
 		return
 	}
 	if err := json.Unmarshal(msg.Value, &kafkaMsg); err != nil {
-		log.Errorf("Unable to decode kafka message: %s", msg.Value)
+		log.Errorf("Unable to decode kafka message (len=%d, partition=%s): %v", len(msg.Value), msg.TopicPartition, err)
+		commitOnPermanentFailure("unmarshal failed")
 		return
 	}
 	if err := validate.Struct(kafkaMsg); err != nil {
 		log.Errorf("Invalid kafka message: %s", err)
+		commitOnPermanentFailure("validation failed")
 		return
 	}
 
