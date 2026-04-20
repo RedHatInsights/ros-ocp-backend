@@ -3,6 +3,7 @@ package namespace
 import (
 	"github.com/go-gota/gota/dataframe"
 	"github.com/redhatinsights/ros-ocp-backend/internal/config"
+	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	kruizePayload "github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
 	"github.com/redhatinsights/ros-ocp-backend/internal/utils"
@@ -28,6 +29,7 @@ type UpdateNamespaceResult struct {
 func GetUpdateNamespaceResultPayload(experiment_name string, namespaceData []map[string]any) []UpdateNamespaceResult {
 	cfg := config.GetConfig()
 
+	log := logging.GetLogger()
 	payload := []UpdateNamespaceResult{}
 	df := dataframe.LoadMaps(
 		namespaceData,
@@ -38,8 +40,16 @@ func GetUpdateNamespaceResultPayload(experiment_name string, namespaceData []map
 		row := k8s_object[0]
 
 		namespace := kruizePayload.AssertAndConvertToString(row["namespace"])
-		intervalStart := utils.ConvertDateToISO8601(row["interval_start"].(string))
-		intervalEnd := utils.ConvertDateToISO8601(row["interval_end"].(string))
+		intervalStart, err := utils.ConvertDateToISO8601(row["interval_start"].(string))
+		if err != nil {
+			log.Errorf("skipping namespace group (namespace=%s): %v", namespace, err)
+			continue
+		}
+		intervalEnd, err := utils.ConvertDateToISO8601(row["interval_end"].(string))
+		if err != nil {
+			log.Errorf("skipping namespace group (namespace=%s): %v", namespace, err)
+			continue
+		}
 
 		metrics := makeNamespaceMetrics(row)
 

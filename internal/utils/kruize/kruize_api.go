@@ -55,7 +55,7 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 	}
 	// Create experiment in kruize
 	url := cfg.KruizeUrl + KruizeCreateExperiment
-	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(payload))
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return nil, fmt.Errorf("error Occured while creating experiment: %v", err)
@@ -112,7 +112,7 @@ func CreateNamespaceExperiment(experiment_name string, cluster_identifier string
 	log.Debugf("creating namespace experiment with payload: %s", string(postBody))
 
 	url := cfg.KruizeUrl + KruizeCreateExperiment
-	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(postBody))
+	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return fmt.Errorf("error occured while creating namespace experiment: %v", err)
@@ -159,7 +159,6 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 		return nil, fmt.Errorf("unable to create payload: %v", err)
 	}
 
-	// Update metrics to kruize experiment
 	// TODO(FLPATH-3407): use a bounded client once we have Prometheus latency data for /updateResults
 	url := cfg.KruizeUrl + KruizeUpdateResults
 	log.Debugf("\n Sending /updateResult request to kruize with payload - %s \n", string(postBody))
@@ -268,7 +267,11 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time,
 	}
 	q := req.URL.Query()
 	q.Add("experiment_name", experiment_name)
-	q.Add("interval_end_time", utils.ConvertDateToISO8601(interval_end_time.String()))
+	endTimeISO, err := utils.ConvertDateToISO8601(interval_end_time.String())
+	if err != nil {
+		return nil, fmt.Errorf("unable to format interval_end_time for /updateRecommendations: %w", err)
+	}
+	q.Add("interval_end_time", endTimeISO)
 	req.URL.RawQuery = q.Encode()
 	log.Debugf("\n Sending /updateRecommendations request to kruize - %s \n", q)
 	// TODO(FLPATH-3407): use a bounded client once we have Prometheus latency data for /updateRecommendations

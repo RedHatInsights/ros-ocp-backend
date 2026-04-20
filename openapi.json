@@ -310,6 +310,22 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service unavailable due to a database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "unable to fetch records from database"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -610,6 +626,22 @@
                     }
                   },
                   "required": ["message"]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable due to a database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "unable to fetch records from database"
+                    }
+                  }
                 }
               }
             }

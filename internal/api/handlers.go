@@ -43,6 +43,10 @@ func GetRecommendationSetList(c echo.Context) error {
 	recommendationSets, count, queryErr := recommendationSet.GetRecommendationSets(OrgID, apiListOptions, queryParams, user_permissions)
 	if queryErr != nil {
 		log.Errorf("unable to fetch records from database; %v", queryErr)
+		return c.JSON(http.StatusServiceUnavailable, echo.Map{
+			"status":  "error",
+			"message": "unable to fetch records from database",
+		})
 	}
 
 	for i := range recommendationSets {
@@ -165,6 +169,10 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 
 	if queryErr != nil {
 		log.Errorf("unable to fetch records from database; %v", queryErr)
+		return c.JSON(http.StatusServiceUnavailable, echo.Map{
+			"status":  "error",
+			"message": "unable to fetch records from database",
+		})
 	}
 
 	for i := range namespaceRecommendationSets {
