@@ -55,7 +55,7 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 	}
 	// Create experiment in kruize
 	url := cfg.KruizeUrl + KruizeCreateExperiment
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
+	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return nil, fmt.Errorf("error Occured while creating experiment: %v", err)
@@ -112,7 +112,7 @@ func CreateNamespaceExperiment(experiment_name string, cluster_identifier string
 	log.Debugf("creating namespace experiment with payload: %s", string(postBody))
 
 	url := cfg.KruizeUrl + KruizeCreateExperiment
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(postBody))
+	res, err := utils.HTTPClient.Post(url, "application/json", bytes.NewBuffer(postBody))
 	if err != nil {
 		kruizeAPIException.WithLabelValues(KruizeCreateExperiment).Inc()
 		return fmt.Errorf("error occured while creating namespace experiment: %v", err)
