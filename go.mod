@@ -1,6 +1,6 @@
 module github.com/redhatinsights/ros-ocp-backend
 
-go 1.25.0
+go 1.25.8
 
 require (
 	github.com/Unleash/unleash-go-sdk/v5 v5.1.0
