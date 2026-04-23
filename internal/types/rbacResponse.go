@@ -7,15 +7,15 @@ type RbacResponse struct {
 }
 
 type RbacData struct {
-	ResourceDefinitions []rbacResourceDefinitions `json:"resourceDefinitions,omitempty"`
+	ResourceDefinitions []RbacResourceDefinitions `json:"resourceDefinitions,omitempty"`
 	Permission          string
 }
 
-type rbacResourceDefinitions struct {
-	AttributeFilter attributeFilter `json:"attributeFilter,omitempty"`
+type RbacResourceDefinitions struct {
+	AttributeFilter AttributeFilter `json:"attributeFilter,omitempty"`
 }
 
-type attributeFilter struct {
+type AttributeFilter struct {
 	Key       string
 	Value     interface{}
 	Operation string

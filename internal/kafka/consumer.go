@@ -74,7 +74,9 @@ func StartConsumer(kafka_topic string, handler func(msg *kafka.Message, consumer
 
 	err = consumer.Subscribe(kafka_topic, nil)
 	if err != nil {
-		log.Errorf("Failed to create subscribe: %s", err)
+		log.Errorf("Failed to subscribe to topic %s: %s", kafka_topic, err)
+		_ = consumer.Close()
+		os.Exit(1)
 	}
 
 	run := true
@@ -88,13 +90,16 @@ func StartConsumer(kafka_topic string, handler func(msg *kafka.Message, consumer
 			msg, err := consumer.ReadMessage(time.Second)
 			if err == nil {
 				// Invoke report processor function in this block.
-				log.Infof("Message received from kafka %s: %s", msg.TopicPartition, string(msg.Value))
+				log.Infof("Message received from kafka %s (len=%d)", msg.TopicPartition, len(msg.Value))
+				log.Debugf("Message payload (truncated): %.512s", string(msg.Value))
 				handler(msg, consumer)
-			} else if !err.(kafka.Error).IsTimeout() {
+			} else if kerr, ok := err.(kafka.Error); ok && !kerr.IsTimeout() {
 				// The client will automatically try to recover from all errors.
 				// Timeout is not considered an error because it is raised by
 				// ReadMessage in absence of messages.
 				log.Errorf("Consumer error: %v (%v)", err, msg)
+			} else if !ok {
+				log.Errorf("Consumer unexpected error type: %T: %v", err, err)
 			}
 		}
 	}

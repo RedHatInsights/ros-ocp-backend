@@ -159,7 +159,6 @@ func Update_results(experiment_name string, payload_data []kruizePayload.UpdateR
 		return nil, fmt.Errorf("unable to create payload: %v", err)
 	}
 
-	// Update metrics to kruize experiment
 	// TODO(FLPATH-3407): use a bounded client once we have Prometheus latency data for /updateResults
 	url := cfg.KruizeUrl + KruizeUpdateResults
 	log.Debugf("\n Sending /updateResult request to kruize with payload - %s \n", string(postBody))
@@ -268,7 +267,11 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time,
 	}
 	q := req.URL.Query()
 	q.Add("experiment_name", experiment_name)
-	q.Add("interval_end_time", utils.ConvertDateToISO8601(interval_end_time.String()))
+	endTimeISO, err := utils.ConvertDateToISO8601(interval_end_time.String())
+	if err != nil {
+		return nil, fmt.Errorf("unable to format interval_end_time for /updateRecommendations: %w", err)
+	}
+	q.Add("interval_end_time", endTimeISO)
 	req.URL.RawQuery = q.Encode()
 	log.Debugf("\n Sending /updateRecommendations request to kruize - %s \n", q)
 	// TODO(FLPATH-3407): use a bounded client once we have Prometheus latency data for /updateRecommendations

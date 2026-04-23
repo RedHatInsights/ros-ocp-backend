@@ -37,7 +37,11 @@ func fetchRecommendationFromKruize(
 
 	response, err := kruize.Update_recommendations(experimentName, maxEndTime, experimentType)
 	if err != nil {
-		endInterval := utils.ConvertDateToISO8601(maxEndTime.String())
+		endInterval, convErr := utils.ConvertDateToISO8601(maxEndTime.String())
+		if convErr != nil {
+			log.Warnf("unable to format maxEndTime for error comparison: %v", convErr)
+			return nil, err
+		}
 		notFoundMsg := fmt.Sprintf("Recommendation for timestamp - \" %s \" does not exist", endInterval)
 
 		if err.Error() == notFoundMsg {
@@ -304,12 +308,12 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 	var kafkaMsg types.RecommendationKafkaMsg
 
 	if !json.Valid([]byte(msg.Value)) {
-		log.Errorf("received message on kafka topic is not vaild JSON: %s", msg.Value)
+		log.Errorf("received message on kafka topic is not valid JSON (len=%d, partition=%s)", len(msg.Value), msg.TopicPartition)
 		commitKafkaMsg(msg, consumer_object)
 		return
 	}
 	if err := json.Unmarshal(msg.Value, &kafkaMsg); err != nil {
-		log.Errorf("unable to decode kafka message: %s", msg.Value)
+		log.Errorf("unable to decode kafka message (len=%d, partition=%s): %v", len(msg.Value), msg.TopicPartition, err)
 		commitKafkaMsg(msg, consumer_object)
 		return
 	}
@@ -355,7 +359,6 @@ func PollForRecommendations(msg *kafka.Message, consumer_object *kafka.Consumer)
 			if poll_cycle_complete {
 				commitKafkaMsg(msg, consumer_object)
 			}
-			// To consume upcoming Kafka msg, explicitly
 			return
 		case true:
 			// MonitoringEndTime.UTC() defaults to 0001-01-01 00:00:00 +0000 UTC if not set
