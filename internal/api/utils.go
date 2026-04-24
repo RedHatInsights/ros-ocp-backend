@@ -239,10 +239,7 @@ func parseClusterParams(value string, mode string) ([]string, []string, error) {
 		}
 		return []string{"clusters.cluster_uuid" + suffix}, []string{value}, nil
 	}
-	s, err := sanitizeParamValue("cluster", value, model.ClusterMaxLen, true)
-	if err != nil {
-		return nil, nil, err
-	}
+	s := value
 	if modeClause.Wrap {
 		s = "%" + s + "%"
 	}
