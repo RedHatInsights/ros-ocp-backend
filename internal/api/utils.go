@@ -924,12 +924,11 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 	data = transformComponentUnits(unitsToTransform, updateUnitsk8s, data) // cpu: core values require truncation
 	data = filterNotifications(recommendationID, clusterUUID, data)
 
-	if storedPcts != nil && storedPcts.HasValues() {
+	skipRequests := storedPcts != nil && storedPcts.HasValues()
+	if skipRequests {
 		data = injectStoredRequestVariationPct(data, storedPcts)
-		data = convertVariationToPercentage(data, true) // limits only; requests already injected
-	} else {
-		data = convertVariationToPercentage(data, false)
 	}
+	data = convertVariationToPercentage(data, skipRequests)
 	return data
 }
 
