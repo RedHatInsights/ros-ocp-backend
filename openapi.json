@@ -1287,8 +1287,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
-                        "nullable": true
+                        "example": "percent"
                       }
                     }
                   },
@@ -1302,7 +1301,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "Mi"
+                        "example": "percent"
                       }
                     }
                   }
@@ -1452,8 +1451,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
-                        "nullable": true
+                        "example": "percent"
                       }
                     }
                   },
@@ -1467,7 +1465,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "Mi"
+                        "example": "percent"
                       }
                     }
                   }

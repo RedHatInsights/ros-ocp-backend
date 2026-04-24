@@ -128,7 +128,7 @@ func GetRecommendationSet(c echo.Context) error {
 			unitChoices,
 			setk8sUnits,
 			recommendationSet.Recommendations,
-			nil, // single-item fetch: recompute variation percentages from JSON
+			&recommendationSet.StoredVariationPcts,
 		)
 		return c.JSON(http.StatusOK, recommendationSet)
 	} else {
@@ -245,7 +245,7 @@ func GetNamespaceRecommendationSet(c echo.Context) error {
 			unitChoices,
 			setk8sUnits,
 			nsRecommendationSet.Recommendations,
-			nil, // single-item fetch: recompute variation percentages from JSON
+			&nsRecommendationSet.StoredVariationPcts,
 		)
 		return c.JSON(http.StatusOK, nsRecommendationSet)
 	} else {

@@ -15,6 +15,10 @@ const (
 	ClusterMaxLen = 253
 )
 
+func ptrFloat64(v float64) *float64 {
+	return &v
+}
+
 // StoredVariationPcts holds pre-computed per-term, per-engine variation percentages fetched
 // from DB columns. Used in API response building to avoid recomputing from the JSON blob.
 // Fields are pointers to handle nullable DB columns (e.g. existing rows before migration).
@@ -72,57 +76,57 @@ func (s *StoredVariationPcts) Lookup(term, engine string) (cpu, mem *float64) {
 // RecommendationColumnValues holds current request and per-term, per-engine variation
 // as percent of current request. Values match transformComponentUnits + convertVariationToPercentage
 // (CPU cores truncated to 3dp, memory bytes as MiB to 2dp, then percent to 3dp).
+// Pointer fields are nil when a term/engine is absent so GORM persists SQL NULL.
 // Used to populate recommendation_sets and namespace_recommendation_sets columns for sorting.
 type RecommendationColumnValues struct {
-	CPURequestCurrent    float64
-	MemoryRequestCurrent float64
+	CPURequestCurrent    *float64
+	MemoryRequestCurrent *float64
 
-	CPUVariationShortCostPct            float64
-	CPUVariationShortPerformancePct     float64
-	CPUVariationMediumCostPct           float64
-	CPUVariationMediumPerformancePct    float64
-	CPUVariationLongCostPct             float64
-	CPUVariationLongPerformancePct      float64
-	MemoryVariationShortCostPct         float64
-	MemoryVariationShortPerformancePct  float64
-	MemoryVariationMediumCostPct        float64
-	MemoryVariationMediumPerformancePct float64
-	MemoryVariationLongCostPct          float64
-	MemoryVariationLongPerformancePct   float64
+	CPUVariationShortCostPct            *float64
+	CPUVariationShortPerformancePct     *float64
+	CPUVariationMediumCostPct           *float64
+	CPUVariationMediumPerformancePct    *float64
+	CPUVariationLongCostPct             *float64
+	CPUVariationLongPerformancePct      *float64
+	MemoryVariationShortCostPct         *float64
+	MemoryVariationShortPerformancePct  *float64
+	MemoryVariationMediumCostPct        *float64
+	MemoryVariationMediumPerformancePct *float64
+	MemoryVariationLongCostPct          *float64
+	MemoryVariationLongPerformancePct   *float64
 }
 
 // ExtractRecommendationColumnValues extracts current requests and per-term, per-engine
 // variation as percent-of-request for recommendation_sets and namespace_recommendation_sets columns.
 func ExtractRecommendationColumnValues(data kruizePayload.RecommendationData) RecommendationColumnValues {
+	cpuReq := data.Current.Requests.Cpu.Amount
+	memReq := data.Current.Requests.Memory.Amount
 	recommVals := RecommendationColumnValues{
-		CPURequestCurrent:    data.Current.Requests.Cpu.Amount,
-		MemoryRequestCurrent: data.Current.Requests.Memory.Amount,
+		CPURequestCurrent:    ptrFloat64(cpuReq),
+		MemoryRequestCurrent: ptrFloat64(memReq),
 	}
-	extractTermVariations(&recommVals, data.RecommendationTerms)
+	extractTermVariations(&recommVals, data.RecommendationTerms, cpuReq, memReq)
 	return recommVals
 }
 
-func extractTermVariations(recommVals *RecommendationColumnValues, terms kruizePayload.Term) {
-	cpuReq := recommVals.CPURequestCurrent
-	memReq := recommVals.MemoryRequestCurrent
-
+func extractTermVariations(recommVals *RecommendationColumnValues, terms kruizePayload.Term, cpuReq, memReq float64) {
 	if e := terms.Short_term.RecommendationEngines; e != nil {
-		recommVals.CPUVariationShortCostPct = utils.VariationPercentOfRequestCPU(e.Cost.Variation.Requests.Cpu.Amount, cpuReq)
-		recommVals.MemoryVariationShortCostPct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Cost.Variation.Requests.Memory.Amount, memReq)
-		recommVals.CPUVariationShortPerformancePct = utils.VariationPercentOfRequestCPU(e.Performance.Variation.Requests.Cpu.Amount, cpuReq)
-		recommVals.MemoryVariationShortPerformancePct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Performance.Variation.Requests.Memory.Amount, memReq)
+		recommVals.CPUVariationShortCostPct = ptrFloat64(utils.VariationPercentOfRequestCPU(e.Cost.Variation.Requests.Cpu.Amount, cpuReq))
+		recommVals.MemoryVariationShortCostPct = ptrFloat64(utils.VariationPercentOfRequestMemoryBytesMiB(e.Cost.Variation.Requests.Memory.Amount, memReq))
+		recommVals.CPUVariationShortPerformancePct = ptrFloat64(utils.VariationPercentOfRequestCPU(e.Performance.Variation.Requests.Cpu.Amount, cpuReq))
+		recommVals.MemoryVariationShortPerformancePct = ptrFloat64(utils.VariationPercentOfRequestMemoryBytesMiB(e.Performance.Variation.Requests.Memory.Amount, memReq))
 	}
 	if e := terms.Medium_term.RecommendationEngines; e != nil {
-		recommVals.CPUVariationMediumCostPct = utils.VariationPercentOfRequestCPU(e.Cost.Variation.Requests.Cpu.Amount, cpuReq)
-		recommVals.MemoryVariationMediumCostPct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Cost.Variation.Requests.Memory.Amount, memReq)
-		recommVals.CPUVariationMediumPerformancePct = utils.VariationPercentOfRequestCPU(e.Performance.Variation.Requests.Cpu.Amount, cpuReq)
-		recommVals.MemoryVariationMediumPerformancePct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Performance.Variation.Requests.Memory.Amount, memReq)
+		recommVals.CPUVariationMediumCostPct = ptrFloat64(utils.VariationPercentOfRequestCPU(e.Cost.Variation.Requests.Cpu.Amount, cpuReq))
+		recommVals.MemoryVariationMediumCostPct = ptrFloat64(utils.VariationPercentOfRequestMemoryBytesMiB(e.Cost.Variation.Requests.Memory.Amount, memReq))
+		recommVals.CPUVariationMediumPerformancePct = ptrFloat64(utils.VariationPercentOfRequestCPU(e.Performance.Variation.Requests.Cpu.Amount, cpuReq))
+		recommVals.MemoryVariationMediumPerformancePct = ptrFloat64(utils.VariationPercentOfRequestMemoryBytesMiB(e.Performance.Variation.Requests.Memory.Amount, memReq))
 	}
 	if e := terms.Long_term.RecommendationEngines; e != nil {
-		recommVals.CPUVariationLongCostPct = utils.VariationPercentOfRequestCPU(e.Cost.Variation.Requests.Cpu.Amount, cpuReq)
-		recommVals.MemoryVariationLongCostPct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Cost.Variation.Requests.Memory.Amount, memReq)
-		recommVals.CPUVariationLongPerformancePct = utils.VariationPercentOfRequestCPU(e.Performance.Variation.Requests.Cpu.Amount, cpuReq)
-		recommVals.MemoryVariationLongPerformancePct = utils.VariationPercentOfRequestMemoryBytesMiB(e.Performance.Variation.Requests.Memory.Amount, memReq)
+		recommVals.CPUVariationLongCostPct = ptrFloat64(utils.VariationPercentOfRequestCPU(e.Cost.Variation.Requests.Cpu.Amount, cpuReq))
+		recommVals.MemoryVariationLongCostPct = ptrFloat64(utils.VariationPercentOfRequestMemoryBytesMiB(e.Cost.Variation.Requests.Memory.Amount, memReq))
+		recommVals.CPUVariationLongPerformancePct = ptrFloat64(utils.VariationPercentOfRequestCPU(e.Performance.Variation.Requests.Cpu.Amount, cpuReq))
+		recommVals.MemoryVariationLongPerformancePct = ptrFloat64(utils.VariationPercentOfRequestMemoryBytesMiB(e.Performance.Variation.Requests.Memory.Amount, memReq))
 	}
 }
 
