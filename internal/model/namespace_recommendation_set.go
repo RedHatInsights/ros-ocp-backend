@@ -20,22 +20,22 @@ type NamespaceRecommendationSet struct {
 	WorkloadID           uint
 	Workload             Workload `gorm:"foreignKey:WorkloadID"`
 	NamespaceName        string
-	CPURequestCurrent    float64
-	MemoryRequestCurrent float64
+	CPURequestCurrent    *float64
+	MemoryRequestCurrent *float64
 
 	// Variation fields: percent of current CPU/memory request (aligned with API response).
-	CPUVariationShortCostPct            float64 `gorm:"column:cpu_variation_short_cost_pct;type:numeric(10,4)"`
-	CPUVariationShortPerformancePct     float64 `gorm:"column:cpu_variation_short_performance_pct;type:numeric(10,4)"`
-	CPUVariationMediumCostPct           float64 `gorm:"column:cpu_variation_medium_cost_pct;type:numeric(10,4)"`
-	CPUVariationMediumPerformancePct    float64 `gorm:"column:cpu_variation_medium_performance_pct;type:numeric(10,4)"`
-	CPUVariationLongCostPct             float64 `gorm:"column:cpu_variation_long_cost_pct;type:numeric(10,4)"`
-	CPUVariationLongPerformancePct      float64 `gorm:"column:cpu_variation_long_performance_pct;type:numeric(10,4)"`
-	MemoryVariationShortCostPct         float64 `gorm:"column:memory_variation_short_cost_pct;type:numeric(10,4)"`
-	MemoryVariationShortPerformancePct  float64 `gorm:"column:memory_variation_short_performance_pct;type:numeric(10,4)"`
-	MemoryVariationMediumCostPct        float64 `gorm:"column:memory_variation_medium_cost_pct;type:numeric(10,4)"`
-	MemoryVariationMediumPerformancePct float64 `gorm:"column:memory_variation_medium_performance_pct;type:numeric(10,4)"`
-	MemoryVariationLongCostPct          float64 `gorm:"column:memory_variation_long_cost_pct;type:numeric(10,4)"`
-	MemoryVariationLongPerformancePct   float64 `gorm:"column:memory_variation_long_performance_pct;type:numeric(10,4)"`
+	CPUVariationShortCostPct            *float64 `gorm:"column:cpu_variation_short_cost_pct;type:numeric(10,4)"`
+	CPUVariationShortPerformancePct     *float64 `gorm:"column:cpu_variation_short_performance_pct;type:numeric(10,4)"`
+	CPUVariationMediumCostPct           *float64 `gorm:"column:cpu_variation_medium_cost_pct;type:numeric(10,4)"`
+	CPUVariationMediumPerformancePct    *float64 `gorm:"column:cpu_variation_medium_performance_pct;type:numeric(10,4)"`
+	CPUVariationLongCostPct             *float64 `gorm:"column:cpu_variation_long_cost_pct;type:numeric(10,4)"`
+	CPUVariationLongPerformancePct      *float64 `gorm:"column:cpu_variation_long_performance_pct;type:numeric(10,4)"`
+	MemoryVariationShortCostPct         *float64 `gorm:"column:memory_variation_short_cost_pct;type:numeric(10,4)"`
+	MemoryVariationShortPerformancePct  *float64 `gorm:"column:memory_variation_short_performance_pct;type:numeric(10,4)"`
+	MemoryVariationMediumCostPct        *float64 `gorm:"column:memory_variation_medium_cost_pct;type:numeric(10,4)"`
+	MemoryVariationMediumPerformancePct *float64 `gorm:"column:memory_variation_medium_performance_pct;type:numeric(10,4)"`
+	MemoryVariationLongCostPct          *float64 `gorm:"column:memory_variation_long_cost_pct;type:numeric(10,4)"`
+	MemoryVariationLongPerformancePct   *float64 `gorm:"column:memory_variation_long_performance_pct;type:numeric(10,4)"`
 
 	MonitoringStartTime    time.Time `gorm:"type:timestamp"`
 	MonitoringEndTime      time.Time `gorm:"type:timestamp"`
@@ -56,6 +56,8 @@ type NamespaceRecommendationSetResult struct {
 	Recommendations     datatypes.JSON `json:"-"`
 	RecommendationsJSON map[string]any `gorm:"-" json:"recommendations"`
 	SourceID            string         `json:"source_id"`
+	// Embedded stored variation percentages (scanned from SELECT, excluded from JSON output).
+	StoredVariationPcts `gorm:"embedded"`
 }
 
 func (r *NamespaceRecommendationSet) AfterFind(tx *gorm.DB) error {

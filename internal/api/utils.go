@@ -747,9 +747,12 @@ func dropBoxPlotsObject(recommendationJSON map[string]interface{}) map[string]in
 	return recommendationJSON
 }
 
-func convertVariationToPercentage(recommendationJSON map[string]interface{}) map[string]interface{} {
+// convertVariationToPercentage replaces variation amounts in the recommendation JSON with
+// percentages relative to the corresponding current amounts. When skipRequests is true the
+// "requests" section is left untouched (used when stored *_pct values have already been
+// injected via injectStoredRequestVariationPct).
+func convertVariationToPercentage(recommendationJSON map[string]interface{}, skipRequests bool) map[string]interface{} {
 	var currentCpuLimits, currentMemoryLimits, currentCpuRequests, currentMemoryRequests float64
-	// Current section of recommendation
 
 	current_config, ok := recommendationJSON["current"].(map[string]interface{})
 	if !ok {
@@ -810,7 +813,12 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 						continue
 					}
 
-					for _, section := range []string{"limits", "requests"} {
+					sections := []string{"limits", "requests"}
+					if skipRequests {
+						sections = []string{"limits"}
+					}
+
+					for _, section := range sections {
 						sectionObject, ok := recommendationSection[section].(map[string]interface{})
 						if ok {
 							memoryObject, ok := sectionObject["memory"].(map[string]interface{})
@@ -851,7 +859,56 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}) map
 	return recommendationJSON
 }
 
-func UpdateRecommendationJSON(handlerName string, recommendationID string, clusterUUID string, unitsToTransform map[string]string, updateUnitsk8s bool, jsonData datatypes.JSON) map[string]interface{} {
+// injectStoredRequestVariationPct writes the pre-computed *_pct DB column values directly into
+// the variation.requests section of the recommendation JSON, replacing the raw amounts. This
+// avoids recomputing percentages from the JSON blob for the requests section. The limits section
+// is left unchanged and must still be processed by convertVariationToPercentage.
+func injectStoredRequestVariationPct(data map[string]interface{}, pcts *model.StoredVariationPcts) map[string]interface{} {
+	terms, ok := data["recommendation_terms"].(map[string]interface{})
+	if !ok {
+		return data
+	}
+	for _, period := range []string{"short_term", "medium_term", "long_term"} {
+		intervalData, ok := terms[period].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		engines, ok := intervalData["recommendation_engines"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		for _, engineName := range []string{"cost", "performance"} {
+			engine, ok := engines[engineName].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			variation, ok := engine["variation"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			requests, ok := variation["requests"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			cpuPct, memPct := pcts.Lookup(period, engineName)
+			if cpu, ok := requests["cpu"].(map[string]interface{}); ok && cpuPct != nil {
+				cpu["amount"] = *cpuPct
+				cpu["format"] = "percent"
+			}
+			if mem, ok := requests["memory"].(map[string]interface{}); ok && memPct != nil {
+				mem["amount"] = *memPct
+				mem["format"] = "percent"
+			}
+		}
+	}
+	return data
+}
+
+// UpdateRecommendationJSON transforms raw recommendation JSON for API output: unit conversion,
+// notification filtering, and variation-to-percentage conversion.
+// When storedPcts is provided and has values, the requests variation percentages are taken
+// directly from the stored DB columns instead of being recomputed from the JSON blob.
+func UpdateRecommendationJSON(handlerName string, recommendationID string, clusterUUID string, unitsToTransform map[string]string, updateUnitsk8s bool, jsonData datatypes.JSON, storedPcts *model.StoredVariationPcts) map[string]interface{} {
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(jsonData), &data)
 	if err != nil {
@@ -866,7 +923,12 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 
 	data = transformComponentUnits(unitsToTransform, updateUnitsk8s, data) // cpu: core values require truncation
 	data = filterNotifications(recommendationID, clusterUUID, data)
-	data = convertVariationToPercentage(data)
+
+	skipRequests := storedPcts != nil && storedPcts.HasValues()
+	if skipRequests {
+		data = injectStoredRequestVariationPct(data, storedPcts)
+	}
+	data = convertVariationToPercentage(data, skipRequests)
 	return data
 }
 

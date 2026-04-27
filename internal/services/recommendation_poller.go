@@ -170,13 +170,28 @@ func requestAndSaveRecommendation(kafkaMsg types.RecommendationKafkaMsg, recomme
 							log.Errorf("unable to list recommendation for: %v", err)
 							continue
 						}
+						extractedRecommVals := model.ExtractRecommendationColumnValues(v)
 						// Create RecommendationSet entry into the table.
 						recommendationSet := model.RecommendationSet{
-							WorkloadID:          kafkaMsg.Metadata.Workload_id,
-							ContainerName:       container.Container_name,
-							MonitoringStartTime: v.RecommendationTerms.Short_term.MonitoringStartTime,
-							MonitoringEndTime:   v.MonitoringEndTime,
-							Recommendations:     marshalData,
+							WorkloadID:                          kafkaMsg.Metadata.Workload_id,
+							ContainerName:                       container.Container_name,
+							CPURequestCurrent:                   extractedRecommVals.CPURequestCurrent,
+							MemoryRequestCurrent:                extractedRecommVals.MemoryRequestCurrent,
+							CPUVariationShortCostPct:            extractedRecommVals.CPUVariationShortCostPct,
+							CPUVariationShortPerformancePct:     extractedRecommVals.CPUVariationShortPerformancePct,
+							CPUVariationMediumCostPct:           extractedRecommVals.CPUVariationMediumCostPct,
+							CPUVariationMediumPerformancePct:    extractedRecommVals.CPUVariationMediumPerformancePct,
+							CPUVariationLongCostPct:             extractedRecommVals.CPUVariationLongCostPct,
+							CPUVariationLongPerformancePct:      extractedRecommVals.CPUVariationLongPerformancePct,
+							MemoryVariationShortCostPct:         extractedRecommVals.MemoryVariationShortCostPct,
+							MemoryVariationShortPerformancePct:  extractedRecommVals.MemoryVariationShortPerformancePct,
+							MemoryVariationMediumCostPct:        extractedRecommVals.MemoryVariationMediumCostPct,
+							MemoryVariationMediumPerformancePct: extractedRecommVals.MemoryVariationMediumPerformancePct,
+							MemoryVariationLongCostPct:          extractedRecommVals.MemoryVariationLongCostPct,
+							MemoryVariationLongPerformancePct:   extractedRecommVals.MemoryVariationLongPerformancePct,
+							MonitoringStartTime:                 v.RecommendationTerms.Short_term.MonitoringStartTime,
+							MonitoringEndTime:                   v.MonitoringEndTime,
+							Recommendations:                     marshalData,
 						}
 						recommendationSetList = append(recommendationSetList, recommendationSet)
 

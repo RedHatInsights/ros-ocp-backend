@@ -222,10 +222,32 @@
           {
             "name": "order_by",
             "in": "query",
-            "description": "Options are cluster, project, workload_type, workload, container, last_reported",
+            "description": "Field to order results by. Options: cluster, project, workload_type, workload, container, last_reported, cpu_request_current, memory_request_current, and per-term variation fields (e.g. cpu_variation_short_cost, memory_variation_long_performance). Variation values are percent of current CPU or memory request (float); see the recommendations.variation amounts in each list item.",
             "required": false,
             "schema": {
               "type": "string",
+              "enum": [
+                "cluster",
+                "project",
+                "workload_type",
+                "workload",
+                "container",
+                "last_reported",
+                "cpu_request_current",
+                "memory_request_current",
+                "cpu_variation_short_cost",
+                "cpu_variation_short_performance",
+                "cpu_variation_medium_cost",
+                "cpu_variation_medium_performance",
+                "cpu_variation_long_cost",
+                "cpu_variation_long_performance",
+                "memory_variation_short_cost",
+                "memory_variation_short_performance",
+                "memory_variation_medium_cost",
+                "memory_variation_medium_performance",
+                "memory_variation_long_cost",
+                "memory_variation_long_performance"
+              ],
               "example": "last_reported"
             }
           },
@@ -1265,8 +1287,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
-                        "nullable": true
+                        "example": "percent"
                       }
                     }
                   },
@@ -1280,7 +1301,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "Mi"
+                        "example": "percent"
                       }
                     }
                   }
@@ -1430,8 +1451,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
-                        "nullable": true
+                        "example": "percent"
                       }
                     }
                   },
@@ -1445,7 +1465,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "Mi"
+                        "example": "percent"
                       }
                     }
                   }
