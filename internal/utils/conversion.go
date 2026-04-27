@@ -6,6 +6,21 @@ import (
 	"strings"
 )
 
+// maxNumeric10_4Magnitude is the maximum absolute value storable in PostgreSQL NUMERIC(10,4)
+// (6 digits + 4 decimal places; see "numeric field overflow" in Postgres when |v| >= 1e6).
+// Variation "percent" values that exceed this after truncation must be clamped for DB columns.
+const maxNumeric10_4Magnitude = 999_999.9999
+
+func clampToNumeric10_4Range(p float64) float64 {
+	if p > maxNumeric10_4Magnitude {
+		return maxNumeric10_4Magnitude
+	}
+	if p < -maxNumeric10_4Magnitude {
+		return -maxNumeric10_4Magnitude
+	}
+	return p
+}
+
 // CalculatePercentage returns (numerator / denominator) * 100.
 // If numerator or denominator is zero, it returns 0 to avoid Inf/NaN from division by zero.
 func CalculatePercentage(numerator, denominator float64) float64 {
@@ -50,7 +65,8 @@ func VariationPercentOfRequestCPU(variationCores, currentCores float64) float64 
 	v := TruncateToThreeDecimalPlaces(variationCores)
 	d := TruncateToThreeDecimalPlaces(currentCores)
 	p := CalculatePercentage(v, d)
-	return TruncateToThreeDecimalPlaces(p)
+	p = TruncateToThreeDecimalPlaces(p)
+	return clampToNumeric10_4Range(p)
 }
 
 // VariationPercentOfRequestMemoryBytesMiB computes request variation as percent of current memory request
@@ -59,5 +75,6 @@ func VariationPercentOfRequestMemoryBytesMiB(variationBytes, currentBytes float6
 	v := TruncateMemoryBytesToMiBTwoDecimals(variationBytes)
 	d := TruncateMemoryBytesToMiBTwoDecimals(currentBytes)
 	p := CalculatePercentage(v, d)
-	return TruncateToThreeDecimalPlaces(p)
+	p = TruncateToThreeDecimalPlaces(p)
+	return clampToNumeric10_4Range(p)
 }
