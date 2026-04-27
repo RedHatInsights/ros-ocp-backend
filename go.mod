@@ -3,7 +3,7 @@ module github.com/redhatinsights/ros-ocp-backend
 go 1.25.8
 
 require (
-	github.com/Unleash/unleash-go-sdk/v5 v5.1.0
+	github.com/Unleash/unleash-go-sdk/v6 v6.4.0
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/confluentinc/confluent-kafka-go/v2 v2.14.1
 	github.com/go-gota/gota v0.12.0
@@ -42,6 +42,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
