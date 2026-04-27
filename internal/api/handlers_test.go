@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/redhatinsights/platform-go-middlewares/identity"
 
 	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
