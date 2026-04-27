@@ -1,12 +1,15 @@
 package api
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 	"gorm.io/datatypes"
 )
+
+func float64Ptr(v float64) *float64 { return &v }
 
 // Minimal recommendation JSON that exercises both term and engine maps.
 // short_term has cost + performance engines; medium_term has cost only.
@@ -121,4 +124,77 @@ func TestGenerateCSVRows_TermOrdering(t *testing.T) {
 				i, rows[i][18], rows[i][21], exp[0], exp[1])
 		}
 	}
+}
+
+// injectTestJSON is minimal: one term/engine with variation limits + requests (raw units before inject).
+const injectTestJSON = `{
+	"recommendation_terms": {
+		"short_term": {
+			"recommendation_engines": {
+				"cost": {
+					"variation": {
+						"limits": {"cpu": {"amount": -1.0, "format": "cores"}},
+						"requests": {"cpu": {"amount": 0.1, "format": "cores"}, "memory": {"amount": 512, "format": "bytes"}}
+					}
+				}
+			}
+		}
+	}
+}`
+
+func TestInjectStoredRequestVariationPct(t *testing.T) {
+	t.Run("writes requests from stored pcts and sets format percent", func(t *testing.T) {
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(injectTestJSON), &data); err != nil {
+			t.Fatal(err)
+		}
+		pcts := &model.StoredVariationPcts{
+			CPUVariationShortCostPct:    float64Ptr(12.5),
+			MemoryVariationShortCostPct: float64Ptr(3.25),
+		}
+		out := injectStoredRequestVariationPct(data, pcts)
+		v := out["recommendation_terms"].(map[string]interface{})["short_term"].(map[string]interface{})["recommendation_engines"].(map[string]interface{})["cost"].(map[string]interface{})["variation"].(map[string]interface{})
+		req := v["requests"].(map[string]interface{})
+		lim := v["limits"].(map[string]interface{})
+
+		if got := req["cpu"].(map[string]interface{})["amount"]; got != 12.5 {
+			t.Fatalf("requests.cpu.amount: got %v, want 12.5", got)
+		}
+		if got := req["cpu"].(map[string]interface{})["format"]; got != "percent" {
+			t.Fatalf("requests.cpu.format: got %v, want percent", got)
+		}
+		if got := req["memory"].(map[string]interface{})["amount"]; got != 3.25 {
+			t.Fatalf("requests.memory.amount: got %v, want 3.25", got)
+		}
+		if got := req["memory"].(map[string]interface{})["format"]; got != "percent" {
+			t.Fatalf("requests.memory.format: got %v, want percent", got)
+		}
+		if got := lim["cpu"].(map[string]interface{})["amount"]; got != -1.0 {
+			t.Fatalf("limits.cpu.amount should be unchanged: got %v", got)
+		}
+	})
+
+	t.Run("skips field when stored pointer is nil", func(t *testing.T) {
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(injectTestJSON), &data); err != nil {
+			t.Fatal(err)
+		}
+		pcts := &model.StoredVariationPcts{
+			CPUVariationShortCostPct:    float64Ptr(9.0),
+			MemoryVariationShortCostPct: nil,
+		}
+		out := injectStoredRequestVariationPct(data, pcts)
+		req := out["recommendation_terms"].(map[string]interface{})["short_term"].(map[string]interface{})["recommendation_engines"].(map[string]interface{})["cost"].(map[string]interface{})["variation"].(map[string]interface{})["requests"].(map[string]interface{})
+
+		if got := req["cpu"].(map[string]interface{})["amount"]; got != 9.0 {
+			t.Fatalf("cpu: got %v, want 9", got)
+		}
+		// memory not overwritten
+		if got := req["memory"].(map[string]interface{})["amount"]; got != 512.0 {
+			t.Fatalf("memory amount: got %v, want 512 (unchanged)", got)
+		}
+		if got := req["memory"].(map[string]interface{})["format"]; got != "bytes" {
+			t.Fatalf("memory format: got %v, want bytes", got)
+		}
+	})
 }
