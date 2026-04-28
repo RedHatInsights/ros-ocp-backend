@@ -12,6 +12,9 @@ import (
 const maxNumeric10_4Magnitude = 999_999.9999
 
 func clampToNumeric10_4Range(p float64) float64 {
+	if math.IsNaN(p) || math.IsInf(p, 0) {
+		return 0
+	}
 	if p > maxNumeric10_4Magnitude {
 		return maxNumeric10_4Magnitude
 	}
@@ -19,6 +22,33 @@ func clampToNumeric10_4Range(p float64) float64 {
 		return -maxNumeric10_4Magnitude
 	}
 	return p
+}
+
+// maxNumeric20_4Magnitude is the maximum absolute value storable in PostgreSQL NUMERIC(20,4)
+// (16 digits + 4 decimal places; Postgres overflows when |v| >= 1e16).
+const maxNumeric20_4Magnitude = 9_999_999_999_999_999.9999
+
+func clampToNumeric20_4Range(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
+	if v > maxNumeric20_4Magnitude {
+		return maxNumeric20_4Magnitude
+	}
+	if v < -maxNumeric20_4Magnitude {
+		return -maxNumeric20_4Magnitude
+	}
+	return v
+}
+
+// ClampToNumeric10_4 clamps a value into the PostgreSQL NUMERIC(10,4) range.
+func ClampToNumeric10_4(v float64) float64 {
+	return clampToNumeric10_4Range(v)
+}
+
+// ClampToNumeric20_4 clamps a value into the PostgreSQL NUMERIC(20,4) range.
+func ClampToNumeric20_4(v float64) float64 {
+	return clampToNumeric20_4Range(v)
 }
 
 // CalculatePercentage returns (numerator / denominator) * 100.

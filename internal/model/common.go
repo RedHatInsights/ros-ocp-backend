@@ -101,6 +101,11 @@ type RecommendationColumnValues struct {
 func ExtractRecommendationColumnValues(data kruizePayload.RecommendationData) RecommendationColumnValues {
 	cpuReq := data.Current.Requests.Cpu.Amount
 	memReq := data.Current.Requests.Memory.Amount
+
+	// Clamp current request values to the backing DB numeric ranges to prevent insert/update failures.
+	// cpu_request_current is NUMERIC(10,4); memory_request_current is NUMERIC(20,4).
+	cpuReq = utils.ClampToNumeric10_4(cpuReq)
+	memReq = utils.ClampToNumeric20_4(memReq)
 	recommVals := RecommendationColumnValues{
 		CPURequestCurrent:    ptrFloat64(cpuReq),
 		MemoryRequestCurrent: ptrFloat64(memReq),
