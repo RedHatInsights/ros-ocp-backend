@@ -11,7 +11,7 @@ import (
 // Variation "percent" values that exceed this after truncation must be clamped for DB columns.
 const maxNumeric10_4Magnitude = 999_999.9999
 
-func clampToNumeric10_4Range(p float64) float64 {
+func ClampToNumeric10_4Range(p float64) float64 {
 	if math.IsNaN(p) || math.IsInf(p, 0) {
 		return 0
 	}
@@ -28,7 +28,7 @@ func clampToNumeric10_4Range(p float64) float64 {
 // (16 digits + 4 decimal places; Postgres overflows when |v| >= 1e16).
 const maxNumeric20_4Magnitude = 9_999_999_999_999_999.9999
 
-func clampToNumeric20_4Range(v float64) float64 {
+func ClampToNumeric20_4Range(v float64) float64 {
 	if math.IsNaN(v) || math.IsInf(v, 0) {
 		return 0
 	}
@@ -39,16 +39,6 @@ func clampToNumeric20_4Range(v float64) float64 {
 		return -maxNumeric20_4Magnitude
 	}
 	return v
-}
-
-// ClampToNumeric10_4 clamps a value into the PostgreSQL NUMERIC(10,4) range.
-func ClampToNumeric10_4(v float64) float64 {
-	return clampToNumeric10_4Range(v)
-}
-
-// ClampToNumeric20_4 clamps a value into the PostgreSQL NUMERIC(20,4) range.
-func ClampToNumeric20_4(v float64) float64 {
-	return clampToNumeric20_4Range(v)
 }
 
 // CalculatePercentage returns (numerator / denominator) * 100.
@@ -96,7 +86,7 @@ func VariationPercentOfRequestCPU(variationCores, currentCores float64) float64 
 	d := TruncateToThreeDecimalPlaces(currentCores)
 	p := CalculatePercentage(v, d)
 	p = TruncateToThreeDecimalPlaces(p)
-	return clampToNumeric10_4Range(p)
+	return ClampToNumeric10_4Range(p)
 }
 
 // VariationPercentOfRequestMemoryBytesMiB computes request variation as percent of current memory request
@@ -106,5 +96,5 @@ func VariationPercentOfRequestMemoryBytesMiB(variationBytes, currentBytes float6
 	d := TruncateMemoryBytesToMiBTwoDecimals(currentBytes)
 	p := CalculatePercentage(v, d)
 	p = TruncateToThreeDecimalPlaces(p)
-	return clampToNumeric10_4Range(p)
+	return ClampToNumeric10_4Range(p)
 }

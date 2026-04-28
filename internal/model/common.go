@@ -104,8 +104,8 @@ func ExtractRecommendationColumnValues(data kruizePayload.RecommendationData) Re
 
 	// Clamp current request values to the backing DB numeric ranges to prevent insert/update failures.
 	// cpu_request_current is NUMERIC(10,4); memory_request_current is NUMERIC(20,4).
-	cpuReq = utils.ClampToNumeric10_4(cpuReq)
-	memReq = utils.ClampToNumeric20_4(memReq)
+	cpuReq = utils.ClampToNumeric10_4Range(cpuReq)
+	memReq = utils.ClampToNumeric20_4Range(memReq)
 	recommVals := RecommendationColumnValues{
 		CPURequestCurrent:    ptrFloat64(cpuReq),
 		MemoryRequestCurrent: ptrFloat64(memReq),

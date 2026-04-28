@@ -20,8 +20,8 @@ type RecommendationSet struct {
 	Workload      Workload `gorm:"foreignKey:WorkloadID"`
 	ContainerName string
 
-	CPURequestCurrent    *float64
-	MemoryRequestCurrent *float64
+	CPURequestCurrent    *float64 `gorm:"column:cpu_request_current;type:numeric(10,4)"`
+	MemoryRequestCurrent *float64 `gorm:"column:memory_request_current;type:numeric(20,4)"`
 
 	// Variation fields: percent of current CPU/memory request (aligned with API response).
 	CPUVariationShortCostPct            *float64 `gorm:"column:cpu_variation_short_cost_pct;type:numeric(10,4)"`
