@@ -112,10 +112,10 @@ func TestGenerateCSVRows_TermOrdering(t *testing.T) {
 
 	// Column index 18 = termName, column index 21 = recommendationType
 	expectedOrder := [][2]string{
-		{"short_term", "cost"},
-		{"short_term", "performance"},
-		{"medium_term", "cost"},
-		{"medium_term", "performance"},
+		{KruizeShortTerm, KruizeEngineCost},
+		{KruizeShortTerm, KruizeEnginePerformance},
+		{KruizeMediumTerm, KruizeEngineCost},
+		{KruizeMediumTerm, KruizeEnginePerformance},
 	}
 
 	for i, exp := range expectedOrder {

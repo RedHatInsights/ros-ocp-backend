@@ -37,6 +37,56 @@ type StoredVariationPcts struct {
 	MemoryVariationLongPerformancePct   *float64 `gorm:"column:memory_variation_long_performance_pct" json:"-"`
 }
 
+// StoredVariationSpec is the single source of truth for supported term/engine combinations
+// and how they map to stored DB percentage columns in StoredVariationPcts.
+type StoredVariationSpec struct {
+	Term   string
+	Engine string
+	CPU    func(*StoredVariationPcts) *float64
+	Mem    func(*StoredVariationPcts) *float64
+}
+
+// StoredVariationSpecs enumerates all supported term/engine pairs.
+// Keep this list in sync with DB columns and API JSON injection.
+var StoredVariationSpecs = []StoredVariationSpec{
+	{
+		Term:   "short_term",
+		Engine: "cost",
+		CPU:    func(s *StoredVariationPcts) *float64 { return s.CPUVariationShortCostPct },
+		Mem:    func(s *StoredVariationPcts) *float64 { return s.MemoryVariationShortCostPct },
+	},
+	{
+		Term:   "short_term",
+		Engine: "performance",
+		CPU:    func(s *StoredVariationPcts) *float64 { return s.CPUVariationShortPerformancePct },
+		Mem:    func(s *StoredVariationPcts) *float64 { return s.MemoryVariationShortPerformancePct },
+	},
+	{
+		Term:   "medium_term",
+		Engine: "cost",
+		CPU:    func(s *StoredVariationPcts) *float64 { return s.CPUVariationMediumCostPct },
+		Mem:    func(s *StoredVariationPcts) *float64 { return s.MemoryVariationMediumCostPct },
+	},
+	{
+		Term:   "medium_term",
+		Engine: "performance",
+		CPU:    func(s *StoredVariationPcts) *float64 { return s.CPUVariationMediumPerformancePct },
+		Mem:    func(s *StoredVariationPcts) *float64 { return s.MemoryVariationMediumPerformancePct },
+	},
+	{
+		Term:   "long_term",
+		Engine: "cost",
+		CPU:    func(s *StoredVariationPcts) *float64 { return s.CPUVariationLongCostPct },
+		Mem:    func(s *StoredVariationPcts) *float64 { return s.MemoryVariationLongCostPct },
+	},
+	{
+		Term:   "long_term",
+		Engine: "performance",
+		CPU:    func(s *StoredVariationPcts) *float64 { return s.CPUVariationLongPerformancePct },
+		Mem:    func(s *StoredVariationPcts) *float64 { return s.MemoryVariationLongPerformancePct },
+	},
+}
+
 // HasValues reports whether at least one stored percentage is non-nil.
 func (s *StoredVariationPcts) HasValues() bool {
 	return s.CPUVariationShortCostPct != nil ||
@@ -56,19 +106,10 @@ func (s *StoredVariationPcts) HasValues() bool {
 // Lookup returns the stored CPU and memory variation pct for a given term (e.g. "short_term") and
 // engine name (e.g. "cost"). Returns (nil, nil) when the combination is not recognised.
 func (s *StoredVariationPcts) Lookup(term, engine string) (cpu, mem *float64) {
-	switch {
-	case term == "short_term" && engine == "cost":
-		return s.CPUVariationShortCostPct, s.MemoryVariationShortCostPct
-	case term == "short_term" && engine == "performance":
-		return s.CPUVariationShortPerformancePct, s.MemoryVariationShortPerformancePct
-	case term == "medium_term" && engine == "cost":
-		return s.CPUVariationMediumCostPct, s.MemoryVariationMediumCostPct
-	case term == "medium_term" && engine == "performance":
-		return s.CPUVariationMediumPerformancePct, s.MemoryVariationMediumPerformancePct
-	case term == "long_term" && engine == "cost":
-		return s.CPUVariationLongCostPct, s.MemoryVariationLongCostPct
-	case term == "long_term" && engine == "performance":
-		return s.CPUVariationLongPerformancePct, s.MemoryVariationLongPerformancePct
+	for _, spec := range StoredVariationSpecs {
+		if spec.Term == term && spec.Engine == engine {
+			return spec.CPU(s), spec.Mem(s)
+		}
 	}
 	return nil, nil
 }

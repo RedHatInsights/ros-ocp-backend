@@ -571,7 +571,7 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 		return recommendationJSON
 	}
 
-	for _, period := range []string{"short_term", "medium_term", "long_term"} {
+	for _, period := range kruizeRecommendationTerms {
 		intervalData, ok := recommendation_terms[period].(map[string]interface{})
 		if !ok {
 			continue
@@ -630,7 +630,7 @@ func transformComponentUnits(unitsToTransform map[string]string, updateUnitsk8s 
 		}
 
 		if intervalData["recommendation_engines"] != nil {
-			for _, recommendationType := range []string{"cost", "performance"} {
+			for _, recommendationType := range kruizeRecommendationEngines {
 				engineData, ok := intervalData["recommendation_engines"].(map[string]interface{})[recommendationType].(map[string]interface{})
 				if !ok {
 					continue
@@ -709,18 +709,20 @@ func filterNotifications(recommendationID string, clusterUUID string, recommenda
 		return recommendationJSON
 	}
 
-	for _, term := range []string{"short_term", "medium_term", "long_term"} {
+	for _, term := range kruizeRecommendationTerms {
 		levelThree, ok := recommendationTerms[term].(map[string]interface{})
-		if ok {
-			deleteNotificationObject(levelThree)
+		if !ok {
+			continue
 		}
-		recommendationEngineObject, ok := levelThree["recommendation_engines"].(map[string]interface{})
-		if ok {
-			for _, engine := range []string{"cost", "performance"} {
-				levelFour, ok := recommendationEngineObject[engine].(map[string]interface{})
-				if ok {
-					deleteNotificationObject(levelFour)
-				}
+		deleteNotificationObject(levelThree)
+		recommendationEngineObject, okEngines := levelThree["recommendation_engines"].(map[string]interface{})
+		if !okEngines {
+			continue
+		}
+		for _, engine := range kruizeRecommendationEngines {
+			levelFour, ok := recommendationEngineObject[engine].(map[string]interface{})
+			if ok {
+				deleteNotificationObject(levelFour)
 			}
 		}
 	}
@@ -737,7 +739,7 @@ func dropBoxPlotsObject(recommendationJSON map[string]interface{}) map[string]in
 		return recommendationJSON
 	}
 
-	for _, period := range []string{"short_term", "medium_term", "long_term"} {
+	for _, period := range kruizeRecommendationTerms {
 		intervalData, ok := recommendation_terms[period].(map[string]interface{})
 		if !ok {
 			continue
@@ -794,14 +796,14 @@ func convertVariationToPercentage(recommendationJSON map[string]interface{}, ski
 		return recommendationJSON
 	}
 
-	for _, period := range []string{"short_term", "medium_term", "long_term"} {
+	for _, period := range kruizeRecommendationTerms {
 		intervalData, ok := recommendation_terms[period].(map[string]interface{})
 		if !ok {
 			continue
 		}
 
 		if intervalData["recommendation_engines"] != nil {
-			for _, recommendationType := range []string{"cost", "performance"} {
+			for _, recommendationType := range kruizeRecommendationEngines {
 				engineData, ok := intervalData["recommendation_engines"].(map[string]interface{})[recommendationType].(map[string]interface{})
 				if !ok {
 					continue
@@ -868,8 +870,8 @@ func injectStoredRequestVariationPct(data map[string]interface{}, pcts *model.St
 	if !ok {
 		return data
 	}
-	for _, period := range []string{"short_term", "medium_term", "long_term"} {
-		intervalData, ok := terms[period].(map[string]interface{})
+	for _, spec := range model.StoredVariationSpecs {
+		intervalData, ok := terms[spec.Term].(map[string]interface{})
 		if !ok {
 			continue
 		}
@@ -877,28 +879,26 @@ func injectStoredRequestVariationPct(data map[string]interface{}, pcts *model.St
 		if !ok {
 			continue
 		}
-		for _, engineName := range []string{"cost", "performance"} {
-			engine, ok := engines[engineName].(map[string]interface{})
-			if !ok {
-				continue
-			}
-			variation, ok := engine["variation"].(map[string]interface{})
-			if !ok {
-				continue
-			}
-			requests, ok := variation["requests"].(map[string]interface{})
-			if !ok {
-				continue
-			}
-			cpuPct, memPct := pcts.Lookup(period, engineName)
-			if cpu, ok := requests["cpu"].(map[string]interface{}); ok && cpuPct != nil {
-				cpu["amount"] = *cpuPct
-				cpu["format"] = "percent"
-			}
-			if mem, ok := requests["memory"].(map[string]interface{}); ok && memPct != nil {
-				mem["amount"] = *memPct
-				mem["format"] = "percent"
-			}
+		engine, ok := engines[spec.Engine].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		variation, ok := engine["variation"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		requests, ok := variation["requests"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		cpuPct, memPct := spec.CPU(pcts), spec.Mem(pcts)
+		if cpu, ok := requests["cpu"].(map[string]interface{}); ok && cpuPct != nil {
+			cpu["amount"] = *cpuPct
+			cpu["format"] = "percent"
+		}
+		if mem, ok := requests["memory"].(map[string]interface{}); ok && memPct != nil {
+			mem["amount"] = *memPct
+			mem["format"] = "percent"
 		}
 	}
 	return data
@@ -957,9 +957,9 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 		term kruizePayload.RecommendationTerm
 	}
 	orderedTerms := []namedTerm{
-		{"short_term", recommendationObj.RecommendationTerms.Short_term},
-		{"medium_term", recommendationObj.RecommendationTerms.Medium_term},
-		{"long_term", recommendationObj.RecommendationTerms.Long_term},
+		{KruizeShortTerm, recommendationObj.RecommendationTerms.Short_term},
+		{KruizeMediumTerm, recommendationObj.RecommendationTerms.Medium_term},
+		{KruizeLongTerm, recommendationObj.RecommendationTerms.Long_term},
 	}
 
 	type namedEngine struct {
@@ -974,8 +974,8 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 			continue
 		}
 		orderedEngines := []namedEngine{
-			{"cost", recommendationTerm.RecommendationEngines.Cost},
-			{"performance", recommendationTerm.RecommendationEngines.Performance},
+			{KruizeEngineCost, recommendationTerm.RecommendationEngines.Cost},
+			{KruizeEnginePerformance, recommendationTerm.RecommendationEngines.Performance},
 		}
 		for _, ne := range orderedEngines {
 			recommendationType := ne.name
