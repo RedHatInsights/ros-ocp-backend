@@ -4,9 +4,8 @@ Please title this PR with a summary of the change, along with the JIRA card numb
 
 Suggested formats: 
 
-1. Fixes/Refs #RHIROS-XXX - Title
-2. RHIROS-XXX Title
-3. RHINENG-XXX Title 
+1. Fixes/Refs #RHINENG-XXX - Title
+2. RHINENG-XXX Title 
 
 Feel free to remove this section from PR description once done.
 
