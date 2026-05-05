@@ -31,7 +31,7 @@ func GetRecommendationSetList(c echo.Context) error {
 
 	queryParams, err := MapQueryParameters(c)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
+		return apiErrResponse(c, err, http.StatusBadRequest, err.Error())
 	}
 
 	unitChoices, setk8sUnits, unitParseErr := ParseUnitParams(c, "cores", "bytes")
@@ -144,25 +144,17 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 
 	apiListOptions, listOptionsErr := listoptions.ListAPIOptions(c, listoptions.DefaultNsRecsDBColumn, listoptions.NsAllowedOrderBy)
 	if listOptionsErr != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"status":  "error",
-			"message": listOptionsErr.Error(),
-		})
+		return apiErrResponse(c, listOptionsErr, http.StatusBadRequest, listOptionsErr.Error())
 	}
 
 	queryParams, paramErr := MapNamespaceQueryParameters(c)
 	if paramErr != nil {
-		log.Error(paramErr.Error())
-		var pe *ParamError
-		if errors.As(paramErr, &pe) && pe.UserErr {
-			return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": paramErr.Error()})
-		}
-		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "unable to parse query parameters"})
+		return apiErrResponse(c, paramErr, http.StatusBadRequest, paramErr.Error())
 	}
 
 	unitChoices, setk8sUnits, err := ParseUnitParams(c, "cores", "bytes")
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": err.Error()})
+		return apiErrResponse(c, err, http.StatusBadRequest, err.Error())
 	}
 
 	NamespaceRecommendationSet := model.NamespaceRecommendationSet{}
@@ -171,11 +163,7 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 	)
 
 	if queryErr != nil {
-		log.Errorf("unable to fetch records from database; %v", queryErr)
-		return c.JSON(http.StatusServiceUnavailable, echo.Map{
-			"status":  "error",
-			"message": "unable to fetch records from database",
-		})
+		return apiErrResponse(c, queryErr, http.StatusServiceUnavailable, "unable to fetch records from database")
 	}
 
 	for i := range namespaceRecommendationSets {
@@ -200,9 +188,8 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 		return c.JSON(http.StatusOK, results)
 	case listoptions.ResponseFormatCSV:
 		// TODO: Add CSV support when export feature is enabled
-		return c.JSON(http.StatusNotAcceptable, map[string]string{
-			"message": "CSV format is not supported. Please use application/json.",
-		})
+		csvErr := errors.New("CSV format is not supported. Please use application/json")
+		return apiErrResponse(c, csvErr, http.StatusNotAcceptable, csvErr.Error())
 	}
 	return nil
 
@@ -217,12 +204,12 @@ func GetNamespaceRecommendationSet(c echo.Context) error {
 	RecommendationIDStr := c.Param("recommendation-id")
 	RecommendationUUID, err := uuid.Parse(RecommendationIDStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": "bad recommendation-id for project"})
+		return apiErrResponse(c, err, http.StatusBadRequest, "bad recommendation-id for project")
 	}
 
 	unitChoices, setk8sUnits, unitParseErr := ParseUnitParams(c, "cores", "MiB")
 	if unitParseErr != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"status": "error", "message": unitParseErr.Error()})
+		return apiErrResponse(c, unitParseErr, http.StatusBadRequest, unitParseErr.Error())
 	}
 
 	recommendationSetVar := model.NamespaceRecommendationSet{}
@@ -233,8 +220,7 @@ func GetNamespaceRecommendationSet(c echo.Context) error {
 	)
 
 	if getNSRecordErr != nil {
-		log.Errorf("unable to fetch project recommendation %s; error %v", RecommendationIDStr, getNSRecordErr.Error())
-		return c.JSON(http.StatusNotFound, echo.Map{"status": "error", "message": "unable to fetch project recommendation"})
+		return apiErrResponse(c, getNSRecordErr, http.StatusNotFound, "unable to fetch project recommendation")
 	}
 
 	if len(nsRecommendationSet.Recommendations) != 0 {
@@ -247,10 +233,8 @@ func GetNamespaceRecommendationSet(c echo.Context) error {
 			nsRecommendationSet.Recommendations,
 			&nsRecommendationSet.StoredVariationPcts,
 		)
-		return c.JSON(http.StatusOK, nsRecommendationSet)
-	} else {
-		return c.JSON(http.StatusNotFound, echo.Map{"status": "not_found", "message": "project recommendation not found"})
 	}
+	return c.JSON(http.StatusOK, nsRecommendationSet)
 }
 
 func GetAppStatus(c echo.Context) error {

@@ -112,13 +112,13 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	queryParams["recommendation_sets.monitoring_end_time < ?"] = endTimestamp
 
 	var errs []error
-	if err := applyParamFilter(c, queryParams, "cluster", "", model.ClusterMaxLen, true); err != nil {
+	if err := applyParamFilter(c, queryParams, "cluster", "", model.ClusterMaxLen, true, SkipSanitizationForContainer); err != nil {
 		errs = append(errs, err)
 	}
-	if err := applyParamFilter(c, queryParams, "project", "workloads.namespace", model.NamespaceMaxLen, false); err != nil {
+	if err := applyParamFilter(c, queryParams, "project", "workloads.namespace", model.NamespaceMaxLen, false, SkipSanitizationForContainer); err != nil {
 		errs = append(errs, err)
 	}
-	if err := applyParamFilter(c, queryParams, "workload", "workloads.workload_name", model.ClusterMaxLen, true); err != nil {
+	if err := applyParamFilter(c, queryParams, "workload", "workloads.workload_name", model.ClusterMaxLen, true, SkipSanitizationForContainer); err != nil {
 		errs = append(errs, err)
 	}
 	workloadTypeVals := slices.Concat(
@@ -128,10 +128,10 @@ func MapQueryParameters(c echo.Context) (map[string]interface{}, error) {
 	)
 	if err := validateWorkloadTypeValues(workloadTypeVals); err != nil {
 		errs = append(errs, err)
-	} else if err := applyParamFilter(c, queryParams, "workload_type", "workloads.workload_type", model.NamespaceMaxLen, false, true); err != nil {
+	} else if err := applyParamFilter(c, queryParams, "workload_type", "workloads.workload_type", model.NamespaceMaxLen, false, SkipSanitizationForContainer, true); err != nil {
 		errs = append(errs, err)
 	}
-	if err := applyParamFilter(c, queryParams, "container", "recommendation_sets.container_name", model.NamespaceMaxLen, false); err != nil {
+	if err := applyParamFilter(c, queryParams, "container", "recommendation_sets.container_name", model.NamespaceMaxLen, false, SkipSanitizationForContainer); err != nil {
 		errs = append(errs, err)
 	}
 	if len(errs) > 0 {
@@ -207,17 +207,19 @@ func isCharSafeRFC1123(c rune, allowDot bool) bool {
 	}
 }
 
-func sanitizeParamValue(paramName, s string, paramMaxLen int, allowDot bool) (string, error) {
-	s = strings.TrimSpace(s)
+func sanitizeParamValue(paramName, s string, paramMaxLen int, allowDot bool, skipSanitize bool) (string, error) {
+	if skipSanitize {
+		return s, nil
+	}
 	if s == "" {
-		return "", namespaceAPIErrf(true, "empty value for %s", paramName)
+		return "", namespaceAPIErrf(EnableUserAPIErr, "empty value for %s", paramName)
 	}
 	if len(s) > paramMaxLen {
-		return "", namespaceAPIErrf(true, "%s exceeds max length %d", paramName, paramMaxLen)
+		return "", namespaceAPIErrf(EnableUserAPIErr, "%s exceeds max length %d", paramName, paramMaxLen)
 	}
 	for _, c := range s {
 		if !isCharSafeRFC1123(c, allowDot) {
-			return "", namespaceAPIErrf(true, "invalid character in %s value", paramName)
+			return "", namespaceAPIErrf(EnableUserAPIErr, "invalid character in %s value", paramName)
 		}
 	}
 	return s, nil
@@ -229,7 +231,7 @@ func parseClusterParams(value string, mode string) ([]string, []string, error) {
 	}
 	modeClause := FilterModeClause[mode]
 	if modeClause.Suffix == "" {
-		return nil, nil, namespaceAPIErrf(false, "unknown cluster filter mode: %s", mode)
+		return nil, nil, namespaceAPIErrf(EnableUserAPIErr, "unknown cluster filter mode: %s", mode)
 	}
 	if _, err := uuid.Parse(value); err == nil {
 		suffix := modeClause.Suffix
@@ -246,13 +248,13 @@ func parseClusterParams(value string, mode string) ([]string, []string, error) {
 	return []string{"clusters.cluster_alias" + modeClause.Suffix}, []string{s}, nil
 }
 
-func buildModeClause(param, column, mode string, vals []string, maxLen int, allowDot bool) (map[string]any, error) {
+func buildModeClause(param, column, mode string, vals []string, maxLen int, allowDot bool, skipSanitize bool) (map[string]any, error) {
 	if len(vals) == 0 {
 		return nil, nil
 	}
 	modeClause := FilterModeClause[mode]
 	if modeClause.Suffix == "" {
-		return nil, namespaceAPIErrf(false, "unknown filter mode: %s", mode)
+		return nil, namespaceAPIErrf(EnableUserAPIErr, "unknown filter mode: %s", mode)
 	}
 
 	allSQLClauses := make([]string, 0, len(vals))
@@ -270,8 +272,7 @@ func buildModeClause(param, column, mode string, vals []string, maxLen int, allo
 			allSQLClauses = append(allSQLClauses, sqlClauses...)
 			allParamVals = append(allParamVals, paramVals...)
 		default:
-			// handles all other string based query params
-			s, err := sanitizeParamValue(param, val, maxLen, allowDot)
+			s, err := sanitizeParamValue(param, val, maxLen, allowDot, skipSanitize)
 			if err != nil {
 				return nil, err
 			}
@@ -290,7 +291,16 @@ func buildModeClause(param, column, mode string, vals []string, maxLen int, allo
 }
 
 // parsing of string params based on mode -> include, exclude, exact.
-func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeVals []string, column string, maxLen int, allowDot bool) (map[string]any, error) {
+func buildSQLClauseWithFilterType(
+	param string,
+	includeVals,
+	exactVals,
+	excludeVals []string,
+	column string,
+	maxLen int,
+	allowDot bool,
+	skipSanitize bool,
+) (map[string]any, error) {
 	hasExclude, hasExact, hasInclude := len(excludeVals) > 0, len(exactVals) > 0, len(includeVals) > 0
 
 	if !hasExclude && !hasExact {
@@ -298,23 +308,23 @@ func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeV
 			return nil, nil
 		}
 		// early exit as default is includes i.e. param=value
-		return buildModeClause(param, column, FilterModeInclude, includeVals, maxLen, allowDot)
+		return buildModeClause(param, column, FilterModeInclude, includeVals, maxLen, allowDot, skipSanitize)
 	}
 
 	if hasExclude {
 		for _, ev := range excludeVals {
 			if slices.Contains(exactVals, ev) {
-				return nil, namespaceAPIErrf(true, "exclude and exact cannot share values for %s", param)
+				return nil, namespaceAPIErrf(EnableUserAPIErr, "exclude and exact cannot share values for %s", param)
 			}
 			if slices.Contains(includeVals, ev) {
-				return nil, namespaceAPIErrf(true, "exclude and include cannot share values for %s", param)
+				return nil, namespaceAPIErrf(EnableUserAPIErr, "exclude and include cannot share values for %s", param)
 			}
 		}
 	}
 
 	clauseMap := make(map[string]any)
 	if len(excludeVals) > 0 {
-		clause, err := buildModeClause(param, column, FilterModeExclude, excludeVals, maxLen, allowDot)
+		clause, err := buildModeClause(param, column, FilterModeExclude, excludeVals, maxLen, allowDot, skipSanitize)
 		if err != nil {
 			return nil, err
 		}
@@ -323,7 +333,7 @@ func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeV
 		}
 	}
 	if len(exactVals) > 0 {
-		clause, err := buildModeClause(param, column, FilterModeExact, exactVals, maxLen, allowDot)
+		clause, err := buildModeClause(param, column, FilterModeExact, exactVals, maxLen, allowDot, skipSanitize)
 		if err != nil {
 			return nil, err
 		}
@@ -347,7 +357,7 @@ func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeV
 		includeValsFiltered = includeVals
 	}
 	if len(includeValsFiltered) > 0 {
-		clause, err := buildModeClause(param, column, FilterModeInclude, includeValsFiltered, maxLen, allowDot)
+		clause, err := buildModeClause(param, column, FilterModeInclude, includeValsFiltered, maxLen, allowDot, skipSanitize)
 		if err != nil {
 			return nil, err
 		}
@@ -358,7 +368,15 @@ func buildSQLClauseWithFilterType(param string, includeVals, exactVals, excludeV
 	return clauseMap, nil
 }
 
-func applyParamFilter(c echo.Context, queryParams map[string]any, param, column string, maxLen int, allowDot bool, treatIncludeAsExact ...bool) error {
+func applyParamFilter(
+	c echo.Context,
+	queryParams map[string]any,
+	param, column string,
+	maxLen int,
+	allowDot bool,
+	skipSanitize bool, //nolint:unparam
+	treatIncludeAsExact ...bool,
+) error {
 	cfg := config.GetConfig()
 	excludeKey := "exclude[" + param + "]"
 	exactKey := "filter[exact:" + param + "]"
@@ -375,7 +393,7 @@ func applyParamFilter(c echo.Context, queryParams map[string]any, param, column 
 	}
 
 	if len(includeVals) > cfg.MaxCountPerQueryParam {
-		return namespaceAPIErrf(true, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
+		return namespaceAPIErrf(EnableUserAPIErr, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
 	}
 
 	for _, v := range c.QueryParams()[excludeKey] {
@@ -385,7 +403,7 @@ func applyParamFilter(c echo.Context, queryParams map[string]any, param, column 
 	}
 
 	if len(excludeVals) > cfg.MaxCountPerQueryParam {
-		return namespaceAPIErrf(true, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
+		return namespaceAPIErrf(EnableUserAPIErr, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
 	}
 
 	for _, v := range c.QueryParams()[exactKey] {
@@ -395,13 +413,13 @@ func applyParamFilter(c echo.Context, queryParams map[string]any, param, column 
 	}
 
 	if len(exactVals) > cfg.MaxCountPerQueryParam {
-		return namespaceAPIErrf(true, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
+		return namespaceAPIErrf(EnableUserAPIErr, "too many %s parameters, a maximum of %d is allowed", param, cfg.MaxCountPerQueryParam)
 	}
 
 	if len(includeVals) == 0 && len(excludeVals) == 0 && len(exactVals) == 0 {
 		return nil
 	}
-	clauseMap, err := buildSQLClauseWithFilterType(param, includeVals, exactVals, excludeVals, column, maxLen, allowDot)
+	clauseMap, err := buildSQLClauseWithFilterType(param, includeVals, exactVals, excludeVals, column, maxLen, allowDot, skipSanitize)
 	if err != nil {
 		return err
 	}
@@ -427,7 +445,7 @@ func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
 		startTimestamp, err = time.Parse(timeLayout, startDateStr)
 		if err != nil {
 			log.Error("error parsing start_date:", err)
-			return queryParams, namespaceAPIErrf(true, "invalid start_date format, use YYYY-MM-DD")
+			return queryParams, namespaceAPIErrf(EnableUserAPIErr, "invalid start_date format, use YYYY-MM-DD")
 		}
 	}
 	queryParams["namespace_recommendation_sets.monitoring_end_time >= ?"] = startTimestamp
@@ -440,17 +458,17 @@ func MapNamespaceQueryParameters(c echo.Context) (map[string]any, error) {
 		endTimestamp, err = time.Parse(timeLayout, endDateStr)
 		if err != nil {
 			log.Error("error parsing end_date:", err)
-			return queryParams, namespaceAPIErrf(true, "invalid end_date format, use YYYY-MM-DD")
+			return queryParams, namespaceAPIErrf(EnableUserAPIErr, "invalid end_date format, use YYYY-MM-DD")
 		}
 		endTimestamp = endTimestamp.Add(24 * time.Hour)
 	}
 	queryParams["namespace_recommendation_sets.monitoring_end_time < ?"] = endTimestamp
 
 	var errs []error
-	if err := applyParamFilter(c, queryParams, "cluster", "", model.ClusterMaxLen, true); err != nil {
+	if err := applyParamFilter(c, queryParams, "cluster", "", model.ClusterMaxLen, true, SkipSanitizationForNamespace); err != nil {
 		errs = append(errs, err)
 	}
-	if err := applyParamFilter(c, queryParams, "project", "namespace_recommendation_sets.namespace_name", model.NamespaceMaxLen, false); err != nil {
+	if err := applyParamFilter(c, queryParams, "project", "namespace_recommendation_sets.namespace_name", model.NamespaceMaxLen, false, SkipSanitizationForNamespace); err != nil {
 		errs = append(errs, err)
 	}
 	if len(errs) > 0 {
@@ -1077,4 +1095,15 @@ func GenerateAndStreamCSV(w io.Writer, recommendationSets []model.Recommendation
 		return fmt.Errorf("flush error: %w", err)
 	}
 	return nil
+}
+
+// apiErrResponse is the single gate for user-facing error visibility.
+// Logs the error; returns the specific error response if EnableUserAPIErr is set, otherwise 200 OK.
+// ParamError.UserErr from apiErrResponse is available for per-error override if needed in future.
+func apiErrResponse(c echo.Context, err error, status int, userMsg string) error {
+	log.Error(err.Error())
+	if EnableUserAPIErr {
+		return c.JSON(status, echo.Map{"status": "error", "message": userMsg})
+	}
+	return c.JSON(http.StatusOK, echo.Map{})
 }

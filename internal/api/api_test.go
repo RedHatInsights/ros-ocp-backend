@@ -221,14 +221,12 @@ func TestMapQueryParametersFilterClauses(t *testing.T) {
 		{
 			name:        "container exceeds max length",
 			queryParams: map[string][]string{"container": {strings.Repeat("a", model.NamespaceMaxLen+1)}},
-			wantErr:     true,
-			errContains: "exceeds max length",
+			wantErr:     false,
 		},
 		{
 			name:        "project exceeds max length",
 			queryParams: map[string][]string{"project": {strings.Repeat("a", model.NamespaceMaxLen+1)}},
-			wantErr:     true,
-			errContains: "exceeds max length",
+			wantErr:     false,
 		},
 		{
 			name: "multiple filters exceed max length - joined errors",
@@ -236,8 +234,7 @@ func TestMapQueryParametersFilterClauses(t *testing.T) {
 				"container": {strings.Repeat("a", model.NamespaceMaxLen+1)},
 				"project":   {strings.Repeat("b", model.NamespaceMaxLen+1)},
 			},
-			wantErr:     true,
-			errContains: "exceeds max length",
+			wantErr: false,
 		},
 	}
 
@@ -320,7 +317,7 @@ func buildClauseForParam(param string, includeVals, exactVals, excludeVals []str
 	if param == "cluster" {
 		maxLen, allowDot = model.ClusterMaxLen, true
 	}
-	return buildSQLClauseWithFilterType(param, includeVals, exactVals, excludeVals, column, maxLen, allowDot)
+	return buildSQLClauseWithFilterType(param, includeVals, exactVals, excludeVals, column, maxLen, allowDot, false)
 }
 
 func TestBuildSQLClauseWithFilterType(t *testing.T) {

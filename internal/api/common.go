@@ -4,18 +4,18 @@ import "fmt"
 
 const timeLayout = "2006-01-02"
 
-// ParamError carries an error and whether it is safe to show to the user.
-// The handler uses UserErr to decide: show message or generic "unable to parse query parameters".
 type ParamError struct {
-	Err     error
+	AppErr  error
 	UserErr bool
 }
 
-func (e *ParamError) Error() string { return e.Err.Error() }
-func (e *ParamError) Unwrap() error { return e.Err }
+func (e *ParamError) Error() string { return e.AppErr.Error() }
+func (e *ParamError) Unwrap() error { return e.AppErr }
 
-func namespaceAPIErrf(userErr bool, format string, args ...any) *ParamError {
-	return &ParamError{Err: fmt.Errorf(format, args...), UserErr: userErr}
+// namespaceAPIErrf constructs a ParamError. UserErr per error is not evaluated currently;
+// apiErrResponse in utils.go is the single gate controlling user-facing error visibility.
+func namespaceAPIErrf(userErr bool, format string, args ...any) *ParamError { //nolint:unparam
+	return &ParamError{AppErr: fmt.Errorf(format, args...), UserErr: userErr}
 }
 
 // Filter modes for param-based query filters (cluster, project, etc.).
@@ -24,6 +24,13 @@ const (
 	FilterModeExact   = "exact"
 	FilterModeExclude = "exclude"
 )
+
+const (
+	SkipSanitizationForContainer = true
+	SkipSanitizationForNamespace = true
+)
+
+const EnableUserAPIErr = false
 
 // validWorkloadTypes is the fixed set of allowed workload_type values (mirrors the sorted_workloadtype DB enum).
 var validWorkloadTypes = map[string]bool{
@@ -38,7 +45,7 @@ var validWorkloadTypes = map[string]bool{
 func validateWorkloadTypeValues(vals []string) error {
 	for _, v := range vals {
 		if !validWorkloadTypes[v] {
-			return namespaceAPIErrf(true, "invalid workload_type %q, must be one of: daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset", v)
+			return namespaceAPIErrf(EnableUserAPIErr, "invalid workload_type %q, must be one of: daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset", v)
 		}
 	}
 	return nil
