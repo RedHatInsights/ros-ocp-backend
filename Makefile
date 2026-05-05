@@ -38,7 +38,7 @@ endif
 
 .PHONY: golangci-lint
 GOLANGCILINT := $(LOCALBIN)/golangci-lint
-GOLANGCI_URL := https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh
+GOLANGCI_URL := https://golangci-lint.run/install.sh
 start_date := 1970-01-01
 GOLANGCI_VERSION := latest
 
