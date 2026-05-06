@@ -174,6 +174,13 @@ func initConfig() {
 		viper.SetDefault("RECOMMENDATION_TOPIC", "rosocp.kruize.recommendations")
 		viper.SetDefault("SOURCES_EVENT_TOPIC", "platform.sources.event-stream")
 
+		// Kafka SASL/TLS config (env vars set by Helm chart when kafka.sasl is configured)
+		_ = viper.BindEnv("KafkaSecurityProtocol", "KAFKA_SECURITY_PROTOCOL")
+		_ = viper.BindEnv("KafkaSASLMechanism", "KAFKA_SASL_MECHANISM")
+		_ = viper.BindEnv("KafkaUsername", "KAFKA_SASL_USERNAME")
+		_ = viper.BindEnv("KafkaPassword", "KAFKA_SASL_PASSWORD")
+		_ = viper.BindEnv("KafkaCA", "KAFKA_SSL_CA_LOCATION")
+
 		// DB Config
 		_ = viper.BindEnv("DBHost", "DB_HOST")
 		viper.SetDefault("DBHost", "localhost")
