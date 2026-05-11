@@ -950,25 +950,23 @@ func UpdateRecommendationJSON(handlerName string, recommendationID string, clust
 	return data
 }
 
-func formatPrecisionValuesToStr(val float64) string {
-	// avoid un-necessary rounding by sprintf 104.939886 -> -104.940
-	multiplier := 1000.0
-	truncatedVal := math.Trunc(val*multiplier) / multiplier
-
-	s := fmt.Sprintf("%.3f", truncatedVal)
-	s = strings.TrimRight(s, "0")  // removes trailing zeros
-	s = strings.TrimSuffix(s, ".") // removes trailing "." for instance 10.0
-	return s
-}
-
 func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]string, error) {
 	rows := [][]string{}
 	variationFormat := "percent"
 	var recommendationObj kruizePayload.RecommendationData
-	err := json.Unmarshal([]byte(recommendationSet.Recommendations), &recommendationObj)
+
+	if recommendationSet.RecommendationsJSON == nil {
+		return nil, fmt.Errorf("RecommendationsJSON not set for %s: call UpdateRecommendationJSON first", recommendationSet.ID)
+	}
+	b, err := json.Marshal(recommendationSet.RecommendationsJSON)
 	if err != nil {
+		return nil, fmt.Errorf("unable to marshal RecommendationsJSON %s: %w", recommendationSet.ID, err)
+	}
+	if err := json.Unmarshal(b, &recommendationObj); err != nil {
 		return nil, fmt.Errorf("unable to unmarshall recommendation %s: %w", recommendationSet.ID, err)
 	}
+
+	f := func(v float64) string { return strconv.FormatFloat(v, 'f', -1, 64) }
 
 	type namedTerm struct {
 		name string
@@ -998,26 +996,6 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 		for _, ne := range orderedEngines {
 			recommendationType := ne.name
 			recommendationEngine := ne.engine
-
-			variationCPULimitPercentage := utils.VariationPercentOfRequestCPU(
-				recommendationEngine.Variation.Limits.Cpu.Amount,
-				recommendationObj.Current.Limits.Cpu.Amount,
-			)
-
-			variationMemoryLimitPercentage := utils.VariationPercentOfRequestMemoryBytesMiB(
-				recommendationEngine.Variation.Limits.Memory.Amount,
-				recommendationObj.Current.Limits.Memory.Amount,
-			)
-
-			variationCPURequestPercentage := utils.VariationPercentOfRequestCPU(
-				recommendationEngine.Variation.Requests.Cpu.Amount,
-				recommendationObj.Current.Requests.Cpu.Amount,
-			)
-
-			variationMemoryRequestPercentage := utils.VariationPercentOfRequestMemoryBytesMiB(
-				recommendationEngine.Variation.Requests.Memory.Amount,
-				recommendationObj.Current.Requests.Memory.Amount,
-			)
 			rows = append(rows, []string{
 				recommendationSet.ID,
 				recommendationSet.ClusterUUID,
@@ -1028,34 +1006,34 @@ func GenerateCSVRows(recommendationSet model.RecommendationSetResult) ([][]strin
 				recommendationSet.WorkloadType,
 				recommendationSet.LastReported,
 				recommendationSet.SourceID,
-				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationObj.Current.Limits.Cpu.Amount)),
+				f(recommendationObj.Current.Limits.Cpu.Amount),
 				recommendationObj.Current.Limits.Cpu.Format,
-				fmt.Sprint(recommendationObj.Current.Limits.Memory.Amount),
+				f(recommendationObj.Current.Limits.Memory.Amount),
 				recommendationObj.Current.Limits.Memory.Format,
-				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationObj.Current.Requests.Cpu.Amount)),
+				f(recommendationObj.Current.Requests.Cpu.Amount),
 				recommendationObj.Current.Requests.Cpu.Format,
-				fmt.Sprint(recommendationObj.Current.Requests.Memory.Amount),
+				f(recommendationObj.Current.Requests.Memory.Amount),
 				recommendationObj.Current.Requests.Memory.Format,
 				recommendationObj.MonitoringEndTime.String(),
 				termName,
-				fmt.Sprint(recommendationTerm.DurationInHours),
+				f(recommendationTerm.DurationInHours),
 				recommendationTerm.MonitoringStartTime.String(),
 				recommendationType,
-				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationEngine.Config.Limits.Cpu.Amount)),
+				f(recommendationEngine.Config.Limits.Cpu.Amount),
 				recommendationEngine.Config.Limits.Cpu.Format,
-				fmt.Sprint(recommendationEngine.Config.Limits.Memory.Amount),
+				f(recommendationEngine.Config.Limits.Memory.Amount),
 				recommendationEngine.Config.Limits.Memory.Format,
-				formatPrecisionValuesToStr(convertCPUUnit("cores", recommendationEngine.Config.Requests.Cpu.Amount)),
+				f(recommendationEngine.Config.Requests.Cpu.Amount),
 				recommendationEngine.Config.Requests.Cpu.Format,
-				fmt.Sprint(recommendationEngine.Config.Requests.Memory.Amount),
+				f(recommendationEngine.Config.Requests.Memory.Amount),
 				recommendationEngine.Config.Requests.Memory.Format,
-				formatPrecisionValuesToStr(variationCPULimitPercentage),
+				f(recommendationEngine.Variation.Limits.Cpu.Amount),
 				variationFormat,
-				fmt.Sprint(variationMemoryLimitPercentage),
+				f(recommendationEngine.Variation.Limits.Memory.Amount),
 				variationFormat,
-				formatPrecisionValuesToStr(variationCPURequestPercentage),
+				f(recommendationEngine.Variation.Requests.Cpu.Amount),
 				variationFormat,
-				fmt.Sprint(variationMemoryRequestPercentage),
+				f(recommendationEngine.Variation.Requests.Memory.Amount),
 				variationFormat,
 			})
 		}
