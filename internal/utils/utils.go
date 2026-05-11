@@ -136,7 +136,7 @@ func SetupKruizePerformanceProfile() {
 						log.Debugf("response status: %d", res.StatusCode)
 						log.Debugf("response body: %s", string(bodyBytes))
 
-						if res.StatusCode == 201 {
+						if res.StatusCode == 200 {
 							log.Infof("performance profile updated successfully from %v to %v", fetchedVersion, targetVersion)
 							return
 						}
