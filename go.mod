@@ -50,7 +50,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/klauspost/compress v1.18.5 // indirect
+	github.com/klauspost/compress v1.18.6 // indirect
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/launchdarkly/eventsource v1.11.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
