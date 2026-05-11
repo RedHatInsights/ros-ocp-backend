@@ -438,7 +438,7 @@
         }
       }
     },
-    "/openshift/namespace/recommendations": {
+    "/recommendations/openshift/namespace": {
       "get": {
         "tags": [
           "Namespace Optimizations"

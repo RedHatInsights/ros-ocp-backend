@@ -133,11 +133,11 @@ endif
 get-ns-recommendations:
 ifdef env
 	$(eval APIPOD=$(shell oc get pods -o custom-columns=POD:.metadata.name --no-headers -n ${env} | grep ros-ocp-backend-api))
-	oc exec ${APIPOD} -c ros-ocp-backend-api -n ${env} -- /bin/bash -c 'curl -v -H "X-Rh-Identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/openshift/namespace/recommendations?start_date=${start_date}' | python -m json.tool
+	oc exec ${APIPOD} -c ros-ocp-backend-api -n ${env} -- /bin/bash -c 'curl -v -H "X-Rh-Identity: ${b64_identity}" -H "x-rh-request_id: testtesttest" http://localhost:8000/api/cost-management/v1/recommendations/openshift/namespace?start_date=${start_date}' | python -m json.tool
 else
 	curl -v -H "x-rh-identity: ${b64_identity}" \
 		 -H "x-rh-request_id: testtesttest" \
-		 "http://localhost:8000/api/cost-management/v1/openshift/namespace/recommendations?start_date=${start_date}" | python -m json.tool
+		 "http://localhost:8000/api/cost-management/v1/recommendations/openshift/namespace?start_date=${start_date}" | python -m json.tool
 endif
 
 get_unleash_features:
