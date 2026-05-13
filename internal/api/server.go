@@ -56,7 +56,7 @@ func StartAPIServer() {
 	v1.GET("/recommendations/openshift/:recommendation-id", GetRecommendationSet)
 
 	// Project/Namespace
-	v1.GET("/openshift/namespace/recommendations", GetNamespaceRecommendationSetList)
+	v1.GET("/recommendations/openshift/namespace", GetNamespaceRecommendationSetList)
 	v1.GET("/recommendations/openshift/namespace/:recommendation-id", GetNamespaceRecommendationSet)
 
 	s := http.Server{

@@ -72,7 +72,7 @@ func TestGetNamespaceRecommendationSetList_DBError_Returns503(t *testing.T) {
 	restore := setupBrokenDB(t)
 	defer restore()
 
-	c, rec := newHandlerContext(t, http.MethodGet, "/api/v1/openshift/namespace/recommendations")
+	c, rec := newHandlerContext(t, http.MethodGet, "/api/v1/recommendations/openshift/namespace")
 
 	err := GetNamespaceRecommendationSetList(c)
 	if err != nil {
