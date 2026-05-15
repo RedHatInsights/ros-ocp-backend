@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -10,6 +12,11 @@ import (
 )
 
 func float64Ptr(v float64) *float64 { return &v }
+
+func prepareRec(rs model.RecommendationSetResult) model.RecommendationSetResult {
+	rs.RecommendationsJSON = UpdateRecommendationJSON("", "", "", map[string]string{"cpu": "cores", "memory": "bytes"}, false, rs.Recommendations, &model.StoredVariationPcts{})
+	return rs
+}
 
 // Minimal recommendation JSON that exercises both term and engine maps.
 // short_term has cost + performance engines; medium_term has cost only.
@@ -53,7 +60,7 @@ const testRecommendationJSON = `{
 }`
 
 func TestGenerateCSVRows_DeterministicOrder(t *testing.T) {
-	rec := model.RecommendationSetResult{
+	rec := prepareRec(model.RecommendationSetResult{
 		ID:              "test-id",
 		ClusterUUID:     "cluster-uuid",
 		ClusterAlias:    "cluster-alias",
@@ -64,7 +71,7 @@ func TestGenerateCSVRows_DeterministicOrder(t *testing.T) {
 		LastReported:    "2024-01-15",
 		SourceID:        "src-1",
 		Recommendations: datatypes.JSON(testRecommendationJSON),
-	}
+	})
 
 	first, err := GenerateCSVRows(rec)
 	if err != nil {
@@ -86,7 +93,7 @@ func TestGenerateCSVRows_DeterministicOrder(t *testing.T) {
 }
 
 func TestGenerateCSVRows_TermOrdering(t *testing.T) {
-	rec := model.RecommendationSetResult{
+	rec := prepareRec(model.RecommendationSetResult{
 		ID:              "test-id",
 		ClusterUUID:     "cluster-uuid",
 		ClusterAlias:    "cluster-alias",
@@ -97,7 +104,7 @@ func TestGenerateCSVRows_TermOrdering(t *testing.T) {
 		LastReported:    "2024-01-15",
 		SourceID:        "src-1",
 		Recommendations: datatypes.JSON(testRecommendationJSON),
-	}
+	})
 
 	rows, err := GenerateCSVRows(rec)
 	if err != nil {
@@ -197,4 +204,34 @@ func TestInjectStoredRequestVariationPct(t *testing.T) {
 			t.Fatalf("memory format: got %v, want bytes", got)
 		}
 	})
+}
+
+// TestJSONvsCSVCPULimitAmount verifies that current_cpu_limit_amount is identical in
+// JSON and CSV for boundary float64 values (e.g. 2.034 = 2.033999... in IEEE 754).
+func TestJSONvsCSVCPULimitAmount(t *testing.T) {
+	for _, amount := range []float64{2.034, 1.0, 0.5, 2.1, 10.999, 0.001, 0.064, 100.123, 0.333, 7.0} {
+		rec := fmt.Sprintf(`{
+			"current": {
+				"limits":   {"cpu": {"amount": %v}},
+				"requests": {"cpu": {}}
+			},
+			"recommendation_terms": {
+				"short_term": {"recommendation_engines": {"cost": {"config": {}, "variation": {}}}}
+			}
+		}`, amount)
+
+		rs := prepareRec(model.RecommendationSetResult{Recommendations: datatypes.JSON(rec)})
+
+		jsonCPU := rs.RecommendationsJSON["current"].(map[string]interface{})["limits"].(map[string]interface{})["cpu"].(map[string]interface{})
+		jsonAmount := strconv.FormatFloat(jsonCPU["amount"].(float64), 'f', -1, 64)
+
+		rows, err := GenerateCSVRows(rs)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if rows[0][9] != jsonAmount {
+			t.Errorf("amount=%v: CPU limit mismatch: csv=%q json=%q", amount, rows[0][9], jsonAmount)
+		}
+	}
 }
