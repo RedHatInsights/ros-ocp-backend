@@ -211,7 +211,7 @@ func initConfig() {
 
 		// Unleash config
 		viper.SetDefault("UnleashClientAccessToken", "rosocp:dev.token")
-		viper.SetDefault("UnleashHostname", "0.0.0.0")
+		viper.SetDefault("UnleashHostname", "localhost")
 		viper.SetDefault("UnleashScheme", "http")
 		viper.SetDefault("UnleashPort", 3063)
 		viper.SetDefault(
