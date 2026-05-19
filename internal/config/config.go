@@ -208,6 +208,20 @@ func initConfig() {
 
 		// Sources-api-go
 		viper.SetDefault("SOURCES_API_BASE_URL", "http://127.0.0.1:8002")
+
+		// Unleash config
+		viper.SetDefault("UnleashClientAccessToken", "rosocp:dev.token")
+		viper.SetDefault("UnleashHostname", "0.0.0.0")
+		viper.SetDefault("UnleashScheme", "http")
+		viper.SetDefault("UnleashPort", 3063)
+		viper.SetDefault(
+			"UnleashFullURL",
+			fmt.Sprintf(
+				"%s://%s:%d/api/",
+				viper.GetString("UnleashScheme"),
+				viper.GetString("UnleashHostname"),
+				viper.GetInt("UnleashPort")),
+		)
 	}
 
 	viper.SetDefault("SOURCES_API_PREFIX", "/api/sources/v3.1")
