@@ -245,20 +245,6 @@ func initConfig() {
 	viper.SetDefault("MAXIMUM_COUNT_PER_QUERY_PARAM", 5)
 	viper.SetDefault("GLOBAL_HTTP_CLIENT_TIMEOUT_SECS", 30)
 
-	// Unleash config
-	viper.SetDefault("UnleashClientAccessToken", "rosocp:dev.token")
-	viper.SetDefault("UnleashHostname", "0.0.0.0")
-	viper.SetDefault("UnleashScheme", "http")
-	viper.SetDefault("UnleashPort", 3063)
-	viper.SetDefault(
-		"UnleashFullURL",
-		fmt.Sprintf(
-			"%s://%s:%d/api/",
-			viper.GetString("UnleashScheme"),
-			viper.GetString("UnleashHostname"),
-			viper.GetInt("UnleashPort")),
-	)
-
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}
 	if err := mapstructure.Decode(cfg, &envKeysMap); err != nil {
