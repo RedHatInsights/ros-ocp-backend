@@ -2,7 +2,6 @@ package namespace
 
 import (
 	"github.com/go-gota/gota/dataframe"
-	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/logging"
 	"github.com/redhatinsights/ros-ocp-backend/internal/types"
 	kruizePayload "github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
@@ -27,8 +26,6 @@ type UpdateNamespaceResult struct {
 }
 
 func GetUpdateNamespaceResultPayload(experiment_name string, namespaceData []map[string]any) []UpdateNamespaceResult {
-	cfg := config.GetConfig()
-
 	log := logging.GetLogger()
 	payload := []UpdateNamespaceResult{}
 	df := dataframe.LoadMaps(
@@ -54,7 +51,7 @@ func GetUpdateNamespaceResultPayload(experiment_name string, namespaceData []map
 		metrics := makeNamespaceMetrics(row)
 
 		payload = append(payload, UpdateNamespaceResult{
-			Version:           cfg.KruizePerformanceProfileVersion,
+			Version:           "1.0",
 			ExperimentName:    experiment_name,
 			IntervalStartTime: intervalStart,
 			IntervalEndTime:   intervalEnd,
