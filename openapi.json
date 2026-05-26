@@ -1788,7 +1788,7 @@
         "properties": {
           "format": {
             "type": "string",
-            "example": "cores"
+            "example": ""
           },
           "max": {
             "$ref": "#/components/schemas/cpuUsageFloatComponent"
@@ -1947,7 +1947,7 @@
                           },
                           "format": {
                             "type": "string",
-                            "example": "cores"
+                            "example": ""
                           }
                         }
                       },
@@ -1978,7 +1978,7 @@
                           },
                           "format": {
                             "type": "string",
-                            "example": "cores"
+                            "example": ""
                           }
                         }
                       },
@@ -2117,7 +2117,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": ""
                       }
                     }
                   },
@@ -2148,7 +2148,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": ""
                       }
                     }
                   },
@@ -2259,7 +2259,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": ""
                       }
                     }
                   },
@@ -2290,7 +2290,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": ""
                       }
                     }
                   },
