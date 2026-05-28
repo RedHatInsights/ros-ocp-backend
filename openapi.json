@@ -466,7 +466,7 @@
             }
           },
           "404": {
-            "description": "Container Recommendation not found",
+            "description": "Container recommendation not found",
             "content": {
               "application/json": {
                 "schema": {
