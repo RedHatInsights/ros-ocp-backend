@@ -762,7 +762,7 @@
                 "MiB",
                 "GiB"
               ],
-              "default": "MiB"
+              "default": "bytes"
             }
           },
           {
@@ -1779,7 +1779,14 @@
           },
           "2023-04-02T00:00:00Z": {
             "type": "object",
-            "additionalProperties": false
+            "properties": {
+              "cpuUsage": {
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage": {
+                "$ref": "#/components/schemas/memoryUsage"
+              }
+            }
           }
         }
       },
@@ -1839,6 +1846,96 @@
       "memoryUsageFloatComponent": {
         "type": "number",
         "example": 238.2,
+        "format": "float"
+      },
+      "NamespacePlotsData": {
+        "type": "object",
+        "properties": {
+          "datapoints": {
+            "type": "integer",
+            "example": 4
+          },
+          "plots_data": {
+            "$ref": "#/components/schemas/NamespacePlotDetails"
+          }
+        }
+      },
+      "NamespacePlotDetails": {
+        "type": "object",
+        "properties": {
+          "2025-09-18T11:00:00.000Z": {
+            "type": "object",
+            "properties": {
+              "cpuUsage": {
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage": {
+                "$ref": "#/components/schemas/namespaceMemoryUsage"
+              }
+            }
+          },
+          "2025-09-18T17:00:00.000Z": {
+            "type": "object",
+            "properties": {
+              "cpuUsage": {
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage": {
+                "$ref": "#/components/schemas/namespaceMemoryUsage"
+              }
+            }
+          },
+          "2025-09-18T23:00:00.000Z": {
+            "type": "object",
+            "properties": {
+              "cpuUsage": {
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage": {
+                "$ref": "#/components/schemas/namespaceMemoryUsage"
+              }
+            }
+          },
+          "2025-09-19T05:00:00.000Z": {
+            "type": "object",
+            "properties": {
+              "cpuUsage": {
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage": {
+                "$ref": "#/components/schemas/namespaceMemoryUsage"
+              }
+            }
+          }
+        }
+      },
+      "namespaceMemoryUsage": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "example": "bytes"
+          },
+          "max": {
+            "$ref": "#/components/schemas/namespaceMemoryUsageFloatComponent"
+          },
+          "median": {
+            "$ref": "#/components/schemas/namespaceMemoryUsageFloatComponent"
+          },
+          "min": {
+            "$ref": "#/components/schemas/namespaceMemoryUsageFloatComponent"
+          },
+          "q1": {
+            "$ref": "#/components/schemas/namespaceMemoryUsageFloatComponent"
+          },
+          "q3": {
+            "$ref": "#/components/schemas/namespaceMemoryUsageFloatComponent"
+          }
+        }
+      },
+      "namespaceMemoryUsageFloatComponent": {
+        "type": "number",
+        "example": 1154465734,
         "format": "float"
       },
       "NamespaceRecommendationList": {
@@ -1918,16 +2015,6 @@
             "type": "string",
             "format": "date-time",
             "example": "2023-04-18T15:48:54.000Z"
-          },
-          "cpu_request_current": {
-            "type": "number",
-            "format": "float",
-            "description": "Current CPU request (e.g. cores)"
-          },
-          "memory_request_current": {
-            "type": "number",
-            "format": "float",
-            "description": "Current memory request (e.g. bytes)"
           },
           "recommendations": {
             "type": "object",
@@ -2034,6 +2121,9 @@
             "format": "date-time",
             "example": "2023-06-02T00:45:00Z"
           },
+          "plots": {
+            "$ref": "#/components/schemas/NamespacePlotsData"
+          },
           "recommendation_engines": {
             "type": "object",
             "properties": {
@@ -2060,6 +2150,9 @@
             "format": "date-time",
             "example": "2023-06-02T00:45:00Z"
           },
+          "plots": {
+            "$ref": "#/components/schemas/NamespacePlotsData"
+          },
           "recommendation_engines": {
             "type": "object",
             "properties": {
@@ -2085,6 +2178,9 @@
             "type": "string",
             "format": "date-time",
             "example": "2024-09-24T09:46:20.000Z"
+          },
+          "plots": {
+            "$ref": "#/components/schemas/NamespacePlotsData"
           },
           "recommendation_engines": {
             "type": "object",
