@@ -1,7 +1,6 @@
 package namespace
 
 import (
-	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	kruizePayload "github.com/redhatinsights/ros-ocp-backend/internal/types/kruizePayload"
 )
 
@@ -19,10 +18,9 @@ type CreateNamespaceExperiment struct {
 }
 
 func GetCreateNamespaceExperimentPayload(experiment_name string, cluster_identifier string, namespace string) []CreateNamespaceExperiment {
-	cfg := config.GetConfig()
 	return []CreateNamespaceExperiment{
 		{
-			Version:            cfg.KruizePerformanceProfileVersion,
+			Version:            "1.0",
 			ExperimentName:     experiment_name,
 			ClusterName:        cluster_identifier,
 			PerformanceProfile: "resource-optimization-openshift",

@@ -34,7 +34,7 @@ func GetCreateExperimentPayload(experiment_name string, cluster_identifier strin
 	}
 	payload := []createExperiment{
 		{
-			Version:                 "1.0", // TODO To be set to cfg.KruizePerformanceProfileVersion
+			Version:                 "1.0",
 			Experiment_name:         experiment_name,
 			Cluster_name:            cluster_identifier,
 			Performance_profile:     "resource-optimization-openshift",
