@@ -823,7 +823,7 @@
             }
           },
           "404": {
-            "description": "Project Recommendation not found",
+            "description": "Project recommendation not found",
             "content": {
               "application/json": {
                 "schema": {
