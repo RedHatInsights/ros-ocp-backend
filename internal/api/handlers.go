@@ -207,7 +207,7 @@ func GetNamespaceRecommendationSet(c echo.Context) error {
 		return apiErrResponse(c, err, http.StatusBadRequest, "bad recommendation-id for project")
 	}
 
-	unitChoices, setk8sUnits, unitParseErr := ParseUnitParams(c, "cores", "MiB")
+	unitChoices, setk8sUnits, unitParseErr := ParseUnitParams(c, "cores", "bytes")
 	if unitParseErr != nil {
 		return apiErrResponse(c, unitParseErr, http.StatusBadRequest, unitParseErr.Error())
 	}

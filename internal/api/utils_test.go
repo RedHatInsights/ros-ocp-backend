@@ -235,3 +235,38 @@ func TestJSONvsCSVCPULimitAmount(t *testing.T) {
 		}
 	}
 }
+
+func TestMemoryBytesPreserved(t *testing.T) {
+	/*
+		Generic memory format test;
+		TODO: Set default format to bytes for Container detail endpoint later
+	*/
+
+	const nsRecJSON = `{
+		"current": {
+			"limits":   {"cpu": {"amount": 0.5, "format": "cores"}, "memory": {"amount": 536870912, "format": "bytes"}},
+			"requests": {"cpu": {"amount": 0.25, "format": "cores"}, "memory": {"amount": 268435456, "format": "bytes"}}
+		},
+		"recommendation_terms": {}
+	}`
+
+	result := UpdateRecommendationJSON(
+		"namespace-recommendationset", "", "",
+		map[string]string{"cpu": "cores", "memory": "bytes"}, false,
+		datatypes.JSON(nsRecJSON), &model.StoredVariationPcts{},
+	)
+
+	current := result["current"].(map[string]interface{})
+	for _, section := range []string{"limits", "requests"} {
+		mem := current[section].(map[string]interface{})["memory"].(map[string]interface{})
+		if mem["format"] != "bytes" {
+			t.Errorf("current.%s.memory.format: got %q, want \"bytes\"", section, mem["format"])
+		}
+	}
+	if got := current["limits"].(map[string]interface{})["memory"].(map[string]interface{})["amount"].(float64); got != 536870912 {
+		t.Errorf("current.limits.memory.amount: got %v, want 536870912", got)
+	}
+	if got := current["requests"].(map[string]interface{})["memory"].(map[string]interface{})["amount"].(float64); got != 268435456 {
+		t.Errorf("current.requests.memory.amount: got %v, want 268435456", got)
+	}
+}
