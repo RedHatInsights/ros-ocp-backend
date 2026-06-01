@@ -229,7 +229,7 @@ objects:
 
     database:
       name: rosocp
-      version: 13
+      version: 16
     kafkaTopics:
       - topicName: hccm.ros.events
         partitions: 1
