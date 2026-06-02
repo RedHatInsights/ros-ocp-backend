@@ -64,28 +64,55 @@
           {
             "name": "workload_type",
             "in": "query",
-            "description": "Exact match on workload type. Options are daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset",
+            "description": "Exact match on workload type.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "daemonset",
+                "deployment",
+                "deploymentconfig",
+                "replicaset",
+                "replicationcontroller",
+                "statefulset"
+              ],
+              "example": "daemonset"
             }
           },
           {
             "name": "exclude[workload_type]",
             "in": "query",
-            "description": "Exclude by workload type. Must be one of: daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset",
+            "description": "Exclude by workload type.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "daemonset",
+                "deployment",
+                "deploymentconfig",
+                "replicaset",
+                "replicationcontroller",
+                "statefulset"
+              ],
+              "example": "daemonset"
             }
           },
           {
             "name": "filter[exact:workload_type]",
             "in": "query",
-            "description": "Exact match on workload type. Must be one of: daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset",
+            "description": "Exact match on workload type.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "daemonset",
+                "deployment",
+                "deploymentconfig",
+                "replicaset",
+                "replicationcontroller",
+                "statefulset"
+              ],
+              "example": "daemonset"
             }
           },
           {
@@ -215,14 +242,13 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "minimum": 1,
-              "maximum": 100
+              "minimum": 1
             }
           },
           {
             "name": "order_by",
             "in": "query",
-            "description": "Field to order results by. Options: cluster, project, workload_type, workload, container, last_reported, cpu_request_current, memory_request_current, and per-term variation fields (e.g. cpu_variation_short_cost, memory_variation_long_performance). Variation values are percent of current CPU or memory request (float); see the recommendations.variation amounts in each list item.",
+            "description": "Field to order results by. Variation values are percent of current CPU or memory request (float); see the recommendations.variation amounts in each list item.",
             "required": false,
             "schema": {
               "type": "string",
@@ -254,10 +280,14 @@
           {
             "name": "order_how",
             "in": "query",
-            "description": "Options are ASC, DESC",
+            "description": "Ordering direction for recommendations",
             "required": false,
             "schema": {
               "type": "string",
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
               "example": "DESC"
             }
           },
@@ -295,7 +325,7 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": {
+              "application/json; charset=UTF-8": {
                 "schema": {
                   "$ref": "#/components/schemas/RecommendationList"
                 }
@@ -357,7 +387,7 @@
         "tags": [
           "Optimizations"
         ],
-        "description": "This feature is in limited preview for select customers",
+        "description": "Get recommendation by ID i.e. UUID",
         "externalDocs": {
           "description": "Please refer to this blog post if you want to be included in the preview",
           "url": "https://www.redhat.com/en/blog/red-hat-insights-brings-resource-optimization-red-hat-openshift"
@@ -434,6 +464,17 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Container recommendation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": "recommendation not found"
+                }
+              }
+            }
           }
         }
       }
@@ -443,8 +484,8 @@
         "tags": [
           "Namespace Optimizations"
         ],
-        "summary": "Get all namespace recommendations",
-        "description": "Get resource optimization recommendations at the namespace level. This feature is in limited preview for select customers.",
+        "summary": "Get namespace recommendation list",
+        "description": "Get namespace/project resource optimization recommendations. This feature is in limited preview for select customers.",
         "operationId": "getNamespaceRecommendationList",
         "parameters": [
           {
@@ -547,8 +588,7 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "minimum": 1,
-              "maximum": 100
+              "minimum": 1
             }
           },
           {
@@ -583,7 +623,7 @@
           {
             "name": "order_by",
             "in": "query",
-            "description": "Field to order results by. Options: cluster, project, last_reported, cpu_request_current, memory_request_current, and per-term variation fields (e.g. cpu_variation_short_cost, memory_variation_long_performance). Variation values are percent of current CPU or memory request (float); see the recommendations.variation amounts in each list item.",
+            "description": "Field to order results by. Variation values are percent of current CPU or memory request (float); see the recommendations.variation amounts in each list item.",
             "required": false,
             "schema": {
               "type": "string",
@@ -612,7 +652,7 @@
           {
             "name": "order_how",
             "in": "query",
-            "description": "Sort order direction",
+            "description": "Ordering direction for recommendations",
             "required": false,
             "schema": {
               "type": "string",
@@ -628,9 +668,20 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": {
+              "application/json; charset=UTF-8": {
                 "schema": {
                   "$ref": "#/components/schemas/NamespaceRecommendationList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User is not authorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "User is not authorized to access the resource"
                 }
               }
             }
@@ -711,7 +762,7 @@
                 "MiB",
                 "GiB"
               ],
-              "default": "MiB"
+              "default": "bytes"
             }
           },
           {
@@ -733,7 +784,7 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": {
+              "application/json; charset=UTF-8": {
                 "schema": {
                   "$ref": "#/components/schemas/NamespaceRecommendation"
                 }
@@ -776,17 +827,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "not_found"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "project recommendation not found"
-                    }
-                  }
+                  "type": "string",
+                  "example": "recommendation not found"
                 }
               }
             }
@@ -907,8 +949,7 @@
               },
               "limit": {
                 "type": "integer",
-                "minimum": 1,
-                "maximum": 10
+                "minimum": 1
               },
               "offset": {
                 "type": "integer",
@@ -981,8 +1022,7 @@
                           },
                           "format": {
                             "type": "string",
-                            "example": null,
-                            "nullable": true
+                            "example": ""
                           }
                         }
                       },
@@ -1013,8 +1053,7 @@
                           },
                           "format": {
                             "type": "string",
-                            "example": null,
-                            "nullable": true
+                            "example": ""
                           }
                         }
                       },
@@ -1165,8 +1204,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
-                        "nullable": true
+                        "example": ""
                       }
                     }
                   },
@@ -1197,8 +1235,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
-                        "nullable": true
+                        "example": ""
                       }
                     }
                   },
@@ -1329,8 +1366,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "m",
-                        "nullable": true
+                        "example": "m"
                       }
                     }
                   },
@@ -1361,8 +1397,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": null,
-                        "nullable": true
+                        "example": ""
                       }
                     }
                   },
@@ -1521,8 +1556,7 @@
                           },
                           "format": {
                             "type": "string",
-                            "example": null,
-                            "nullable": true
+                            "example": ""
                           }
                         }
                       },
@@ -1553,8 +1587,7 @@
                           },
                           "format": {
                             "type": "string",
-                            "example": null,
-                            "nullable": true
+                            "example": ""
                           }
                         }
                       },
@@ -1746,7 +1779,14 @@
           },
           "2023-04-02T00:00:00Z": {
             "type": "object",
-            "additionalProperties": false
+            "properties": {
+              "cpuUsage": {
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage": {
+                "$ref": "#/components/schemas/memoryUsage"
+              }
+            }
           }
         }
       },
@@ -1755,7 +1795,7 @@
         "properties": {
           "format": {
             "type": "string",
-            "example": "cores"
+            "example": ""
           },
           "max": {
             "$ref": "#/components/schemas/cpuUsageFloatComponent"
@@ -1808,6 +1848,96 @@
         "example": 238.2,
         "format": "float"
       },
+      "NamespacePlotsData": {
+        "type": "object",
+        "properties": {
+          "datapoints": {
+            "type": "integer",
+            "example": 4
+          },
+          "plots_data": {
+            "$ref": "#/components/schemas/NamespacePlotDetails"
+          }
+        }
+      },
+      "NamespacePlotDetails": {
+        "type": "object",
+        "properties": {
+          "2025-09-18T11:00:00.000Z": {
+            "type": "object",
+            "properties": {
+              "cpuUsage": {
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage": {
+                "$ref": "#/components/schemas/namespaceMemoryUsage"
+              }
+            }
+          },
+          "2025-09-18T17:00:00.000Z": {
+            "type": "object",
+            "properties": {
+              "cpuUsage": {
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage": {
+                "$ref": "#/components/schemas/namespaceMemoryUsage"
+              }
+            }
+          },
+          "2025-09-18T23:00:00.000Z": {
+            "type": "object",
+            "properties": {
+              "cpuUsage": {
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage": {
+                "$ref": "#/components/schemas/namespaceMemoryUsage"
+              }
+            }
+          },
+          "2025-09-19T05:00:00.000Z": {
+            "type": "object",
+            "properties": {
+              "cpuUsage": {
+                "$ref": "#/components/schemas/cpuUsage"
+              },
+              "memoryUsage": {
+                "$ref": "#/components/schemas/namespaceMemoryUsage"
+              }
+            }
+          }
+        }
+      },
+      "namespaceMemoryUsage": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "example": "bytes"
+          },
+          "max": {
+            "$ref": "#/components/schemas/namespaceMemoryUsageFloatComponent"
+          },
+          "median": {
+            "$ref": "#/components/schemas/namespaceMemoryUsageFloatComponent"
+          },
+          "min": {
+            "$ref": "#/components/schemas/namespaceMemoryUsageFloatComponent"
+          },
+          "q1": {
+            "$ref": "#/components/schemas/namespaceMemoryUsageFloatComponent"
+          },
+          "q3": {
+            "$ref": "#/components/schemas/namespaceMemoryUsageFloatComponent"
+          }
+        }
+      },
+      "namespaceMemoryUsageFloatComponent": {
+        "type": "number",
+        "example": 1154465734,
+        "format": "float"
+      },
       "NamespaceRecommendationList": {
         "type": "object",
         "properties": {
@@ -1827,9 +1957,7 @@
               },
               "limit": {
                 "type": "integer",
-                "minimum": 1,
-                "maximum": 100,
-                "example": 10
+                "minimum": 1
               },
               "offset": {
                 "type": "integer",
@@ -1888,16 +2016,6 @@
             "format": "date-time",
             "example": "2023-04-18T15:48:54.000Z"
           },
-          "cpu_request_current": {
-            "type": "number",
-            "format": "float",
-            "description": "Current CPU request (e.g. cores)"
-          },
-          "memory_request_current": {
-            "type": "number",
-            "format": "float",
-            "description": "Current memory request (e.g. bytes)"
-          },
           "recommendations": {
             "type": "object",
             "properties": {
@@ -1916,7 +2034,7 @@
                           },
                           "format": {
                             "type": "string",
-                            "example": "cores"
+                            "example": ""
                           }
                         }
                       },
@@ -1947,7 +2065,7 @@
                           },
                           "format": {
                             "type": "string",
-                            "example": "cores"
+                            "example": ""
                           }
                         }
                       },
@@ -2003,6 +2121,9 @@
             "format": "date-time",
             "example": "2023-06-02T00:45:00Z"
           },
+          "plots": {
+            "$ref": "#/components/schemas/NamespacePlotsData"
+          },
           "recommendation_engines": {
             "type": "object",
             "properties": {
@@ -2029,6 +2150,9 @@
             "format": "date-time",
             "example": "2023-06-02T00:45:00Z"
           },
+          "plots": {
+            "$ref": "#/components/schemas/NamespacePlotsData"
+          },
           "recommendation_engines": {
             "type": "object",
             "properties": {
@@ -2054,6 +2178,9 @@
             "type": "string",
             "format": "date-time",
             "example": "2024-09-24T09:46:20.000Z"
+          },
+          "plots": {
+            "$ref": "#/components/schemas/NamespacePlotsData"
           },
           "recommendation_engines": {
             "type": "object",
@@ -2086,7 +2213,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": ""
                       }
                     }
                   },
@@ -2117,7 +2244,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": ""
                       }
                     }
                   },
@@ -2228,7 +2355,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": ""
                       }
                     }
                   },
@@ -2259,7 +2386,7 @@
                       },
                       "format": {
                         "type": "string",
-                        "example": "cores"
+                        "example": ""
                       }
                     }
                   },
