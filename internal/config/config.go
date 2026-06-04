@@ -22,6 +22,7 @@ type Config struct {
 	RecordLimitCSV                  int    `mapstructure:"RECORD_LIMIT_CSV"`
 	CSVStreamInterval               int    `mapstructure:"CSV_STREAM_INTERVAL"`
 	MaxCountPerQueryParam           int    `mapstructure:"MAXIMUM_COUNT_PER_QUERY_PARAM"`
+	UpdateKruizePerfProfile         bool   `mapstructure:"UPDATE_KRUIZE_PERF_PROFILE"`
 
 	// Kafka config
 	KafkaBootstrapServers string `mapstructure:"KAFKA_BOOTSTRAP_SERVERS"`
@@ -244,6 +245,7 @@ func initConfig() {
 	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", true)
 	viper.SetDefault("MAXIMUM_COUNT_PER_QUERY_PARAM", 5)
 	viper.SetDefault("GLOBAL_HTTP_CLIENT_TIMEOUT_SECS", 30)
+	viper.SetDefault("UPDATE_KRUIZE_PERF_PROFILE", true)
 
 	// Hack till viper issue get fix - https://github.com/spf13/viper/issues/761
 	envKeysMap := &map[string]interface{}{}
