@@ -1,13 +1,20 @@
 package featureflags
 
 import (
+	"sync"
+
 	"github.com/Unleash/unleash-go-sdk/v5"
 	"github.com/Unleash/unleash-go-sdk/v5/context"
 )
 
+var namespaceRecommendationDisabledOnce sync.Once
+
 func IsNamespaceEnabled(org_id string) bool {
 	if cfg.DisableNamespaceRecommendation {
-		log.Warn("namespace recommendation feature disabled application-wide")
+		// warn once per pod lifecycle
+		namespaceRecommendationDisabledOnce.Do(func() {
+			log.Warn("namespace recommendation feature disabled application-wide")
+		})
 		return false
 	}
 
