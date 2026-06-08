@@ -7,8 +7,7 @@ import (
 
 func IsNamespaceEnabled(org_id string) bool {
 	if cfg.DisableNamespaceRecommendation {
-		// TODO Set logger with Warn after feature deployment
-		log.Debug("namespace recommendation feature disabled application-wide")
+		log.Warn("namespace recommendation feature disabled application-wide")
 		return false
 	}
 
