@@ -68,6 +68,8 @@ objects:
             value: ${LOG_LEVEL}
           - name: DISABLE_NAMESPACE_RECOMMENDATION
             value: "${DISABLE_NAMESPACE_RECOMMENDATION}"
+          - name: UPDATE_KRUIZE_PERF_PROFILE
+            value: "${UPDATE_KRUIZE_PERF_PROFILE}"
     - name: recommendation-poller
       replicas: ${{POLLER_REPLICA_COUNT}}
       podSpec:
