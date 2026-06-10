@@ -68,6 +68,8 @@ objects:
             value: ${LOG_LEVEL}
           - name: DISABLE_NAMESPACE_RECOMMENDATION
             value: "${DISABLE_NAMESPACE_RECOMMENDATION}"
+          - name: UPDATE_KRUIZE_PERF_PROFILE
+            value: "${UPDATE_KRUIZE_PERF_PROFILE}"
     - name: recommendation-poller
       replicas: ${{POLLER_REPLICA_COUNT}}
       podSpec:
@@ -311,6 +313,9 @@ parameters:
   value: 'INFO'
 - description: Disable namespace recommendations feature
   name: DISABLE_NAMESPACE_RECOMMENDATION
+  value: "false"
+- description: Update Kruize performance profile flag
+  name: UPDATE_KRUIZE_PERF_PROFILE
   value: "false"
 - name: PARTITION_DELETE_INTERVAL
   value: "0 0 */15 * *" # Runs at 12:00 AM, every 15 days.
