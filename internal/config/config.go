@@ -242,7 +242,7 @@ func initConfig() {
 	viper.SetDefault("READ_HEADER_TIMEOUT", 15)
 	viper.SetDefault("RECORD_LIMIT_CSV", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
-	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", true)
+	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", false)
 	viper.SetDefault("MAXIMUM_COUNT_PER_QUERY_PARAM", 5)
 	viper.SetDefault("GLOBAL_HTTP_CLIENT_TIMEOUT_SECS", 30)
 	viper.SetDefault("UPDATE_KRUIZE_PERF_PROFILE", true)
