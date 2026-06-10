@@ -29,9 +29,387 @@
             "description": "Used as a fallback when the 'Accept' header is missing or specifies an unsupported media type.  \nMaximum number of records is 1000 i.e. 6000 rows for CSV downloads.  \nThe 'offset' parameter can be used for pagination with both formats.",
             "required": false,
             "schema": {
-                "type": "string",
-                "enum": ["json", "csv"],
-                "default": "json"
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            }
+          },
+          {
+            "name": "cluster",
+            "in": "query",
+            "description": "Partial match on cluster alias, exact match on cluster UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude[cluster]",
+            "in": "query",
+            "description": "Exclude cluster by alias or UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:cluster]",
+            "in": "query",
+            "description": "Exact match on cluster alias or UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workload_type",
+            "in": "query",
+            "description": "Exact match on workload type.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "daemonset",
+                "deployment",
+                "deploymentconfig",
+                "replicaset",
+                "replicationcontroller",
+                "statefulset"
+              ],
+              "example": "daemonset"
+            }
+          },
+          {
+            "name": "exclude[workload_type]",
+            "in": "query",
+            "description": "Exclude by workload type.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "daemonset",
+                "deployment",
+                "deploymentconfig",
+                "replicaset",
+                "replicationcontroller",
+                "statefulset"
+              ],
+              "example": "daemonset"
+            }
+          },
+          {
+            "name": "filter[exact:workload_type]",
+            "in": "query",
+            "description": "Exact match on workload type.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "daemonset",
+                "deployment",
+                "deploymentconfig",
+                "replicaset",
+                "replicationcontroller",
+                "statefulset"
+              ],
+              "example": "daemonset"
+            }
+          },
+          {
+            "name": "workload",
+            "in": "query",
+            "description": "Partial match on workload name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude[workload]",
+            "in": "query",
+            "description": "Exclude by workload name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:workload]",
+            "in": "query",
+            "description": "Exact match on workload name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "container",
+            "in": "query",
+            "description": "Partial match on container name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude[container]",
+            "in": "query",
+            "description": "Exclude by container name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:container]",
+            "in": "query",
+            "description": "Exact match on container name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "description": "Partial match on project name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude[project]",
+            "in": "query",
+            "description": "Exclude by project name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[exact:project]",
+            "in": "query",
+            "description": "Exact match on project name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "true-units",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Shows all values in true/real-world units. Accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False."
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "description": "Start date",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "YYYY-MM-DD"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "description": "End date",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "YYYY-MM-DD"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Pagination offset",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Pagination limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Field to order results by. Variation values are percent of current CPU or memory request (float); see the recommendations.variation amounts in each list item.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cluster",
+                "project",
+                "workload_type",
+                "workload",
+                "container",
+                "last_reported",
+                "cpu_request_current",
+                "memory_request_current",
+                "cpu_variation_short_cost",
+                "cpu_variation_short_performance",
+                "cpu_variation_medium_cost",
+                "cpu_variation_medium_performance",
+                "cpu_variation_long_cost",
+                "cpu_variation_long_performance",
+                "memory_variation_short_cost",
+                "memory_variation_short_performance",
+                "memory_variation_medium_cost",
+                "memory_variation_medium_performance",
+                "memory_variation_long_cost",
+                "memory_variation_long_performance"
+              ],
+              "example": "last_reported"
+            }
+          },
+          {
+            "name": "order_how",
+            "in": "query",
+            "description": "Ordering direction for recommendations",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
+              "example": "DESC"
+            }
+          },
+          {
+            "in": "query",
+            "name": "memory-unit",
+            "description": "unit preference for memory",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bytes",
+                "MiB",
+                "GiB"
+              ],
+              "default": "bytes"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cpu-unit",
+            "description": "unit preference for cpu",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "millicores",
+                "cores"
+              ],
+              "default": "cores"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json; charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request, e.g. invalid query parameter value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "invalid workload_type \"not-a-real-type\", must be one of: daemonset, deployment, deploymentconfig, replicaset, replicationcontroller, statefulset"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User is not authorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "User is not authorized to access the resource"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable due to a database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "unable to fetch records from database"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recommendations/openshift/container": {
+      "get": {
+        "tags": [
+          "Container Optimizations"
+        ],
+        "summary": "Get container recommendation list",
+        "description": "Get container resource optimization recommendations. This feature is in limited preview for select customers. Refer to [this link](https://github.com/RedHatInsights/ros-ocp-backend/blob/main/openapi.json) if you want checkout the OpenAPI spec file.",
+        "externalDocs": {
+          "description": "Please refer to this blog post if you want to be included in the preview",
+          "url": "https://www.redhat.com/en/blog/red-hat-insights-brings-resource-optimization-red-hat-openshift"
+        },
+        "operationId": "getContainerRecommendationList",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Used as a fallback when the 'Accept' header is missing or specifies an unsupported media type.  \nMaximum number of records is 1000 i.e. 6000 rows for CSV downloads.  \nThe 'offset' parameter can be used for pagination with both formats.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
             }
           },
           {
@@ -479,6 +857,103 @@
         }
       }
     },
+    "/recommendations/openshift/container/{recommendation-id}": {
+      "get": {
+        "tags": [
+          "Container Optimizations"
+        ],
+        "description": "Get recommendation by ID i.e. UUID",
+        "externalDocs": {
+          "description": "Please refer to this blog post if you want to be included in the preview",
+          "url": "https://www.redhat.com/en/blog/red-hat-insights-brings-resource-optimization-red-hat-openshift"
+        },
+        "operationId": "getContainerRecommendationById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recommendation-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The recommendation UUID"
+          },
+          {
+            "name": "true-units",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Shows all values in true/real-world units. Accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False."
+          },
+          {
+            "in": "query",
+            "name": "memory-unit",
+            "description": "unit preference for memory",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bytes",
+                "MiB",
+                "GiB"
+              ],
+              "default": "MiB"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cpu-unit",
+            "description": "unit preference for cpu",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "millicores",
+                "cores"
+              ],
+              "default": "cores"
+            }
+          }
+        ],
+        "summary": "Get container recommendation by ID",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json; charset=UTF-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationBoxPlots"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User is not authorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "User is not authorized to access the resource"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Container recommendation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": "recommendation not found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/recommendations/openshift/namespace": {
       "get": {
         "tags": [
@@ -698,7 +1173,9 @@
                       "example": "CSV format is not supported. Please use application/json."
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
