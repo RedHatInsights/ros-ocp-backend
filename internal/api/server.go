@@ -19,6 +19,20 @@ import (
 var log *logrus.Entry = logging.GetLogger()
 var cfg *config.Config = config.GetConfig()
 
+func registerRecommendationRoutes(v1 *echo.Group) {
+	// Legacy container routes (retained for backward compatibility)
+	v1.GET("/recommendations/openshift", GetRecommendationSetList)
+	v1.GET("/recommendations/openshift/:recommendation-id", GetRecommendationSet)
+
+	// New container routes
+	v1.GET("/recommendations/openshift/container", GetRecommendationSetList)
+	v1.GET("/recommendations/openshift/container/:recommendation-id", GetRecommendationSet)
+
+	// Project/Namespace
+	v1.GET("/recommendations/openshift/namespace", GetNamespaceRecommendationSetList)
+	v1.GET("/recommendations/openshift/namespace/:recommendation-id", GetNamespaceRecommendationSet)
+}
+
 func StartAPIServer() {
 	app := echo.New()
 	app.Use(echoprometheus.NewMiddlewareWithConfig(echoprometheus.MiddlewareConfig{
@@ -51,13 +65,7 @@ func StartAPIServer() {
 		v1.Use(ros_middleware.Rbac)
 	}
 
-	// Container
-	v1.GET("/recommendations/openshift", GetRecommendationSetList)
-	v1.GET("/recommendations/openshift/:recommendation-id", GetRecommendationSet)
-
-	// Project/Namespace
-	v1.GET("/recommendations/openshift/namespace", GetNamespaceRecommendationSetList)
-	v1.GET("/recommendations/openshift/namespace/:recommendation-id", GetNamespaceRecommendationSet)
+	registerRecommendationRoutes(v1)
 
 	s := http.Server{
 		Addr:              ":" + cfg.API_PORT, // local dev server
