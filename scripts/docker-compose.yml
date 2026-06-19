@@ -30,7 +30,7 @@ services:
       - kafka
 
   db-ros:
-    image: postgres
+    image: postgres:16
     restart: always
     environment:
       POSTGRES_PASSWORD: postgres
@@ -40,7 +40,7 @@ services:
       - "15432:5432"
 
   db-kruize:
-    image: postgres
+    image: postgres:16
     restart: always
     environment:
       POSTGRES_PASSWORD: postgres
