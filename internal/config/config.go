@@ -236,7 +236,7 @@ func initConfig() {
 	viper.SetDefault("KRUIZE_HOST", "localhost")
 	viper.SetDefault("KRUIZE_PORT", "8080")
 	viper.SetDefault("KRUIZE_URL", fmt.Sprintf("http://%s:%s", viper.GetString("KRUIZE_HOST"), viper.GetString("KRUIZE_PORT")))
-	viper.SetDefault("KRUIZE_PERFORMANCE_PROFILE_VERSION", "v2.0")
+	viper.SetDefault("KRUIZE_PERFORMANCE_PROFILE_VERSION", "v3.0")
 	viper.SetDefault("RECOMMENDATION_POLL_INTERVAL_HOURS", 24)
 	viper.SetDefault("DATA_RETENTION_PERIOD", 15)
 	viper.SetDefault("READ_HEADER_TIMEOUT", 15)
