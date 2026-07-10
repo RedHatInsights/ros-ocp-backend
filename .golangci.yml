@@ -9,9 +9,16 @@ linters:
     - unused
     - unparam
     - govet
+    - gosec
+    # TODO: enable gocritic with performance tag
+    # - gocritic
   settings:
+    # gocritic:
+    #   disable-all: true
+    #   enabled-tags:
+    #     - performance
     errcheck:
-        exclude-functions:
+      exclude-functions:
         - fmt.Fprintln
         - fmt.Fprint
 

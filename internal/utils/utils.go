@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -185,9 +186,10 @@ func SetupKruizePerformanceProfile() {
 
 }
 
-func ReadCSVFromUrl(url string) ([][]string, error) {
+func ReadCSVFromUrl(csvURL string) ([][]string, error) {
 	// TODO(FLPATH-3407): use a bounded client once we have latency data for CSV downloads
-	resp, err := http.Get(url)
+	parsedCSVURL, _ := url.Parse(csvURL)
+	resp, err := http.Get(parsedCSVURL.String())
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +198,7 @@ func ReadCSVFromUrl(url string) ([][]string, error) {
 	}()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, fmt.Errorf("unexpected status code %d when fetching CSV from %s", resp.StatusCode, url)
+		return nil, fmt.Errorf("unexpected status code %d when fetching CSV from %s", resp.StatusCode, csvURL)
 	}
 
 	reader := csv.NewReader(resp.Body)
@@ -317,7 +319,11 @@ func Start_prometheus_server() {
 	if cfg.PrometheusPort != "" {
 		log.Info("Starting prometheus http server")
 		http.Handle("/metrics", promhttp.Handler())
-		_ = http.ListenAndServe(fmt.Sprintf(":%s", cfg.PrometheusPort), nil)
+		s := &http.Server{
+			Addr:              fmt.Sprintf(":%s", cfg.PrometheusPort),
+			ReadHeaderTimeout: time.Duration(cfg.ReadHeaderTimeout) * time.Second,
+		}
+		_ = s.ListenAndServe()
 	}
 }
 

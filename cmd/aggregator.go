@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/go-gota/gota/dataframe"
 	"github.com/spf13/cobra"
@@ -26,7 +27,7 @@ var (
 			}
 			if outputDir != "" {
 				if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-					if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+					if err := os.MkdirAll(outputDir, 0750); err != nil {
 						panic(err.Error())
 					}
 				}
@@ -34,7 +35,7 @@ var (
 				outputDir, _ = os.Getwd()
 			}
 			outputFile := outputDir + "/output.csv"
-			f, err := os.Open(input_file)
+			f, err := os.Open(filepath.Clean(input_file))
 			if err != nil {
 				panic(err.Error())
 			}
@@ -54,7 +55,7 @@ var (
 			if err != nil {
 				panic(err.Error())
 			}
-			fileio, err := os.Create(outputFile)
+			fileio, err := os.Create(filepath.Clean(outputFile))
 			if err != nil {
 				panic(err.Error())
 			}

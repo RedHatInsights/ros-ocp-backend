@@ -14,7 +14,7 @@ var cfg *config.Config = config.GetConfig()
 
 func GetCostApplicationID() (int, error) {
 	url := cfg.SourceApiBaseUrl + cfg.SourceApiPrefix + "/application_types?filter[name][eq]=/insights/platform/cost-management"
-	res, err := http.Get(url)
+	res, err := http.Get(url) //nolint:gosec // URL from trusted config
 	if err != nil {
 		return 0, fmt.Errorf("error while calling sources API: %v", err)
 	}
