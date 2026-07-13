@@ -9,7 +9,7 @@ import (
 
 func TestUnmarshalCreateNamespaceExperiment(t *testing.T) {
 	jsonPath := filepath.Join("..", "..", "..", "..", "scripts", "samples", "namespace_create_experiment.json")
-	createExperimentJSON, err := os.ReadFile(jsonPath)
+	createExperimentJSON, err := os.ReadFile(filepath.Clean(jsonPath))
 	if err != nil {
 		t.Fatalf("failed to read JSON file: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestUnmarshalCreateNamespaceExperiment(t *testing.T) {
 
 func TestUnmarshalNamespaceUpdateResult(t *testing.T) {
 	jsonPath := filepath.Join("..", "..", "..", "..", "scripts", "samples", "namespace_update_result.json")
-	updateResultJSON, err := os.ReadFile(jsonPath)
+	updateResultJSON, err := os.ReadFile(filepath.Clean(jsonPath))
 	if err != nil {
 		t.Fatalf("failed to read JSON file: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestUnmarshalNamespaceUpdateResult(t *testing.T) {
 
 func TestUnmarshalNamespaceRecommendationResponse(t *testing.T) {
 	jsonPath := filepath.Join("..", "..", "..", "..", "scripts", "samples", "namespace_recommendation.json")
-	recommendationJSON, err := os.ReadFile(jsonPath)
+	recommendationJSON, err := os.ReadFile(filepath.Clean(jsonPath))
 	if err != nil {
 		t.Fatalf("failed to read JSON file: %v", err)
 	}
