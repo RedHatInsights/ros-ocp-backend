@@ -1,4 +1,5 @@
-// Paste below code in https://dbdiagram.io/d editor to get graphical(ERD) view of the database
+// Optional: paste into https://dbdiagram.io/d for a visual editor.
+// Schema docs (Mermaid ERD): https://github.com/RedHatInsights/ros-ocp-backend/wiki/Database-Schema
 
 Table rh_accounts {
   id bigint [increment]
@@ -46,6 +47,8 @@ Table workload_metrics {
   org_id text [not null]
   workload_id bigint [ref: > workloads.id]
   container_name text
+  namespace_name text
+  metric_type text // container | namespace
   interval_start datetime
   interval_end datetime
   usage_metrics jsonb
@@ -61,6 +64,9 @@ Table recommendation_sets {
   monitoring_start_time datetime
   monitoring_end_time datetime
   recommendations jsonb
+  cpu_request_current numeric
+  memory_request_current numeric
+  // plus 12 *_variation_*_pct sortable columns — see wiki / migrations 000023–000024
   updated_at datetime
   Indexes {
     id [pk]
@@ -82,5 +88,38 @@ Table historical_recommendation_sets {
     id [pk]
     workload_id [name: "workloads.id_fkey", type: btree]
     (workload_id, container_name, monitoring_end_time) [unique, type: btree]
+  }
+}
+
+Table namespace_recommendation_sets {
+  id uuid [increment]
+  org_id text [not null]
+  workload_id bigint [ref: > workloads.id]
+  namespace_name text
+  monitoring_start_time datetime
+  monitoring_end_time datetime
+  recommendations jsonb
+  cpu_request_current numeric
+  memory_request_current numeric
+  // plus 12 *_variation_*_pct sortable columns — see wiki / migrations 000020–000025
+  updated_at datetime
+  Indexes {
+    id [pk]
+    workload_id [unique, type: btree]
+  }
+}
+
+Table historical_namespace_recommendation_sets {
+  id bigint [increment]
+  org_id text [not null]
+  workload_id bigint [ref: > workloads.id]
+  namespace_name text
+  monitoring_start_time datetime
+  monitoring_end_time datetime
+  recommendations jsonb
+  updated_at datetime
+  Indexes {
+    id [pk]
+    (org_id, workload_id, monitoring_end_time) [unique, type: btree]
   }
 }
