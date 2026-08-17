@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo-contrib/echoprometheus"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 	"github.com/sirupsen/logrus"
 
 	ros_middleware "github.com/redhatinsights/ros-ocp-backend/internal/api/middleware"
