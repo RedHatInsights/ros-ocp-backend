@@ -1,4 +1,5 @@
-include scripts/.env
+-include scripts/.env
+export MINIO_ACCESS_KEY MINIO_SECRET_KEY INGRESS_PORT
 
 UNAME_S := $(shell uname -s)
 
