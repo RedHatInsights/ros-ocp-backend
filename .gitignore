@@ -1,3 +1,4 @@
+scripts/.env
 scripts/_minio-conf/
 scripts/_minio-data/
 .vscode/

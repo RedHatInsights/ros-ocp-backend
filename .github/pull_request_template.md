@@ -34,6 +34,7 @@ Upon raising this PR please go through [RedHatInsights/secure-coding-checklist](
 - [ ] DRY code
 - [ ] Dependency Added
 - [ ] DB Migration Added
+- [ ] Do not git add `scripts/.env`. To untrack .env (keeps the file on disk), run `git rm --cached scripts/.env` on your local
 
 ## Additional :mega:
 
