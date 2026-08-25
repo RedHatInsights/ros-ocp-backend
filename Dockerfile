@@ -15,4 +15,20 @@ COPY --from=builder /go/src/app/go_version_details ./go_version_details
 COPY migrations ./migrations
 COPY openapi.json ./openapi.json
 COPY resource_optimization_openshift.json ./resource_optimization_openshift.json
+
+ARG IMAGE_NAME
+ARG VERSION
+LABEL summary="Resource Optimization for OpenShift backend for on-premise deployments" \
+    description="Red Hat Resource Optimization for OpenShift backend for on-premise deployments" \
+    io.k8s.description="Red Hat Resource Optimization for OpenShift backend for on-premise deployments" \
+    io.k8s.display-name="Resource Optimization for OpenShift Backend" \
+    com.redhat.component="costmanagement-ros-ocp-backend-rhel9-container" \
+    name="$IMAGE_NAME" \
+    version="$VERSION" \
+    release="1" \
+    vendor="Red Hat, Inc." \
+    distribution-scope="public" \
+    cpe="cpe:/a:redhat:cost_management_on_premise:1::el9" \
+    maintainer="Red Hat Cost Management Services <cost-mgmt@redhat.com>"
+
 USER 1001

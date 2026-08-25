@@ -8,7 +8,7 @@ metadata:
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
-      == "main"
+      == "release-onprem"
   labels:
     appstudio.openshift.io/application: ros-ocp-backend-onprem
     appstudio.openshift.io/component: ros-ocp-backend-onprem
@@ -27,6 +27,16 @@ spec:
     value: Dockerfile
   - name: path-context
     value: .
+  - name: hermetic
+    value: "true"
+  - name: prefetch-input
+    value: '{"type": "gomod", "path": "."}'
+  - name: build-source-image
+    value: "true"
+  - name: build-args
+    value:
+    - IMAGE_NAME=costmanagement/costmanagement-ros-ocp-backend-rhel9
+    - VERSION=1
   pipelineSpec:
     description: |
       This pipeline is ideal for building container images from a Containerfile while reducing network traffic.
