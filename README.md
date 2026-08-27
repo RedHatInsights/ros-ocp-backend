@@ -13,3 +13,4 @@ Backend for Resource Optimization for Openshift service
 
 ## Blogs
 * [Red Hat Insights Brings Resource Optimization to Red Hat OpenShift](https://www.redhat.com/en/blog/red-hat-insights-brings-resource-optimization-red-hat-openshift)
+# RBAC test PR - safe to close
