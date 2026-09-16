@@ -178,6 +178,10 @@ objects:
             value: "rosocp-api"
           - name: LOG_LEVEL
             value: ${LOG_LEVEL}
+          - name: MAX_LIMIT_API
+            value: "${MAX_LIMIT_API}"
+          - name: MAX_LIMIT_CSV
+            value: "${MAX_LIMIT_CSV}"
     - name: housekeeper
       replicas: ${{HOUSEKEEPER_REPLICA_COUNT}}
       podSpec:
@@ -311,6 +315,12 @@ parameters:
   value: 'INFO'
 - name: RECOMMENDATION_POLLER_LOG_LEVEL
   value: 'INFO'
+- description: Maximum records returned for JSON list API when limit is -1 or below
+  name: MAX_LIMIT_API
+  value: "1000"
+- description: Maximum records fetched for CSV list export
+  name: MAX_LIMIT_CSV
+  value: "1000"
 - description: Disable namespace recommendations feature
   name: DISABLE_NAMESPACE_RECOMMENDATION
   value: "false"

@@ -95,10 +95,8 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 	// OrderBy/OrderHow come from ListAPIOptions (allowlisted); secondary sort for stable ordering.
 	query = query.Order(listoptions.SQLOrderByFragment(opts.OrderBy, opts.OrderHow)).Order("namespace_recommendation_sets.id ASC")
 
-	limit := opts.Limit
-	if opts.Format == "csv" {
-		limit = config.GetConfig().RecordLimitCSV
-	}
+	cfg := config.GetConfig()
+	limit := opts.EffectiveDBLimit(cfg.MaxLimitAPI, cfg.MaxLimitCSV)
 	err := query.Offset(opts.Offset).Limit(limit).Scan(&recommendationSets).Error
 
 	return recommendationSets, int(count), err

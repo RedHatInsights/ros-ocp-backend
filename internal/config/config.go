@@ -20,6 +20,8 @@ type Config struct {
 	DataRetentionPeriod             int    `mapstructure:"DATA_RETENTION_PERIOD"`
 	ReadHeaderTimeout               int    `mapstructure:"READ_HEADER_TIMEOUT"`
 	RecordLimitCSV                  int    `mapstructure:"RECORD_LIMIT_CSV"`
+	MaxLimitAPI                     int    `mapstructure:"MAX_LIMIT_API"`
+	MaxLimitCSV                     int    `mapstructure:"MAX_LIMIT_CSV"`
 	CSVStreamInterval               int    `mapstructure:"CSV_STREAM_INTERVAL"`
 	MaxCountPerQueryParam           int    `mapstructure:"MAXIMUM_COUNT_PER_QUERY_PARAM"`
 	UpdateKruizePerfProfile         bool   `mapstructure:"UPDATE_KRUIZE_PERF_PROFILE"`
@@ -241,6 +243,8 @@ func initConfig() {
 	viper.SetDefault("DATA_RETENTION_PERIOD", 15)
 	viper.SetDefault("READ_HEADER_TIMEOUT", 15)
 	viper.SetDefault("RECORD_LIMIT_CSV", 1000)
+	viper.SetDefault("MAX_LIMIT_API", 1000)
+	viper.SetDefault("MAX_LIMIT_CSV", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
 	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", false)
 	viper.SetDefault("MAXIMUM_COUNT_PER_QUERY_PARAM", 5)

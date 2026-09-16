@@ -6,6 +6,66 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestEffectiveDBLimit(t *testing.T) {
+	tests := []struct {
+		name   string
+		opts   ListOptions
+		maxAPI int
+		maxCSV int
+		want   int
+	}{
+		{
+			name:   "json positive limit unchanged",
+			opts:   ListOptions{Limit: 10, Format: ResponseFormatJSON},
+			maxAPI: 1000,
+			maxCSV: 1000,
+			want:   10,
+		},
+		{
+			name:   "json limit -1 uses max API",
+			opts:   ListOptions{Limit: -1, Format: ResponseFormatJSON},
+			maxAPI: 1000,
+			maxCSV: 1000,
+			want:   1000,
+		},
+		{
+			name:   "json limit below -1 uses max API",
+			opts:   ListOptions{Limit: -5, Format: ResponseFormatJSON},
+			maxAPI: 1000,
+			maxCSV: 1000,
+			want:   1000,
+		},
+		{
+			name:   "json limit zero unchanged",
+			opts:   ListOptions{Limit: 0, Format: ResponseFormatJSON},
+			maxAPI: 1000,
+			maxCSV: 1000,
+			want:   0,
+		},
+		{
+			name:   "csv always uses max CSV",
+			opts:   ListOptions{Limit: 10, Format: ResponseFormatCSV},
+			maxAPI: 1000,
+			maxCSV: 500,
+			want:   500,
+		},
+		{
+			name:   "csv limit -1 uses max CSV",
+			opts:   ListOptions{Limit: -1, Format: ResponseFormatCSV},
+			maxAPI: 1000,
+			maxCSV: 500,
+			want:   500,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.opts.EffectiveDBLimit(tt.maxAPI, tt.maxCSV)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestSQLOrderByFragment(t *testing.T) {
 	tests := []struct {
 		name     string

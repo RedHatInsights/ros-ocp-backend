@@ -12,8 +12,14 @@ import (
 
 	"github.com/redhatinsights/platform-go-middlewares/identity"
 	"github.com/redhatinsights/ros-ocp-backend/internal/api/listoptions"
+	"github.com/redhatinsights/ros-ocp-backend/internal/config"
 	"github.com/redhatinsights/ros-ocp-backend/internal/model"
 )
+
+func listResponseLimit(opts listoptions.ListOptions) int {
+	cfg := config.GetConfig()
+	return opts.EffectiveDBLimit(cfg.MaxLimitAPI, cfg.MaxLimitCSV)
+}
 
 func GetRecommendationSetList(c echo.Context) error {
 	XRHID := c.Get("Identity").(identity.XRHID)
@@ -67,7 +73,7 @@ func GetRecommendationSetList(c echo.Context) error {
 		for i, v := range recommendationSets {
 			interfaceSlice[i] = v
 		}
-		results := CollectionResponse(interfaceSlice, c.Request(), count, apiListOptions.Limit, apiListOptions.Offset)
+		results := CollectionResponse(interfaceSlice, c.Request(), count, listResponseLimit(apiListOptions), apiListOptions.Offset)
 		return c.JSON(http.StatusOK, results)
 	case listoptions.ResponseFormatCSV:
 		filename := "recommendations-" + time.Now().Format("20060102")
@@ -184,7 +190,7 @@ func GetNamespaceRecommendationSetList(c echo.Context) error {
 		for i, v := range namespaceRecommendationSets {
 			interfaceSlice[i] = v
 		}
-		results := CollectionResponse(interfaceSlice, c.Request(), count, apiListOptions.Limit, apiListOptions.Offset)
+		results := CollectionResponse(interfaceSlice, c.Request(), count, listResponseLimit(apiListOptions), apiListOptions.Offset)
 		return c.JSON(http.StatusOK, results)
 	case listoptions.ResponseFormatCSV:
 		// TODO: Add CSV support when export feature is enabled

@@ -121,10 +121,6 @@ func ListAPIOptions(c echo.Context, defaultDBColumn string, allowedOrderBy Order
 		offset = DefaultOffset
 	}
 
-	if limit < -1 {
-		return ListOptions{}, fmt.Errorf("limit cannot be less than -1")
-	}
-
 	if orderHow == "" {
 		orderHow = OrderDesc
 	}
@@ -150,6 +146,19 @@ func ListAPIOptions(c echo.Context, defaultDBColumn string, allowedOrderBy Order
 		OrderHow: orderHow,
 		Format:   format,
 	}, nil
+}
+
+// EffectiveDBLimit returns the SQL LIMIT for list queries.
+// JSON: limit <= -1 uses maxAPI (cap "return all" requests).
+// CSV: always uses maxCSV (existing export behavior).
+func (o ListOptions) EffectiveDBLimit(maxAPI, maxCSV int) int {
+	if o.Format == ResponseFormatCSV {
+		return maxCSV
+	}
+	if o.Limit <= -1 {
+		return maxAPI
+	}
+	return o.Limit
 }
 
 func resolveResponseFormat(acceptHeaderVal string, formatQueryParamVal string) (string, error) {

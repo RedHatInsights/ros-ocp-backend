@@ -112,15 +112,8 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, opts listoptions
 	// OrderBy/OrderHow come from ListAPIOptions (allowlisted); secondary sort for stable ordering.
 	query = query.Order(listoptions.SQLOrderByFragment(opts.OrderBy, opts.OrderHow)).Order("recommendation_sets.id ASC")
 
-	limit := opts.Limit
-	if opts.Format == "csv" {
-		/*
-		 each db record has short, medium, long term recommendations
-		 each such term recommendation has two types, cost and performance
-		 total number of CSV rows would be RecordLimitCSV * 3 * 2
-		*/
-		limit = config.GetConfig().RecordLimitCSV
-	}
+	cfg := config.GetConfig()
+	limit := opts.EffectiveDBLimit(cfg.MaxLimitAPI, cfg.MaxLimitCSV)
 	err := query.Offset(opts.Offset).Limit(limit).Scan(&recommendationSets).Error
 
 	return recommendationSets, int(count), err
