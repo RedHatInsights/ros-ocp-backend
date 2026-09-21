@@ -96,7 +96,7 @@ func (r *NamespaceRecommendationSet) GetNamespaceRecommendationSets(orgID string
 	query = query.Order(listoptions.SQLOrderByFragment(opts.OrderBy, opts.OrderHow)).Order("namespace_recommendation_sets.id ASC")
 
 	cfg := config.GetConfig()
-	limit := opts.EffectiveDBLimit(cfg.MaxLimitAPI, cfg.RowLimitCSV)
+	limit := opts.EffectiveDBLimit(cfg.MaxLimitAPI, cfg.MaxLimitCSV)
 	err := query.Offset(opts.Offset).Limit(limit).Scan(&recommendationSets).Error
 
 	return recommendationSets, int(count), err

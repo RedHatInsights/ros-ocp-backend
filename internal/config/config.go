@@ -19,7 +19,7 @@ type Config struct {
 	RecommendationPollIntervalHours int    `mapstructure:"RECOMMENDATION_POLL_INTERVAL_HOURS"`
 	DataRetentionPeriod             int    `mapstructure:"DATA_RETENTION_PERIOD"`
 	ReadHeaderTimeout               int    `mapstructure:"READ_HEADER_TIMEOUT"`
-	RowLimitCSV                     int    `mapstructure:"ROW_LIMIT_CSV"`
+	MaxLimitCSV                     int    `mapstructure:"MAX_LIMIT_CSV"`
 	MaxLimitAPI                     int    `mapstructure:"MAX_LIMIT_API"`
 	CSVStreamInterval               int    `mapstructure:"CSV_STREAM_INTERVAL"`
 	MaxCountPerQueryParam           int    `mapstructure:"MAXIMUM_COUNT_PER_QUERY_PARAM"`
@@ -241,7 +241,7 @@ func initConfig() {
 	viper.SetDefault("RECOMMENDATION_POLL_INTERVAL_HOURS", 24)
 	viper.SetDefault("DATA_RETENTION_PERIOD", 15)
 	viper.SetDefault("READ_HEADER_TIMEOUT", 15)
-	viper.SetDefault("ROW_LIMIT_CSV", 1000)
+	viper.SetDefault("MAX_LIMIT_CSV", 1000)
 	viper.SetDefault("MAX_LIMIT_API", 1000)
 	viper.SetDefault("CSV_STREAM_INTERVAL", 100)
 	viper.SetDefault("DISABLE_NAMESPACE_RECOMMENDATION", false)

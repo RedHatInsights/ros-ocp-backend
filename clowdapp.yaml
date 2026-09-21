@@ -180,8 +180,8 @@ objects:
             value: ${LOG_LEVEL}
           - name: MAX_LIMIT_API
             value: "${MAX_LIMIT_API}"
-          - name: ROW_LIMIT_CSV
-            value: "${ROW_LIMIT_CSV}"
+          - name: MAX_LIMIT_CSV
+            value: "${MAX_LIMIT_CSV}"
     - name: housekeeper
       replicas: ${{HOUSEKEEPER_REPLICA_COUNT}}
       podSpec:
@@ -318,8 +318,8 @@ parameters:
 - description: Maximum records returned for JSON list API. limit <= 0 or above this value is capped here
   name: MAX_LIMIT_API
   value: "1000"
-- description: Maximum DB records fetched for CSV list export
-  name: ROW_LIMIT_CSV
+- description: Maximum DB records fetched for CSV list export (each record can expand to multiple CSV rows)
+  name: MAX_LIMIT_CSV
   value: "1000"
 - description: Disable namespace recommendations feature
   name: DISABLE_NAMESPACE_RECOMMENDATION

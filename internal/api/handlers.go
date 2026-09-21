@@ -18,7 +18,7 @@ import (
 
 func listResponseLimit(opts listoptions.ListOptions) int {
 	cfg := config.GetConfig()
-	return opts.EffectiveDBLimit(cfg.MaxLimitAPI, cfg.RowLimitCSV)
+	return opts.EffectiveDBLimit(cfg.MaxLimitAPI, cfg.MaxLimitCSV)
 }
 
 func GetRecommendationSetList(c echo.Context) error {
