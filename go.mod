@@ -5,7 +5,7 @@ go 1.26.5
 require (
 	github.com/Unleash/unleash-go-sdk/v5 v5.1.0
 	github.com/aws/aws-sdk-go v1.55.8
-	github.com/confluentinc/confluent-kafka-go/v2 v2.15.0
+	github.com/confluentinc/confluent-kafka-go/v2 v2.15.1
 	github.com/go-gota/gota v0.12.0
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/golang-migrate/migrate/v4 v4.19.1
