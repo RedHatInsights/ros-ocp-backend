@@ -36,11 +36,18 @@ func TestEffectiveDBLimit(t *testing.T) {
 			want:   1000,
 		},
 		{
-			name:   "json limit zero unchanged",
+			name:   "json limit zero uses max API",
 			opts:   ListOptions{Limit: 0, Format: ResponseFormatJSON},
 			maxAPI: 1000,
 			maxCSV: 1000,
-			want:   0,
+			want:   1000,
+		},
+		{
+			name:   "json limit above max API capped",
+			opts:   ListOptions{Limit: 5000, Format: ResponseFormatJSON},
+			maxAPI: 1000,
+			maxCSV: 1000,
+			want:   1000,
 		},
 		{
 			name:   "csv always uses max CSV",
