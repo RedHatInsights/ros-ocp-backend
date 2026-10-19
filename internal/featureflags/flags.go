@@ -3,8 +3,8 @@ package featureflags
 import (
 	"sync"
 
-	"github.com/Unleash/unleash-go-sdk/v5"
-	"github.com/Unleash/unleash-go-sdk/v5/context"
+	"github.com/Unleash/unleash-go-sdk/v6"
+	"github.com/Unleash/unleash-go-sdk/v6/context"
 )
 
 var namespaceRecommendationDisabledOnce sync.Once
