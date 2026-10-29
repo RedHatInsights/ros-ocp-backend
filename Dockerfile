@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/go-toolset:1.26.7 AS builder
+FROM registry.access.redhat.com/ubi10/go-toolset:1.26.7 AS builder
 WORKDIR /go/src/app
 COPY . .
 USER 0
@@ -8,7 +8,7 @@ RUN if [ -f /cachi2/cachi2.env ]; then . /cachi2/cachi2.env; fi && \
     go build -o rosocp rosocp.go && \
     echo "$(go version)" > go_version_details
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi10/ubi-minimal:latest
 WORKDIR /
 COPY --from=builder /go/src/app/rosocp ./rosocp
 COPY --from=builder /go/src/app/go_version_details ./go_version_details
