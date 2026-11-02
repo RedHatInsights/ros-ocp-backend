@@ -1,11 +1,11 @@
 module github.com/redhatinsights/ros-ocp-backend
 
-go 1.26.7
+go 1.26.10
 
 require (
 	github.com/Unleash/unleash-go-sdk/v5 v5.1.0
 	github.com/aws/aws-sdk-go v1.55.8
-	github.com/confluentinc/confluent-kafka-go/v2 v2.16.0
+	github.com/confluentinc/confluent-kafka-go/v2 v2.16.1
 	github.com/go-gota/gota v0.12.0
 	github.com/go-playground/validator/v10 v10.30.5
 	github.com/golang-migrate/migrate/v4 v4.20.1
