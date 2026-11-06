@@ -70,6 +70,8 @@ objects:
             value: "${DISABLE_NAMESPACE_RECOMMENDATION}"
           - name: UPDATE_KRUIZE_PERF_PROFILE
             value: "${UPDATE_KRUIZE_PERF_PROFILE}"
+          - name: GOMEMLIMIT
+            value: "${GOMEMLIMIT}"
     - name: recommendation-poller
       replicas: ${{POLLER_REPLICA_COUNT}}
       podSpec:
@@ -286,6 +288,11 @@ parameters:
   name: MEMORY_LIMIT_ROSOCP
   required: true
   value: 1Gi
+- description: Soft memory limit for Go, this makes the garbage collector run frequently at the mentioned value
+  displayName: Go Memory Limit
+  name: GOMEMLIMIT
+  required: false
+  value: 2560MiB
 - description: Maximum amount of CPU the build container can use.
   displayName: CPU Limit
   name: CPU_LIMIT_ROSOCP
